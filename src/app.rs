@@ -22,7 +22,9 @@ pub async fn run(config: Config) -> Result<()> {
     loop {
         let mut peer = network::connect(&config).await?;
         let session_result = match config.role {
-            Role::InputOwner => run_input_owner(&config, &mut captured_rx, &peer.outbound).await,
+            Role::InputOwner => {
+                run_input_owner(&config, &mut captured_rx, &mut peer.inbound, &peer.outbound).await
+            }
             Role::Receiver => {
                 run_receiver(&mut peer.inbound, &peer.outbound, platform_tx.clone()).await
             }
@@ -39,6 +41,7 @@ pub async fn run(config: Config) -> Result<()> {
 async fn run_input_owner(
     config: &Config,
     captured_rx: &mut tokio::sync::mpsc::Receiver<platform::CaptureEvent>,
+    inbound: &mut tokio::sync::mpsc::Receiver<PeerMessage>,
     outbound: &tokio::sync::mpsc::Sender<PeerMessage>,
 ) -> Result<()> {
     let mut router = InputRouter::new(config.layout.clone());
@@ -60,6 +63,25 @@ async fn run_input_owner(
                 for message in decision.messages {
                     debug!("sending routed message: {:?}", message);
                     network::send(outbound, message).await?;
+                }
+            }
+            message = inbound.recv() => {
+                let Some(message) = message else {
+                    warn!("peer connection closed");
+                    return Ok(());
+                };
+
+                match message {
+                    PeerMessage::Hello { node_name } => {
+                        info!("receiver identified as {}", node_name);
+                    }
+                    PeerMessage::Heartbeat => {}
+                    PeerMessage::Active { remote_active } => {
+                        debug!("receiver reported remote_active={remote_active}");
+                    }
+                    PeerMessage::Input { event } => {
+                        warn!("receiver sent unexpected input event: {:?}", event);
+                    }
                 }
             }
             _ = heartbeat.tick() => {
@@ -226,6 +248,23 @@ async fn release_pressed(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::{Edge, Layout};
+
+    fn input_owner_config() -> Config {
+        Config {
+            node_name: "owner-test".to_string(),
+            role: Role::InputOwner,
+            listen_addr: None,
+            peer_addr: None,
+            layout: Layout {
+                local_width: 100.0,
+                local_height: 50.0,
+                remote_width: 80.0,
+                remote_height: 40.0,
+                remote_edge: Edge::Right,
+            },
+        }
+    }
 
     #[test]
     fn tracks_pressed_keys_and_buttons() {
@@ -335,5 +374,23 @@ mod tests {
         assert!(button_releases.contains(&"Left".to_string()));
         assert!(button_releases.contains(&"Right".to_string()));
         assert!(button_releases.contains(&"Middle".to_string()));
+    }
+
+    #[tokio::test]
+    async fn input_owner_ends_session_when_peer_inbound_closes() {
+        let config = input_owner_config();
+        let (_capture_tx, mut captured_rx) = tokio::sync::mpsc::channel(1);
+        let (inbound_tx, mut inbound_rx) = tokio::sync::mpsc::channel(1);
+        let (outbound_tx, _outbound_rx) = tokio::sync::mpsc::channel(1);
+
+        drop(inbound_tx);
+
+        tokio::time::timeout(
+            Duration::from_millis(100),
+            run_input_owner(&config, &mut captured_rx, &mut inbound_rx, &outbound_tx),
+        )
+        .await
+        .expect("input owner did not notice peer closure")
+        .expect("input owner peer closure should not be an error");
     }
 }

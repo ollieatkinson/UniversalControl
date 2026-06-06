@@ -75,6 +75,7 @@ dependencies = [
  "clap",
  "display-info",
  "mdns-sd",
+ "objc2-core-graphics",
  "rdev",
  "serde",
  "serde_json",

@@ -87,6 +87,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/mac/uc-probe.sh](scripts/mac/uc-probe.sh): read-only macOS probe for Universal Control/Rapport surfaces.
 - [scripts/mac/watch-mdns-service.sh](scripts/mac/watch-mdns-service.sh): bounded mDNS plus log watcher for Windows advertisement checks.
 - [scripts/mac/watch-companion-link-candidate.sh](scripts/mac/watch-companion-link-candidate.sh): native-focused watcher for controlled `_companion-link._tcp` candidate checks.
+- [scripts/mac/summarize-mdns-watch-artifact.py](scripts/mac/summarize-mdns-watch-artifact.py): redacts watcher artifacts into commit-safe Markdown summaries.
 
 ## Running The macOS Probe
 

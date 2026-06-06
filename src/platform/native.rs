@@ -11,6 +11,12 @@ use std::{
 
 use anyhow::Result;
 use display_info::DisplayInfo;
+#[cfg(target_os = "macos")]
+use objc2_core_graphics::{
+    CGDirectDisplayID, CGDisplayBounds, CGDisplayCopyDisplayMode, CGDisplayIsBuiltin,
+    CGDisplayIsMain, CGDisplayMode, CGDisplayPixelsWide, CGDisplayRotation, CGDisplayScreenSize,
+    CGError, CGGetOnlineDisplayList,
+};
 use rdev::{Button, Event, EventType, Key};
 use tokio::sync::mpsc;
 use tracing::{info, warn};
@@ -116,10 +122,10 @@ pub fn probe_listen(count: usize) -> Result<()> {
 }
 
 pub fn probe_displays() -> Result<()> {
-    let displays =
-        DisplayInfo::all().map_err(|error| anyhow::anyhow!("failed to list displays: {error}"))?;
+    let (displays, source) = display_infos()?;
 
     println!("displays: {}", displays.len());
+    println!("display_source: {source}");
     println!(
         "| index | primary | builtin | name | friendly_name | x | y | width | height | scale | rotation | hz | width_mm | height_mm |"
     );
@@ -158,6 +164,78 @@ pub fn probe_displays() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn display_infos() -> Result<(Vec<DisplayInfo>, &'static str)> {
+    let displays =
+        DisplayInfo::all().map_err(|error| anyhow::anyhow!("failed to list displays: {error}"))?;
+
+    #[cfg(target_os = "macos")]
+    if displays.is_empty() {
+        let online_displays = macos_online_displays()?;
+        return Ok((online_displays, "coregraphics-online-fallback"));
+    }
+
+    Ok((displays, "display-info"))
+}
+
+#[cfg(target_os = "macos")]
+fn macos_online_displays() -> Result<Vec<DisplayInfo>> {
+    let max_displays: u32 = 16;
+    let mut display_ids: Vec<CGDirectDisplayID> = vec![0; max_displays as usize];
+    let mut display_count: u32 = 0;
+    let error = unsafe {
+        CGGetOnlineDisplayList(max_displays, display_ids.as_mut_ptr(), &mut display_count)
+    };
+
+    if error != CGError::Success {
+        anyhow::bail!("CGGetOnlineDisplayList failed: {error:?}");
+    }
+
+    display_ids.truncate(display_count as usize);
+    display_ids
+        .into_iter()
+        .map(macos_display_info)
+        .collect::<Result<Vec<_>>>()
+}
+
+#[cfg(target_os = "macos")]
+fn macos_display_info(id: CGDirectDisplayID) -> Result<DisplayInfo> {
+    let bounds = CGDisplayBounds(id);
+    let width = bounds.size.width.max(0.0) as u32;
+    let height = bounds.size.height.max(0.0) as u32;
+    let display_mode = CGDisplayCopyDisplayMode(id);
+    let mode_pixel_width = CGDisplayMode::pixel_width(display_mode.as_deref());
+    let pixel_width = if mode_pixel_width == 0 {
+        CGDisplayPixelsWide(id)
+    } else {
+        mode_pixel_width
+    };
+    let scale_factor = if width == 0 {
+        1.0
+    } else {
+        pixel_width as f32 / width as f32
+    };
+    let frequency = CGDisplayMode::refresh_rate(display_mode.as_deref()) as f32;
+    let size_mm = CGDisplayScreenSize(id);
+
+    Ok(DisplayInfo {
+        id,
+        name: format!("Display {id}"),
+        friendly_name: format!("Online Display {id}"),
+        raw_handle: id,
+        x: bounds.origin.x as i32,
+        y: bounds.origin.y as i32,
+        width,
+        height,
+        width_mm: size_mm.width as i32,
+        height_mm: size_mm.height as i32,
+        rotation: CGDisplayRotation(id) as f32,
+        frequency,
+        scale_factor,
+        is_primary: CGDisplayIsMain(id),
+        is_builtin: CGDisplayIsBuiltin(id),
+    })
 }
 
 pub fn probe_grab(count: usize, suppress: bool) -> Result<()> {

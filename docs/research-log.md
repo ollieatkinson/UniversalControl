@@ -202,6 +202,18 @@ Windows-controlled candidate advertisement can be observed together with
 candidate-admission smoke test after basic Windows-to-macOS mDNS visibility is
 proven.
 
+Added a watcher summarizer:
+
+```sh
+./scripts/mac/summarize-mdns-watch-artifact.py artifacts/mac-mdns-watch-YYYYMMDDTHHMMSSZ
+```
+
+It emits commit-safe Markdown from ignored watcher artifacts. The summary
+preserves service type, browse/resolve counts, expected-instance match,
+published port, TXT key names, TXT value classes, launchd state, and native
+process log counts, but omits raw hostnames, addresses, instance names, TXT
+values, interface identifiers, and unified-log lines.
+
 ### Windows Bridge Progress Versus Native Gap
 
 Windows-side notes now show the separate AnyKBFlow bridge track can advertise
@@ -209,8 +221,19 @@ Windows-side notes now show the separate AnyKBFlow bridge track can advertise
 TCP JSON-lines session alive with heartbeats, and reconnect after receiver
 process restarts under WSL. The receiver also tracks injected key/button state
 and releases those inputs when the peer disconnects, plus releases common
-latch-prone modifiers/buttons at receiver session start. That cleanup has not
-yet been runtime-tested with native macOS/Windows input injection.
+latch-prone modifiers/buttons at receiver session start and when planned focus
+return marks the receiver inactive. The input owner now also resets routing
+state when the receiver connection closes. Those cleanup paths have not yet been
+runtime-tested with native macOS/Windows input injection. A repo-native display
+geometry probe is also available as
+`cargo run -- probe displays`. The first macOS run returned `displays: 0`
+through `display-info` because CoreGraphics active-display enumeration was empty
+while the built-in display was still online but asleep. The probe now falls back
+to CoreGraphics online-display enumeration on macOS and produced a redacted
+single-display observation in
+`docs/observations/2026-06-06-local-macos-display-probe.md`. It still needs
+native Windows output, external-monitor macOS output, and comparison with
+`probe listen` mouse coordinates.
 
 Those bridge observations are useful fallback progress, but they do not prove
 native Universal Control compatibility. The native-first gaps remain:

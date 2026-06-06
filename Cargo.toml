@@ -18,3 +18,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 [target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
 display-info = "0.5.9"
 rdev = { version = "0.5.3", features = ["serialize", "unstable_grab"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-core-graphics = "0.3.2"

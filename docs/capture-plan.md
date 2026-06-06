@@ -142,7 +142,8 @@ Expected evidence:
 - macOS browse sees `AnyKBFlow Probe`.
 - macOS resolve shows the Windows hostname, published port, and TXT values.
 - The watcher writes a timestamped ignored artifact folder under `artifacts/` containing browse, resolve, and filtered unified logs.
-- If browse succeeds but resolve fails, record the interface number and firewall state.
+- `scripts/mac/summarize-mdns-watch-artifact.py` creates the commit-safe Markdown summary from the ignored artifact folder.
+- If browse succeeds but resolve fails, record the redacted interface count and local firewall state.
 - If neither succeeds, record Windows network profile, firewall state, and whether UDP 5353 multicast is allowed.
 
 Controlled Apple-service experiments must be separated from this benign check.
@@ -160,6 +161,9 @@ On macOS first:
 
 ```sh
 ./scripts/mac/watch-companion-link-candidate.sh --duration 90 --instance "AnyKBFlow Native Probe"
+./scripts/mac/summarize-mdns-watch-artifact.py artifacts/mac-mdns-watch-YYYYMMDDTHHMMSSZ \
+  --expected-instance "AnyKBFlow Native Probe" \
+  --output docs/observations/YYYY-MM-DD-redacted-companion-link-candidate.md
 ```
 
 On Windows while the macOS watcher is running:

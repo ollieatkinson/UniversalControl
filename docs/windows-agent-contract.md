@@ -61,6 +61,7 @@ Redact before committing:
 - local IP addresses if not needed
 - stable Bluetooth addresses
 - stable Bonjour TXT identifiers
+- display names if they include user, room, or asset names
 - packet payloads containing clipboard or keyboard data
 - private keys or pairing material
 
@@ -78,6 +79,7 @@ The next native-focused Windows report should answer:
 8. Is the Windows prototype currently source-controlled somewhere outside this repo?
 9. What language/runtime is the current Windows implementation using?
 10. After macOS confirms the benign probe is visible, what happens when Windows advertises the minimal `_companion-link._tcp` native candidate below while the Mac runs `scripts/mac/watch-companion-link-candidate.sh`?
+11. What does `cargo run -- probe displays` report from a native Windows terminal, with display names redacted but bounds, scale, primary flag, and negative origins preserved?
 
 The Mac-side watcher for questions 6 and 7 is:
 
@@ -90,6 +92,7 @@ Useful commands from this repo:
 ```powershell
 cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact
 cargo run -- discover-companion-link --backend system --seconds 30
+cargo run -- probe displays
 cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
 cargo run -- discovery advertise --service _anykbflow-probe._tcp.local. --instance "AnyKBFlow Probe" --addr <redacted-lan-ip> --port 49152 --txt phase=visibility --txt role=windows-probe --seconds 60
 cargo run -- advertise-mdns --service-type _companion-link._tcp --instance "AnyKBFlow Native Probe" --hostname anykbflow-native-probe --port 49152 --txt probe=visibility --txt role=windows-native-candidate --allow-apple-service --seconds 60

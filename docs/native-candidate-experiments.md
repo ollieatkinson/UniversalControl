@@ -8,8 +8,9 @@ separate AnyKBFlow bridge.
 ## Current Evidence Gap
 
 Windows bridge discovery, heartbeats, reconnects, receiver-side injected
-key/button release cleanup, and startup common-latch cleanup work in WSL, but
-native Universal Control discovery is still not proven:
+key/button release cleanup, startup common-latch cleanup, planned focus-return
+cleanup, input-owner peer-close route reset, and a native display geometry probe
+are in place, but native Universal Control discovery is still not proven:
 
 - Windows has not yet proven it can resolve the Mac's `_companion-link._tcp`
   advertisement with the Rust mDNS backend.
@@ -17,6 +18,9 @@ native Universal Control discovery is still not proven:
   LAN path.
 - macOS has not yet been observed reacting to a Windows `_companion-link._tcp`
   candidate in `rapportd` or `UniversalControl` logs.
+- `cargo run -- probe displays` now has a local macOS single-display observation,
+  but still needs native Windows output, external-monitor macOS output, and mouse
+  coordinate comparison.
 
 ## Experiment 1: Passive Windows Browse
 
@@ -42,6 +46,9 @@ On macOS at the same time:
 
 ```sh
 ./scripts/mac/watch-mdns-service.sh --duration 90
+./scripts/mac/summarize-mdns-watch-artifact.py artifacts/mac-mdns-watch-YYYYMMDDTHHMMSSZ \
+  --expected-instance "AnyKBFlow Probe" \
+  --output docs/observations/YYYY-MM-DD-redacted-benign-mdns-watch.md
 ```
 
 This proves basic Windows-to-macOS mDNS visibility without pretending to be an
@@ -58,6 +65,9 @@ On macOS first:
 ./scripts/mac/watch-companion-link-candidate.sh \
   --duration 90 \
   --instance "AnyKBFlow Native Probe"
+./scripts/mac/summarize-mdns-watch-artifact.py artifacts/mac-mdns-watch-YYYYMMDDTHHMMSSZ \
+  --expected-instance "AnyKBFlow Native Probe" \
+  --output docs/observations/YYYY-MM-DD-redacted-companion-link-candidate.md
 ```
 
 On Windows while the macOS watcher is running:
@@ -80,6 +90,8 @@ Expected evidence:
 - macOS `dns-sd -L` resolves the Windows host, port, and TXT keys.
 - `rapportd` and `UniversalControl` logs either ignore the service or record a
   concrete discovery/rejection reason.
+- The committed observation is generated from the watcher artifact summary, not
+  from raw `dns-sd` or unified-log output.
 
 Do not treat a successful browse/resolve as native admission. Native admission
 requires `rapportd` or `UniversalControl` evidence that the peer became a

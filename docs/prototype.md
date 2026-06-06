@@ -23,7 +23,7 @@ On the other machine:
 cargo run -- --config configs/receiver.example.toml
 ```
 
-Edit screen sizes and `remote_edge` before running. The input owner advertises `_anykbflow._tcp.local.` and the receiver discovers it automatically when `peer_addr` is omitted. Add `peer_addr = "host:24800"` to the receiver config to bypass discovery.
+Edit `local_width`, `local_height`, and `remote_edge` before running. The peer `Hello` message includes each side's local display size, so the input owner updates its remote routing dimensions from the receiver after connection. The configured `remote_width` and `remote_height` remain fallback values until the receiver hello arrives. The input owner advertises `_anykbflow._tcp.local.` and the receiver discovers it automatically when `peer_addr` is omitted. Add `peer_addr = "host:24800"` to the receiver config to bypass discovery.
 
 The peer protocol sends periodic heartbeat messages in both directions. If a peer disconnects, both roles re-enter their connection loop after a short delay: the input owner listens again and the receiver re-discovers or reconnects. The input owner listens for inbound peer closure so a disconnected receiver resets the session and starts the next connection with fresh routing state. The receiver releases common modifier keys and mouse buttons when a session starts, when focus returns local, and when a connection fails; it also releases any keys or buttons it injected and still considers pressed.
 
@@ -37,7 +37,7 @@ Print display geometry for layout calibration:
 cargo run -- probe displays
 ```
 
-Use the primary display `width`/`height` values to fill `local_width`/`local_height` on the input-owner machine and `remote_width`/`remote_height` for the receiver. Record negative `x`/`y` origins in notes because they prove how the OS represents displays positioned left or above the primary display.
+Use the primary display `width`/`height` values to fill `local_width`/`local_height` on each machine. Record negative `x`/`y` origins in notes because they prove how the OS represents displays positioned left or above the primary display.
 
 Print observed events without suppressing them:
 
@@ -116,10 +116,10 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 
 ## Current Limitations
 
-- Peer setup is manual. The input owner listens; the receiver connects.
+- Peer setup is partly manual. The input owner listens; the receiver connects or discovers it with mDNS.
 - No encryption or pairing yet.
 - No clipboard sync yet.
-- Reconnect is basic: the roles re-enter their connection loops, the input owner resets routing state on peer close, and receiver-side common latches plus tracked injected keys/buttons are released. Native runtime validation is still needed.
+- Reconnect is basic: the roles re-enter their connection loops, the input owner resets routing state on peer close, and receiver-side common latches plus tracked injected keys/buttons are released. Peer hello exchanges role and local display size, but native runtime validation is still needed.
 - The native input backend is based on `rdev` and should be treated as a spike layer, not the final platform code.
 - Key mapping uses physical `rdev` key names. This should be replaced with platform scancode mapping once the Mac and Windows spike data is available.
 - The Linux backend is intentionally no-op so the shared daemon can be checked in this workspace.
@@ -128,7 +128,7 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 
 1. Run `cargo run -- probe displays` on both macOS and Windows and commit redacted geometry summaries.
 2. Run the input-owner role on Windows and receiver role on macOS.
-3. Confirm capture, suppression, and injection behavior with Accessibility enabled on macOS.
+3. Confirm receiver hello updates input-owner remote dimensions before edge crossing.
 4. Reverse the roles and test macOS as input owner.
 5. Replace `rdev` mapping with explicit platform scancodes if modifiers/layouts are wrong.
 6. Validate input-owner route reset and receiver focus/modifier cleanup on native macOS and Windows backends during planned return-to-local and forced disconnect.

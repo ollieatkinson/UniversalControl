@@ -49,6 +49,39 @@ async fn run_input_owner(
 
     loop {
         tokio::select! {
+            biased;
+
+            message = inbound.recv() => {
+                let Some(message) = message else {
+                    warn!("peer connection closed");
+                    return Ok(());
+                };
+
+                match message {
+                    PeerMessage::Hello {
+                        node_name,
+                        role,
+                        local_display,
+                    } => {
+                        info!(
+                            "peer identified as {} ({:?}) local_display={}x{}",
+                            node_name, role, local_display.width, local_display.height
+                        );
+                        if role == Role::Receiver {
+                            router.set_remote_display(local_display.width, local_display.height);
+                        } else {
+                            warn!("expected receiver peer, got {:?}", role);
+                        }
+                    }
+                    PeerMessage::Heartbeat => {}
+                    PeerMessage::Active { remote_active } => {
+                        debug!("receiver reported remote_active={remote_active}");
+                    }
+                    PeerMessage::Input { event } => {
+                        warn!("receiver sent unexpected input event: {:?}", event);
+                    }
+                }
+            }
             captured = captured_rx.recv() => {
                 let Some(captured) = captured else {
                     warn!("input capture channel closed");
@@ -63,25 +96,6 @@ async fn run_input_owner(
                 for message in decision.messages {
                     debug!("sending routed message: {:?}", message);
                     network::send(outbound, message).await?;
-                }
-            }
-            message = inbound.recv() => {
-                let Some(message) = message else {
-                    warn!("peer connection closed");
-                    return Ok(());
-                };
-
-                match message {
-                    PeerMessage::Hello { node_name } => {
-                        info!("receiver identified as {}", node_name);
-                    }
-                    PeerMessage::Heartbeat => {}
-                    PeerMessage::Active { remote_active } => {
-                        debug!("receiver reported remote_active={remote_active}");
-                    }
-                    PeerMessage::Input { event } => {
-                        warn!("receiver sent unexpected input event: {:?}", event);
-                    }
                 }
             }
             _ = heartbeat.tick() => {
@@ -113,8 +127,18 @@ async fn run_receiver(
                 };
 
                 match message {
-                    PeerMessage::Hello { node_name } => {
-                        info!("input owner identified as {}", node_name);
+                    PeerMessage::Hello {
+                        node_name,
+                        role,
+                        local_display,
+                    } => {
+                        info!(
+                            "peer identified as {} ({:?}) local_display={}x{}",
+                            node_name, role, local_display.width, local_display.height
+                        );
+                        if role != Role::InputOwner {
+                            warn!("expected input owner peer, got {:?}", role);
+                        }
                     }
                     PeerMessage::Active { remote_active } => {
                         info!("remote_active={}", remote_active);
@@ -249,6 +273,11 @@ async fn release_pressed(
 mod tests {
     use super::*;
     use crate::config::{Edge, Layout};
+    use crate::protocol::DisplayGeometry;
+
+    fn display(width: f64, height: f64) -> DisplayGeometry {
+        DisplayGeometry { width, height }
+    }
 
     fn input_owner_config() -> Config {
         Config {
@@ -392,5 +421,69 @@ mod tests {
         .await
         .expect("input owner did not notice peer closure")
         .expect("input owner peer closure should not be an error");
+    }
+
+    #[tokio::test]
+    async fn input_owner_uses_receiver_display_from_hello() {
+        let config = input_owner_config();
+        let (capture_tx, mut captured_rx) = tokio::sync::mpsc::channel(2);
+        let (inbound_tx, mut inbound_rx) = tokio::sync::mpsc::channel(2);
+        let (outbound_tx, mut outbound_rx) = tokio::sync::mpsc::channel(4);
+
+        let owner = tokio::spawn(async move {
+            run_input_owner(&config, &mut captured_rx, &mut inbound_rx, &outbound_tx).await
+        });
+
+        inbound_tx
+            .send(PeerMessage::Hello {
+                node_name: "receiver-test".to_string(),
+                role: Role::Receiver,
+                local_display: display(300.0, 200.0),
+            })
+            .await
+            .unwrap();
+
+        let (suppress_tx, suppress_rx) = std::sync::mpsc::sync_channel(1);
+        capture_tx
+            .send(platform::CaptureEvent {
+                event: InputEvent::MouseMove { x: 99.0, y: 49.0 },
+                suppress: suppress_tx,
+            })
+            .await
+            .unwrap();
+
+        let mut saw_active = false;
+        let mut saw_scaled_move = false;
+        for _ in 0..4 {
+            let message = tokio::time::timeout(Duration::from_millis(100), outbound_rx.recv())
+                .await
+                .unwrap()
+                .unwrap();
+            match message {
+                PeerMessage::Active {
+                    remote_active: true,
+                } => saw_active = true,
+                PeerMessage::Input {
+                    event: InputEvent::MouseMove { x: 1.0, y },
+                } if (y - 199.0).abs() < f64::EPSILON => saw_scaled_move = true,
+                PeerMessage::Heartbeat => {}
+                other => panic!("unexpected routed message: {other:?}"),
+            }
+
+            if saw_active && saw_scaled_move {
+                break;
+            }
+        }
+
+        assert!(saw_active);
+        assert!(saw_scaled_move);
+        assert!(suppress_rx.try_recv().unwrap());
+
+        drop(capture_tx);
+        drop(inbound_tx);
+        owner
+            .await
+            .expect("input owner task panicked")
+            .expect("input owner should stop cleanly when channels close");
     }
 }

@@ -11,7 +11,7 @@ use tracing::{debug, info, warn};
 use crate::{
     config::{Config, Role},
     discovery,
-    protocol::PeerMessage,
+    protocol::{DisplayGeometry, PeerMessage},
 };
 
 pub struct Peer {
@@ -61,6 +61,11 @@ pub async fn connect(config: &Config) -> Result<Peer> {
 
     let hello = PeerMessage::Hello {
         node_name: config.node_name.clone(),
+        role: config.role,
+        local_display: DisplayGeometry {
+            width: config.layout.local_width,
+            height: config.layout.local_height,
+        },
     };
     outbound_tx.send(hello).await?;
 

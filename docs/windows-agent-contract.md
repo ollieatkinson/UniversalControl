@@ -78,6 +78,12 @@ The next Windows report should answer:
 8. Is the Windows prototype currently source-controlled somewhere outside this repo?
 9. What language/runtime is the current Windows implementation using?
 
+The Mac-side watcher for questions 6 and 7 is:
+
+```sh
+./scripts/mac/watch-mdns-service.sh --duration 60
+```
+
 Useful commands from this repo:
 
 ```powershell

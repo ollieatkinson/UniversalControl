@@ -121,6 +121,7 @@ cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windo
 On macOS, while the Windows command is running:
 
 ```sh
+./scripts/mac/watch-mdns-service.sh --duration 60
 dns-sd -B _anykbflow-probe._tcp local
 dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local
 ```
@@ -129,6 +130,7 @@ Expected evidence:
 
 - macOS browse sees `AnyKBFlow Probe`.
 - macOS resolve shows the Windows hostname, published port, and TXT values.
+- The watcher writes a timestamped ignored artifact folder under `artifacts/` containing browse, resolve, and filtered unified logs.
 - If browse succeeds but resolve fails, record the interface number and firewall state.
 - If neither succeeds, record Windows network profile, firewall state, and whether UDP 5353 multicast is allowed.
 

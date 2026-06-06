@@ -52,6 +52,7 @@ cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windo
 On the Mac:
 
 ```sh
+./scripts/mac/watch-mdns-service.sh --duration 60
 dns-sd -B _anykbflow-probe._tcp local
 dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local
 ```
@@ -79,6 +80,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [docs/windows-interop-plan.md](docs/windows-interop-plan.md): native-first Windows peer strategy and fallback bridge criteria.
 - [docs/windows-agent-contract.md](docs/windows-agent-contract.md): where the Windows machine should write observations.
 - [scripts/mac/uc-probe.sh](scripts/mac/uc-probe.sh): read-only macOS probe for Universal Control/Rapport surfaces.
+- [scripts/mac/watch-mdns-service.sh](scripts/mac/watch-mdns-service.sh): bounded mDNS plus log watcher for Windows advertisement checks.
 
 ## Running The macOS Probe
 

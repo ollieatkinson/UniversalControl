@@ -165,6 +165,23 @@ Local validation on macOS:
 - `dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local` resolved the hostname, port, and TXT values.
 - Because this validation ran on one Mac, the resolver reported the loopback interface; Windows-to-Mac visibility still needs a Windows-machine report.
 
+### macOS mDNS Watcher
+
+Added a bounded Mac-side watcher:
+
+```sh
+./scripts/mac/watch-mdns-service.sh --duration 60
+```
+
+It writes an ignored artifact directory containing:
+
+- `dns-sd -B` output for the selected service type
+- `dns-sd -L` output for the selected instance
+- unified logs for `UniversalControl`, `rapportd`, and `mDNSResponder`
+- launchd state snapshots for `com.apple.ensemble` and `com.apple.rapportd`
+
+This is intended to run while Windows advertises `_anykbflow-probe._tcp` or a controlled `_companion-link._tcp` experiment. Raw output is not committed because it can contain hostnames, addresses, TXT values, and local interface identifiers.
+
 ### Native macOS Priority
 
 The preferred Mac-side architecture is to leave Apple's `UniversalControl.app` in control. The Windows side should first try to become visible to native macOS discovery and session setup. A Mac-side bridge should be treated as a fallback only after captures prove one of these hard blockers:

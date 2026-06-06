@@ -94,6 +94,14 @@ still pending a controlled foreground target. Do not run `inject-button` or
 `inject-wheel` against an arbitrary desktop state; those probes click or scroll
 the current session and only validate the fallback bridge injection path.
 
+Mac-side normalized input probes from
+`docs/windows-inbox/2026-06-06-oliver-pc-wsl-normalized-input-probes.md` are
+pending a manual Keychron/mouse action sequence. Use `listen-events` first, then
+`grab-events` without suppression, and record redacted JSON for: printable key
+down/up, Command/Option/Control/Shift, arrow key, mouse move, button click, and
+wheel scroll. Only use `grab-events --suppress` after the non-suppressing probe
+matches the expected protocol events.
+
 The Mac-side watcher for questions 6 and 7 is:
 
 ```sh

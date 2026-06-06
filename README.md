@@ -88,6 +88,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/mac/capture-uc-session.sh](scripts/mac/capture-uc-session.sh): paired Apple-to-Apple Universal Control session capture wrapper.
 - [scripts/mac/watch-mdns-service.sh](scripts/mac/watch-mdns-service.sh): bounded mDNS plus log watcher for Windows advertisement checks.
 - [scripts/mac/watch-companion-link-candidate.sh](scripts/mac/watch-companion-link-candidate.sh): native-focused watcher for controlled `_companion-link._tcp` candidate checks.
+- [scripts/mac/summarize-uc-probe-artifact.py](scripts/mac/summarize-uc-probe-artifact.py): redacts baseline macOS probe artifacts into commit-safe Markdown summaries.
 - [scripts/mac/summarize-mdns-watch-artifact.py](scripts/mac/summarize-mdns-watch-artifact.py): redacts watcher artifacts into commit-safe Markdown summaries.
 - [scripts/mac/summarize-uc-session-artifact.py](scripts/mac/summarize-uc-session-artifact.py): redacts paired-session artifacts into commit-safe Markdown summaries.
 
@@ -95,9 +96,12 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 
 ```sh
 ./scripts/mac/uc-probe.sh
+./scripts/mac/summarize-uc-probe-artifact.py artifacts/mac-uc-probe-YYYYMMDDTHHMMSSZ \
+  --output docs/observations/YYYY-MM-DD-redacted-macos-uc-probe.md
 ```
 
 The script writes timestamped output under `artifacts/`, which is intentionally ignored by git because the output can contain device names, local addresses, and stable identifiers.
+Only commit the redacted summary.
 
 ## Ground Rules
 

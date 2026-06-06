@@ -1,6 +1,8 @@
 # 2026-06-06 Local macOS Inventory
 
 This is a redacted summary of the first local inventory. Raw command output was not committed because Bonjour TXT values and network addresses can be stable identifiers.
+The generated commit-safe summary for the same raw artifact is
+`docs/observations/2026-06-06-redacted-macos-uc-probe.md`.
 
 ## Host
 

@@ -214,6 +214,21 @@ published port, TXT key names, TXT value classes, launchd state, and native
 process log counts, but omits raw hostnames, addresses, instance names, TXT
 values, interface identifiers, and unified-log lines.
 
+Added a baseline macOS probe summarizer:
+
+```sh
+./scripts/mac/summarize-uc-probe-artifact.py artifacts/mac-uc-probe-YYYYMMDDTHHMMSSZ
+```
+
+It emits commit-safe Markdown from ignored `uc-probe.sh` artifacts. The summary
+preserves OS/build, Universal Control bundle metadata, entitlement key names,
+launchd Rapport matching triggers, DNS-SD browse/resolve counts, `rp*` TXT key
+names and value classes, rapportd socket shape, binary-string hint counts, and
+redacted Rapport event/message IDs. It omits raw hostnames, addresses, hardware
+addresses, Bluetooth IDs, TXT values, defaults values, and unified-log lines. A
+generated summary from the first local probe lives in
+`docs/observations/2026-06-06-redacted-macos-uc-probe.md`.
+
 Added a paired-session capture wrapper:
 
 ```sh

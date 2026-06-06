@@ -15,6 +15,8 @@ Run:
 
 ```sh
 ./scripts/mac/uc-probe.sh
+./scripts/mac/summarize-uc-probe-artifact.py artifacts/mac-uc-probe-YYYYMMDDTHHMMSSZ \
+  --output docs/observations/YYYY-MM-DD-redacted-macos-uc-probe.md
 ```
 
 Expected output:
@@ -30,6 +32,14 @@ Expected output:
 - DNS-SD resolve for the local `_companion-link._tcp` instance
 - short DNS-SD browse for `_universalcontrol._tcp`
 - filtered strings from `UniversalControl`
+- `scripts/mac/summarize-uc-probe-artifact.py` creates the commit-safe Markdown summary from the ignored artifact folder.
+
+The summary preserves bundle metadata, entitlement key names, launchd trigger
+service types, process counts, DNS-SD browse/resolve counts, `rp*` TXT key names
+and value classes, protocol-relevant ports, socket counts, binary-string hint
+categories, and native log event/message IDs. It omits raw hostnames, addresses,
+hardware addresses, Bluetooth IDs, TXT values, defaults values, and unified-log
+lines.
 
 ## Paired Mac Or iPad Session Capture
 

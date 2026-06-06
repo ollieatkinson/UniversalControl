@@ -44,8 +44,25 @@ async fn run_input_owner(
     inbound: &mut tokio::sync::mpsc::Receiver<PeerMessage>,
     outbound: &tokio::sync::mpsc::Sender<PeerMessage>,
 ) -> Result<()> {
+    run_input_owner_with_local_display(
+        config,
+        captured_rx,
+        inbound,
+        outbound,
+        primary_display_geometry_for_router(),
+    )
+    .await
+}
+
+async fn run_input_owner_with_local_display(
+    config: &Config,
+    captured_rx: &mut tokio::sync::mpsc::Receiver<platform::CaptureEvent>,
+    inbound: &mut tokio::sync::mpsc::Receiver<PeerMessage>,
+    outbound: &tokio::sync::mpsc::Sender<PeerMessage>,
+    local_display: Option<DisplayGeometry>,
+) -> Result<()> {
     let mut router = InputRouter::new(config.layout.clone());
-    if let Some(local_display) = primary_display_geometry_for_router() {
+    if let Some(local_display) = local_display {
         info!(
             "using detected input-owner local display {}x{} for edge routing",
             local_display.width, local_display.height
@@ -433,7 +450,13 @@ mod tests {
 
         tokio::time::timeout(
             Duration::from_millis(100),
-            run_input_owner(&config, &mut captured_rx, &mut inbound_rx, &outbound_tx),
+            run_input_owner_with_local_display(
+                &config,
+                &mut captured_rx,
+                &mut inbound_rx,
+                &outbound_tx,
+                None,
+            ),
         )
         .await
         .expect("input owner did not notice peer closure")
@@ -448,7 +471,14 @@ mod tests {
         let (outbound_tx, mut outbound_rx) = tokio::sync::mpsc::channel(4);
 
         let owner = tokio::spawn(async move {
-            run_input_owner(&config, &mut captured_rx, &mut inbound_rx, &outbound_tx).await
+            run_input_owner_with_local_display(
+                &config,
+                &mut captured_rx,
+                &mut inbound_rx,
+                &outbound_tx,
+                None,
+            )
+            .await
         });
 
         inbound_tx

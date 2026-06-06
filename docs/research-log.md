@@ -218,13 +218,18 @@ Added a paired-session capture wrapper:
 
 ```sh
 ./scripts/mac/capture-uc-session.sh --duration 120
+./scripts/mac/summarize-uc-session-artifact.py artifacts/mac-uc-session-YYYYMMDDTHHMMSSZ
 ```
 
 It captures CompanionLink and Universal Control DNS-SD browsing, unified logs,
 launchd snapshots, and `lsof` network snapshots during a real Apple-to-Apple
 Universal Control edge-push session. Passing `--tcpdump` additionally records
 raw packet captures on `en0` and `awdl0` when present. Raw session artifacts stay
-under `artifacts/`; only redacted summaries should be committed.
+under `artifacts/`; only redacted summaries should be committed. The summarizer
+preserves service counts, native process keyword counts, launchd state, network
+snapshot counts, and packet-capture file sizes, but omits raw hostnames,
+addresses, instance names, interface identifiers, packet payloads, and
+unified-log lines.
 
 ### Windows Bridge Progress Versus Native Gap
 
@@ -236,10 +241,13 @@ and releases those inputs when the peer disconnects, plus releases common
 latch-prone modifiers/buttons at receiver session start and when planned focus
 return marks the receiver inactive. The input owner now also resets routing
 state when the receiver connection closes. Those cleanup paths have not yet been
-runtime-tested with native macOS/Windows input injection. Peer `Hello` messages
-now carry each side's local display width and height, letting the input owner
-replace configured remote-dimension fallbacks after connection. A repo-native display
-geometry probe is also available as
+runtime-tested with native macOS/Windows input injection. Bridge display geometry
+now prefers runtime primary-display detection on native macOS/Windows: peer
+`Hello` messages carry each side's detected display size, the input owner
+replaces configured remote-dimension fallbacks after the receiver hello, and
+local edge routing uses the input owner's detected display before falling back to
+config. WSL still uses the stub fallback, so native Windows-terminal output is
+needed. A repo-native display geometry probe is also available as
 `cargo run -- probe displays`. The first macOS run returned `displays: 0`
 through `display-info` because CoreGraphics active-display enumeration was empty
 while the built-in display was still online but asleep. The probe now falls back
@@ -247,7 +255,7 @@ to CoreGraphics online-display enumeration on macOS and produced a redacted
 single-display observation in
 `docs/observations/2026-06-06-local-macos-display-probe.md`. It still needs
 native Windows output, external-monitor macOS output, and comparison with
-`probe listen` mouse coordinates.
+`probe listen` mouse coordinates during live edge routing.
 
 Those bridge observations are useful fallback progress, but they do not prove
 native Universal Control compatibility. The native-first gaps remain:

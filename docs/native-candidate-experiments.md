@@ -9,8 +9,9 @@ separate AnyKBFlow bridge.
 
 Windows bridge discovery, heartbeats, reconnects, receiver-side injected
 key/button release cleanup, startup common-latch cleanup, planned focus-return
-cleanup, input-owner peer-close route reset, and a native display geometry probe
-plus peer display-size exchange are in place, but native Universal Control
+cleanup, input-owner peer-close route reset, runtime native display geometry in
+peer `Hello` messages, local edge routing from detected display size, and a
+macOS display probe fallback are in place, but native Universal Control
 discovery is still not proven:
 
 - Windows has not yet proven it can resolve the Mac's `_companion-link._tcp`
@@ -20,8 +21,8 @@ discovery is still not proven:
 - macOS has not yet been observed reacting to a Windows `_companion-link._tcp`
   candidate in `rapportd` or `UniversalControl` logs.
 - `cargo run -- probe displays` now has a local macOS single-display observation,
-  but still needs native Windows output, external-monitor macOS output, and mouse
-  coordinate comparison.
+  but still needs native Windows-terminal output, external-monitor macOS output,
+  and mouse coordinate comparison against live edge routing.
 
 ## Experiment 1: Passive Windows Browse
 
@@ -124,6 +125,8 @@ On the source Mac:
 
 ```sh
 ./scripts/mac/capture-uc-session.sh --duration 120
+./scripts/mac/summarize-uc-session-artifact.py artifacts/mac-uc-session-YYYYMMDDTHHMMSSZ \
+  --output docs/observations/YYYY-MM-DD-redacted-uc-session.md
 ```
 
 When packet capture is required and you are ready to handle raw `.pcap` files:

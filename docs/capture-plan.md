@@ -55,6 +55,8 @@ Recommended command:
 
 ```sh
 ./scripts/mac/capture-uc-session.sh --duration 120
+./scripts/mac/summarize-uc-session-artifact.py artifacts/mac-uc-session-YYYYMMDDTHHMMSSZ \
+  --output docs/observations/YYYY-MM-DD-redacted-uc-session.md
 ```
 
 Add packet capture when ready to collect raw network evidence:
@@ -71,6 +73,7 @@ What it captures:
 - launchd snapshots for `com.apple.ensemble` and `com.apple.rapportd`
 - `lsof` network snapshots for `rapportd` and `UniversalControl`
 - optional `tcpdump` packet captures on `en0` plus `awdl0` when present
+- `scripts/mac/summarize-uc-session-artifact.py` creates the commit-safe Markdown summary from the ignored artifact folder.
 
 Notes:
 

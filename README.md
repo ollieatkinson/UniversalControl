@@ -26,6 +26,23 @@ It has a TCP JSON-lines peer protocol, edge-crossing router, and a macOS/Windows
 
 See [docs/prototype.md](docs/prototype.md) for setup and current limitations.
 
+## Native Discovery Probe
+
+Run this on macOS or Windows to browse for Apple's native Rapport/CompanionLink service:
+
+```sh
+cargo run -- discover-companion-link --seconds 10
+```
+
+Useful variants:
+
+```sh
+cargo run -- discover-companion-link --backend system --seconds 10
+cargo run -- discover-companion-link --backend rust-mdns --seconds 10
+```
+
+`auto` uses the system `dns-sd` command when available, otherwise it uses the pure Rust mDNS backend. Review output before sharing because hostnames, addresses, and TXT values can be stable identifiers.
+
 ## Current Findings
 
 - macOS Universal Control is implemented by `/System/Library/CoreServices/UniversalControl.app`, bundle identifier `com.apple.universalcontrol`.

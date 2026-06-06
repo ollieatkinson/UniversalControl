@@ -6,6 +6,7 @@ The preferred outcome is a Windows peer that works with Apple's native macOS `Un
 
 - Windows can browse `_companion-link._tcp.local`.
 - Windows can resolve the Mac's `_companion-link._tcp` instance and capture all TXT keys.
+- `cargo run -- discover-companion-link --backend rust-mdns --seconds 30` produces either a resolved Mac service or a clear failure mode on Windows.
 - macOS can see a Windows-advertised test service.
 - macOS logs show whether `rapportd` or `UniversalControl` reacts to the Windows advertisement.
 - The Windows advertisement can be toggled on and off while macOS logs are captured.
@@ -15,6 +16,7 @@ Evidence required:
 - redacted DNS-SD records from both sides
 - filtered macOS `rapportd` and `UniversalControl` logs
 - exact Windows source or command that advertised the service
+- exact `anykbflow discover-companion-link` command and redacted output
 
 ## Phase 2: Candidate Admission
 

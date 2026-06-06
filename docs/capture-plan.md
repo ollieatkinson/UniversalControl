@@ -93,6 +93,18 @@ Get-NetFirewallProfile
 Resolve-DnsName -Type PTR _companion-link._tcp.local
 ```
 
+Repo-native discovery command:
+
+```powershell
+cargo run -- discover-companion-link --backend rust-mdns --seconds 30
+```
+
+If Bonjour's `dns-sd.exe` is installed and available on `PATH`, also compare:
+
+```powershell
+cargo run -- discover-companion-link --backend system --seconds 30
+```
+
 Expected Windows deliverable:
 
 - a redacted Markdown note under `docs/windows-inbox/`

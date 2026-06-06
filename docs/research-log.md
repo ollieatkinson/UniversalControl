@@ -122,6 +122,26 @@ Universal Control is probably an "Ensemble" application layered over Rapport/Com
 
 The next proof step is a paired-device capture while a second Mac or iPad is actively linked. Without a paired Apple peer, we can see the local advertisement and launchd triggers but not the Universal Control session messages.
 
+### Repo-Native Discovery Probe
+
+Added a read-only Rust CLI probe:
+
+```sh
+cargo run -- discover-companion-link --seconds 10
+```
+
+Backends:
+
+- `auto`: use system `dns-sd` when available, otherwise the Rust mDNS backend.
+- `system`: call `dns-sd -B _companion-link._tcp local`.
+- `rust-mdns`: use the `mdns-sd` crate to browse `_companion-link._tcp.local.` and print found/resolved/removed events.
+
+Local validation on macOS:
+
+- `--backend system` saw this Mac's `_companion-link._tcp` advertisement.
+- `--backend rust-mdns` resolved this Mac's `_companion-link._tcp` service and printed the dynamic Rapport port plus `rp*` TXT keys.
+- Raw output was not committed because it includes local hostnames and stable-looking TXT values.
+
 ### Native macOS Priority
 
 The preferred Mac-side architecture is to leave Apple's `UniversalControl.app` in control. The Windows side should first try to become visible to native macOS discovery and session setup. A Mac-side bridge should be treated as a fallback only after captures prove one of these hard blockers:

@@ -70,6 +70,8 @@ The next Windows report should answer:
 
 1. Does Windows see this Mac's `_companion-link._tcp.local` advertisement?
 2. Which TXT keys and port are visible?
-3. Can Windows advertise an mDNS service visible to macOS?
-4. Is the Windows prototype currently source-controlled somewhere outside this empty initial repo?
-5. What language/runtime is the current Windows implementation using?
+3. What happens when running `cargo run -- discover-companion-link --backend rust-mdns --seconds 30`?
+4. If Bonjour is installed, what happens with `cargo run -- discover-companion-link --backend system --seconds 30`?
+5. Can Windows advertise an mDNS service visible to macOS?
+6. Is the Windows prototype currently source-controlled somewhere outside this repo?
+7. What language/runtime is the current Windows implementation using?

@@ -22,13 +22,14 @@ Purpose: learn whether a Windows peer can be accepted by macOS Universal Control
 
 Work items:
 
-1. Implement passive DNS-SD browsing for `_companion-link._tcp`.
+1. Use `cargo run -- discover-companion-link --backend rust-mdns --seconds 30` on Windows for passive DNS-SD browsing of `_companion-link._tcp`.
 2. Parse and log TXT records without assigning meanings prematurely.
-3. Implement controlled advertising experiments for `_companion-link._tcp` from Windows.
-4. Observe whether macOS `rapportd` or `UniversalControl` logs react to a Windows advertisement.
-5. Attempt a minimal TCP connection to the advertised `rapportd` listener only after logging what Apple peers do first.
-6. Continue native work while the session advances with observable, reproducible messages.
-7. Stop only if authentication requires Apple Account/iCloud Keychain material, private Apple signatures, or entitlement-protected peer claims that Windows cannot possess.
+3. Compare the Rust mDNS backend with `--backend system` if Bonjour's `dns-sd.exe` is installed.
+4. Implement controlled advertising experiments for `_companion-link._tcp` from Windows.
+5. Observe whether macOS `rapportd` or `UniversalControl` logs react to a Windows advertisement.
+6. Attempt a minimal TCP connection to the advertised `rapportd` listener only after logging what Apple peers do first.
+7. Continue native work while the session advances with observable, reproducible messages.
+8. Stop only if authentication requires Apple Account/iCloud Keychain material, private Apple signatures, or entitlement-protected peer claims that Windows cannot possess.
 
 Success evidence:
 

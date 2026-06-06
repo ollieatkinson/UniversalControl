@@ -25,7 +25,7 @@ cargo run -- --config configs/receiver.example.toml
 
 Edit screen sizes and `remote_edge` before running. The input owner advertises `_anykbflow._tcp.local.` and the receiver discovers it automatically when `peer_addr` is omitted. Add `peer_addr = "host:24800"` to the receiver config to bypass discovery.
 
-The peer protocol sends periodic heartbeat messages in both directions. This does not yet implement automatic reconnect, but it does keep idle sessions active and exposes broken TCP connections instead of waiting for the next mouse or keyboard event.
+The peer protocol sends periodic heartbeat messages in both directions. If a peer disconnects, both roles re-enter their connection loop after a short delay: the input owner listens again and the receiver re-discovers or reconnects.
 
 ## Native Probes
 
@@ -111,7 +111,7 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 - Peer setup is manual. The input owner listens; the receiver connects.
 - No encryption or pairing yet.
 - No clipboard sync yet.
-- No automatic reconnect yet; restart the affected side after a disconnect.
+- Reconnect is basic: active remote focus and held modifier state are not yet cleaned up across reconnects.
 - The native input backend is based on `rdev` and should be treated as a spike layer, not the final platform code.
 - Key mapping uses physical `rdev` key names. This should be replaced with platform scancode mapping once the Mac and Windows spike data is available.
 - The Linux backend is intentionally no-op so the shared daemon can be checked in this workspace.

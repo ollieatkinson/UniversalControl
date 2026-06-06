@@ -3,6 +3,7 @@ use std::{
     io,
     net::{IpAddr, SocketAddr, UdpSocket},
     process::{Command, Stdio},
+    sync::atomic::{AtomicBool, Ordering},
     thread,
     time::{Duration, Instant},
 };
@@ -13,6 +14,7 @@ use mdns_sd::{ResolvedService, ServiceDaemon, ServiceEvent, ServiceInfo};
 const COMPANION_LINK_SERVICE: &str = "_companion-link._tcp.local.";
 const DNS_SD_SERVICE: &str = "_companion-link._tcp";
 const ANYKBFLOW_SERVICE: &str = "_anykbflow._tcp.local.";
+static BRIDGE_ADVERTISED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Clone, Copy, Debug)]
 pub enum DiscoveryBackend {
@@ -144,6 +146,10 @@ pub fn advertise_mdns(options: AdvertiseOptions) -> Result<()> {
 }
 
 pub fn spawn_bridge_advertisement(node_name: &str, listen_addr: SocketAddr) -> Result<()> {
+    if BRIDGE_ADVERTISED.swap(true, Ordering::SeqCst) {
+        return Ok(());
+    }
+
     let instance = sanitize_instance_name(node_name);
     let host = format!("{instance}.local.");
     let port = listen_addr.port();

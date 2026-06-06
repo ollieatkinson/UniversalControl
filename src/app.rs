@@ -18,20 +18,30 @@ pub async fn run(config: Config) -> Result<()> {
 
     let capture = config.role == Role::InputOwner;
     let (mut captured_rx, platform_tx) = platform::spawn(capture)?;
-    let mut peer = network::connect(&config).await?;
 
-    match config.role {
-        Role::InputOwner => run_input_owner(config, &mut captured_rx, &peer.outbound).await,
-        Role::Receiver => run_receiver(&mut peer.inbound, &peer.outbound, platform_tx).await,
+    loop {
+        let mut peer = network::connect(&config).await?;
+        let session_result = match config.role {
+            Role::InputOwner => run_input_owner(&config, &mut captured_rx, &peer.outbound).await,
+            Role::Receiver => {
+                run_receiver(&mut peer.inbound, &peer.outbound, platform_tx.clone()).await
+            }
+        };
+
+        match session_result {
+            Ok(()) => info!("peer session ended; reconnecting"),
+            Err(error) => warn!("peer session failed: {error}; reconnecting"),
+        }
+        time::sleep(Duration::from_secs(2)).await;
     }
 }
 
 async fn run_input_owner(
-    config: Config,
+    config: &Config,
     captured_rx: &mut tokio::sync::mpsc::Receiver<platform::CaptureEvent>,
     outbound: &tokio::sync::mpsc::Sender<PeerMessage>,
 ) -> Result<()> {
-    let mut router = InputRouter::new(config.layout);
+    let mut router = InputRouter::new(config.layout.clone());
     let mut heartbeat = time::interval(Duration::from_secs(5));
 
     loop {

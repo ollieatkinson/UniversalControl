@@ -7,11 +7,11 @@ mod stub;
 pub use native::{
     CaptureEvent, PlatformCommand, primary_display_geometry, probe_displays, probe_grab,
     probe_grab_events, probe_inject_button, probe_inject_key, probe_inject_mouse,
-    probe_inject_wheel, probe_listen, probe_listen_events, spawn,
+    probe_inject_wheel, probe_listen, probe_listen_events, probe_replay_events, spawn,
 };
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub use stub::{
     CaptureEvent, PlatformCommand, primary_display_geometry, probe_displays, probe_grab,
     probe_grab_events, probe_inject_button, probe_inject_key, probe_inject_mouse,
-    probe_inject_wheel, probe_listen, probe_listen_events, spawn,
+    probe_inject_wheel, probe_listen, probe_listen_events, probe_replay_events, spawn,
 };

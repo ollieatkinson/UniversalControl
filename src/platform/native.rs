@@ -1,4 +1,7 @@
 use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    path::Path,
     process,
     sync::{
         Arc,
@@ -367,6 +370,38 @@ pub fn probe_inject_wheel(delta_x: i64, delta_y: i64) -> Result<()> {
     eprintln!("injecting wheel delta_x={delta_x} delta_y={delta_y}");
     rdev::simulate(&EventType::Wheel { delta_x, delta_y })
         .map_err(|error| anyhow::anyhow!("{error}"))
+}
+
+pub fn probe_replay_events(path: &Path, delay_ms: u64) -> Result<()> {
+    eprintln!(
+        "replaying normalized input events from {}; delay_ms={delay_ms}",
+        path.display()
+    );
+
+    let file = File::open(path)?;
+    let reader = BufReader::new(file);
+    let mut replayed = 0usize;
+
+    for (index, line) in reader.lines().enumerate() {
+        let line = line?;
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+
+        let event: InputEvent = serde_json::from_str(trimmed)
+            .map_err(|error| anyhow::anyhow!("{}:{}: {error}", path.display(), index + 1))?;
+        print_input_event(&event);
+        inject(event)?;
+        replayed += 1;
+
+        if delay_ms > 0 {
+            thread::sleep(Duration::from_millis(delay_ms));
+        }
+    }
+
+    eprintln!("replayed {replayed} normalized input events");
+    Ok(())
 }
 
 fn inject(event: InputEvent) -> Result<()> {

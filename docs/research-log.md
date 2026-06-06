@@ -296,6 +296,20 @@ native Universal Control compatibility. The native-first gaps remain:
   whether `rapportd` or `UniversalControl` ignores, accepts, or rejects a
   Windows-owned candidate.
 
+### Normalized Event Replay Probe
+
+Added `cargo run -- probe replay-events --path <jsonl> --delay-ms <ms>`.
+The command reads the same normalized `InputEvent` JSONL emitted by
+`probe listen-events` and `probe grab-events`, then feeds each event through the
+platform injector used by the receiver role. This is the next bridge between
+passive capture and the full two-machine daemon: capture a short sequence on one
+machine, copy or commit a redacted sample, and replay it on the other with a
+controlled foreground target.
+
+This still does not prove native Universal Control compatibility. It proves the
+fallback software-KVM event shape is internally replayable across macOS and
+Windows once native capture/injection permissions are working.
+
 ### Native macOS Priority
 
 The preferred Mac-side architecture is to leave Apple's `UniversalControl.app` in control. The Windows side should first try to become visible to native macOS discovery and session setup. A Mac-side bridge should be treated as a fallback only after captures prove one of these hard blockers:

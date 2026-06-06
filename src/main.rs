@@ -160,6 +160,14 @@ enum ProbeCommand {
         #[arg(long)]
         suppress: bool,
     },
+    /// Replay normalized AnyKBFlow input events from a JSONL file.
+    ReplayEvents {
+        #[arg(long)]
+        path: PathBuf,
+
+        #[arg(long, default_value_t = 20)]
+        delay_ms: u64,
+    },
     /// Inject a single key press/release.
     Inject {
         #[arg(long, default_value = "KeyA")]
@@ -279,6 +287,9 @@ async fn main() -> Result<()> {
             ProbeCommand::Grab { count, suppress } => platform::probe_grab(count, suppress),
             ProbeCommand::GrabEvents { count, suppress } => {
                 platform::probe_grab_events(count, suppress)
+            }
+            ProbeCommand::ReplayEvents { path, delay_ms } => {
+                platform::probe_replay_events(&path, delay_ms)
             }
             ProbeCommand::Inject { key } => platform::probe_inject_key(&key),
             ProbeCommand::InjectMouse { x, y } => platform::probe_inject_mouse(x, y),

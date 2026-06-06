@@ -36,6 +36,12 @@ Swift is excellent for macOS-native code, and Swift on Windows is real. Swift.or
 
 That makes Swift viable for cross-platform command-line tools. It does not make Swift the best fit for this project as a whole.
 
+Current Swift evidence:
+
+- Swift.org lists Windows installation through the official toolchain and `winget install --id Swift.Toolchain -e`.
+- The Swift Windows Workgroup announcement says Windows has been officially supported since 2020 and is focused on improving the official Windows distribution.
+- Swift 6.3 Windows toolchains are published on Swift.org as of the 2026 install page.
+
 Risks:
 
 - Windows Swift support exists, but the Windows low-level input surface is still more naturally served through Rust/C/C++/.NET.

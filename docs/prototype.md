@@ -107,6 +107,20 @@ Valid button names are `Left`, `Right`, and `Middle`.
 
 The `*-events` probes print normalized `InputEvent` JSON in the same shape sent over the bridge protocol.
 
+Replay normalized events into the local injector:
+
+```sh
+mkdir -p artifacts
+cargo run -- probe listen-events --count 20 > artifacts/input-events.jsonl
+cargo run -- probe replay-events --path artifacts/input-events.jsonl --delay-ms 50
+```
+
+Use this with a controlled foreground target. The replay file is JSONL: one
+serialized `InputEvent` per line. Blank lines and lines starting with `#` are
+ignored, so short annotations can be added while preserving replayability.
+This probe validates the capture-to-injection mapping before a full two-machine
+daemon run.
+
 ## Discovery Probes
 
 Browse for Apple's CompanionLink service:
@@ -163,6 +177,7 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 - No clipboard sync yet.
 - Reconnect is basic: the roles re-enter their connection loops, the input owner resets routing state on peer close, and receiver-side common latches plus tracked injected keys/buttons are released. Local and remote display dimensions prefer detected primary display geometry, but native runtime validation is still needed.
 - The native input backend is based on `rdev` and should be treated as a spike layer, not the final platform code.
+- Normalized event replay is a probe, not a security boundary. Do not replay untrusted event files.
 - Key mapping uses physical `rdev` key names. This should be replaced with platform scancode mapping once the Mac and Windows spike data is available.
 - The Linux backend is intentionally no-op so the shared daemon can be checked in this workspace.
 
@@ -170,9 +185,10 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 
 1. Run `probe bridge-smoke` and `probe bridge-network-smoke` on both machines.
 2. Run `cargo run -- probe displays` on both macOS and Windows and commit redacted geometry summaries.
-3. Run the input-owner role on Windows and receiver role on macOS.
-4. Confirm input-owner edge detection and receiver hello use the same primary display dimensions as `probe displays`.
-5. Reverse the roles and test macOS as input owner.
-6. Replace `rdev` mapping with explicit platform scancodes if modifiers/layouts are wrong.
-7. Validate input-owner route reset and receiver focus/modifier cleanup on native macOS and Windows backends during planned return-to-local and forced disconnect.
-8. Add TLS pairing once basic control is stable.
+3. Capture a short `listen-events` or `grab-events` JSONL file on one machine and replay it on the other with `probe replay-events`.
+4. Run the input-owner role on Windows and receiver role on macOS.
+5. Confirm input-owner edge detection and receiver hello use the same primary display dimensions as `probe displays`.
+6. Reverse the roles and test macOS as input owner.
+7. Replace `rdev` mapping with explicit platform scancodes if modifiers/layouts are wrong.
+8. Validate input-owner route reset and receiver focus/modifier cleanup on native macOS and Windows backends during planned return-to-local and forced disconnect.
+9. Add TLS pairing once basic control is stable.

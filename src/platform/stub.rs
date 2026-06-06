@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::path::Path;
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 
@@ -71,6 +72,11 @@ pub fn probe_grab(_count: usize, _suppress: bool) -> Result<()> {
 
 pub fn probe_grab_events(_count: usize, _suppress: bool) -> Result<()> {
     warn!("probe grab-events is only available on macOS and Windows");
+    Ok(())
+}
+
+pub fn probe_replay_events(_path: &Path, _delay_ms: u64) -> Result<()> {
+    warn!("probe replay-events is only available on macOS and Windows");
     Ok(())
 }
 

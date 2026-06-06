@@ -3,6 +3,8 @@ use crate::{
     protocol::{InputEvent, PeerMessage},
 };
 
+const REMOTE_ENTRY_INSET: f64 = 1.0;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActiveTarget {
     Local,
@@ -26,10 +28,16 @@ pub struct InputRouter {
 impl InputRouter {
     pub fn new(layout: Layout) -> Self {
         let remote_mouse = match layout.remote_edge {
-            Edge::Right => (0.0, layout.remote_height / 2.0),
-            Edge::Left => (layout.remote_width - 1.0, layout.remote_height / 2.0),
-            Edge::Top => (layout.remote_width / 2.0, layout.remote_height - 1.0),
-            Edge::Bottom => (layout.remote_width / 2.0, 0.0),
+            Edge::Right => (REMOTE_ENTRY_INSET, layout.remote_height / 2.0),
+            Edge::Left => (
+                layout.remote_width - 1.0 - REMOTE_ENTRY_INSET,
+                layout.remote_height / 2.0,
+            ),
+            Edge::Top => (
+                layout.remote_width / 2.0,
+                layout.remote_height - 1.0 - REMOTE_ENTRY_INSET,
+            ),
+            Edge::Bottom => (layout.remote_width / 2.0, REMOTE_ENTRY_INSET),
         };
 
         Self {
@@ -137,20 +145,20 @@ impl InputRouter {
     fn remote_entry_point(&self, x: f64, y: f64) -> (f64, f64) {
         match self.layout.remote_edge {
             Edge::Right => (
-                0.0,
+                REMOTE_ENTRY_INSET,
                 scale(y, self.layout.local_height, self.layout.remote_height),
             ),
             Edge::Left => (
-                self.layout.remote_width - 1.0,
+                self.layout.remote_width - 1.0 - REMOTE_ENTRY_INSET,
                 scale(y, self.layout.local_height, self.layout.remote_height),
             ),
             Edge::Top => (
                 scale(x, self.layout.local_width, self.layout.remote_width),
-                self.layout.remote_height - 1.0,
+                self.layout.remote_height - 1.0 - REMOTE_ENTRY_INSET,
             ),
             Edge::Bottom => (
                 scale(x, self.layout.local_width, self.layout.remote_width),
-                0.0,
+                REMOTE_ENTRY_INSET,
             ),
         }
     }
@@ -208,6 +216,38 @@ mod tests {
             decision.messages.as_slice(),
             [PeerMessage::Input {
                 event: InputEvent::KeyPress { .. }
+            }]
+        ));
+    }
+
+    #[test]
+    fn entering_remote_does_not_immediately_cross_back_on_zero_delta() {
+        let mut router = InputRouter::new(layout(Edge::Right));
+        let _ = router.handle_captured(InputEvent::MouseMove { x: 99.0, y: 25.0 });
+
+        let decision = router.handle_captured(InputEvent::MouseMove { x: 99.0, y: 25.0 });
+
+        assert!(decision.suppress_local);
+        assert!(matches!(
+            decision.messages.as_slice(),
+            [PeerMessage::Input {
+                event: InputEvent::MouseMove { .. }
+            }]
+        ));
+    }
+
+    #[test]
+    fn crosses_back_to_local_from_remote_edge() {
+        let mut router = InputRouter::new(layout(Edge::Right));
+        let _ = router.handle_captured(InputEvent::MouseMove { x: 99.0, y: 25.0 });
+
+        let decision = router.handle_captured(InputEvent::MouseMove { x: 98.0, y: 25.0 });
+
+        assert!(decision.suppress_local);
+        assert!(matches!(
+            decision.messages.as_slice(),
+            [PeerMessage::Active {
+                remote_active: false
             }]
         ));
     }

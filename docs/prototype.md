@@ -37,7 +37,11 @@ Run a deterministic bridge routing smoke test without native input capture:
 cargo run -- --config configs/input-owner.example.toml probe bridge-smoke
 ```
 
-This loads the input-owner config, simulates an edge crossing and `KeyA` press/release, prints the JSON peer messages, and prints the receiver-side injection effect. Native macOS/Windows builds use detected primary display size for local edge routing; Linux/WSL falls back to the config.
+This loads the input-owner config, prints the same input-owner `Hello` shape used
+by the peer protocol, simulates an edge crossing and `KeyA` press/release,
+prints the JSON peer messages, and prints the receiver-side injection effect.
+Native macOS/Windows builds use detected primary display size for local edge
+routing and `Hello.local_display`; Linux/WSL falls back to the config.
 
 Run a loopback TCP protocol smoke test:
 
@@ -45,7 +49,11 @@ Run a loopback TCP protocol smoke test:
 cargo run -- --config configs/input-owner.example.toml probe bridge-network-smoke
 ```
 
-This creates an in-process input owner and receiver over `127.0.0.1`, exchanges peer `Hello` messages using the real JSON-lines network tasks, then sends `Active`, mouse move, and `KeyA` press/release messages from owner to receiver.
+This creates an in-process input owner and receiver over `127.0.0.1`, exchanges
+peer `Hello` messages using the real JSON-lines network tasks, then sends
+`Active`, mouse move, and `KeyA` press/release messages from owner to receiver.
+Native macOS/Windows builds use detected primary display size in loopback
+`Hello` messages; Linux/WSL falls back to the config.
 
 Print display geometry for layout calibration:
 
@@ -86,6 +94,10 @@ cargo run -- probe inject-mouse --x 200 --y 200
 cargo run -- probe inject-button --button Left
 cargo run -- probe inject-wheel --delta-y 3
 ```
+
+Run pointer, button, and wheel injection only with a controlled foreground target
+open. `inject-button` clicks at the current pointer location, and `inject-wheel`
+scrolls the current focus target.
 
 Valid key names are the `rdev::Key` debug names, such as `KeyA`, `MetaLeft`, `ControlLeft`, `Alt`, `Space`, and `Return`.
 Valid button names are `Left`, `Right`, and `Middle`.

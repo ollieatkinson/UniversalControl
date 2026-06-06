@@ -115,7 +115,7 @@ pub(crate) async fn peer_from_stream(config: &Config, stream: TcpStream) -> Resu
     })
 }
 
-fn hello_message(config: &Config) -> PeerMessage {
+pub(crate) fn hello_message(config: &Config) -> PeerMessage {
     let detected_display = match platform::primary_display_geometry() {
         Ok(display) => display,
         Err(error) => {

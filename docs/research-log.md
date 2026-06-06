@@ -257,6 +257,19 @@ single-display observation in
 native Windows output, external-monitor macOS output, and comparison with
 `probe listen` mouse coordinates during live edge routing.
 
+Mac-side `probe bridge-smoke` now also prints the input-owner `Hello` generated
+by the real peer-protocol helper. A local macOS run in
+`docs/observations/2026-06-06-local-macos-bridge-smoke.md` used detected
+`1710x1112` display geometry for both local edge routing and
+`Hello.local_display`, overriding the stale `2560x1440` example-config fallback.
+It emitted the expected `active=true`, remote mouse move, and `KeyA`
+press/release messages. The same observation also records a successful
+`probe bridge-network-smoke` run over loopback TCP using the real JSON-lines peer
+tasks. Because both loopback endpoints ran on one Mac, both hello messages used
+the same detected Mac display geometry; this validates the native hello path and
+transport shape on macOS, not remote Windows geometry. This does not close any
+native Universal Control admission gate.
+
 Those bridge observations are useful fallback progress, but they do not prove
 native Universal Control compatibility. The native-first gaps remain:
 

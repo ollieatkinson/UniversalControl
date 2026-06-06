@@ -81,6 +81,19 @@ The next native-focused Windows report should answer:
 10. After macOS confirms the benign probe is visible, what happens when Windows advertises the minimal `_companion-link._tcp` native candidate below while the Mac runs `scripts/mac/watch-companion-link-candidate.sh`?
 11. What does `cargo run -- probe displays` report from a native Windows terminal, with display names redacted but bounds, scale, primary flag, and negative origins preserved?
 
+Mac-side bridge-smoke and bridge-network-smoke follow-up from the 2026-06-06
+Windows notes is answered in
+`docs/observations/2026-06-06-local-macos-bridge-smoke.md`: native macOS display
+detection feeds bridge local routing, input-owner `Hello.local_display`, and the
+loopback JSON-lines transport. The remaining Windows priority is still native
+discovery and candidate admission, not more bridge smoke output.
+
+Mac-side pointer injection probes from
+`docs/windows-inbox/2026-06-06-oliver-pc-wsl-pointer-injection-probes.md` are
+still pending a controlled foreground target. Do not run `inject-button` or
+`inject-wheel` against an arbitrary desktop state; those probes click or scroll
+the current session and only validate the fallback bridge injection path.
+
 The Mac-side watcher for questions 6 and 7 is:
 
 ```sh

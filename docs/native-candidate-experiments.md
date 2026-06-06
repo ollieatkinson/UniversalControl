@@ -21,8 +21,10 @@ discovery is still not proven:
 - macOS has not yet been observed reacting to a Windows `_companion-link._tcp`
   candidate in `rapportd` or `UniversalControl` logs.
 - `cargo run -- probe displays` now has a local macOS single-display observation,
-  but still needs native Windows-terminal output, external-monitor macOS output,
-  and mouse coordinate comparison against live edge routing.
+  and the bridge smoke probes confirm macOS native display detection feeds local
+  routing, input-owner `Hello`, and loopback JSON-lines transport; this still
+  needs native Windows-terminal output, external-monitor macOS output, and mouse
+  coordinate comparison against a live two-machine run.
 
 ## Experiment 1: Passive Windows Browse
 

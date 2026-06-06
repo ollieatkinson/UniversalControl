@@ -44,6 +44,8 @@ pub fn run(config: Config) -> Result<()> {
         config.layout.remote_edge
     );
 
+    print_peer_message("owner->receiver", &network::hello_message(&config))?;
+
     let receiver_hello = PeerMessage::Hello {
         node_name: "smoke-receiver".to_string(),
         role: Role::Receiver,

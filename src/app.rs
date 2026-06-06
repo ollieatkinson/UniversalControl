@@ -8,7 +8,7 @@ use crate::{
     config::{Config, Role},
     network,
     platform::{self, PlatformCommand},
-    protocol::{InputEvent, PeerMessage},
+    protocol::{DisplayGeometry, InputEvent, PeerMessage},
     router::InputRouter,
 };
 
@@ -45,6 +45,13 @@ async fn run_input_owner(
     outbound: &tokio::sync::mpsc::Sender<PeerMessage>,
 ) -> Result<()> {
     let mut router = InputRouter::new(config.layout.clone());
+    if let Some(local_display) = primary_display_geometry_for_router() {
+        info!(
+            "using detected input-owner local display {}x{} for edge routing",
+            local_display.width, local_display.height
+        );
+        router.set_local_display(local_display.width, local_display.height);
+    }
     let mut heartbeat = time::interval(Duration::from_secs(5));
 
     loop {
@@ -101,6 +108,16 @@ async fn run_input_owner(
             _ = heartbeat.tick() => {
                 network::send(outbound, PeerMessage::Heartbeat).await?;
             }
+        }
+    }
+}
+
+fn primary_display_geometry_for_router() -> Option<DisplayGeometry> {
+    match platform::primary_display_geometry() {
+        Ok(display) => display,
+        Err(error) => {
+            warn!("failed to detect primary display geometry for router: {error}");
+            None
         }
     }
 }

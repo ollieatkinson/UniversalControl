@@ -84,6 +84,21 @@ impl InputRouter {
             .clamp(0.0, self.layout.remote_height - 1.0);
     }
 
+    pub fn set_local_display(&mut self, width: f64, height: f64) {
+        if width <= 0.0 || height <= 0.0 {
+            return;
+        }
+
+        self.layout.local_width = width;
+        self.layout.local_height = height;
+        if let Some((x, y)) = self.last_local_mouse {
+            self.last_local_mouse = Some((
+                x.clamp(0.0, self.layout.local_width - 1.0),
+                y.clamp(0.0, self.layout.local_height - 1.0),
+            ));
+        }
+    }
+
     fn handle_mouse_move(&mut self, x: f64, y: f64) -> RouteDecision {
         let previous = self.last_local_mouse.replace((x, y));
 
@@ -286,6 +301,29 @@ mod tests {
                     event: InputEvent::MouseMove { x: 1.0, y }
                 }
             ] if (*y - 99.0).abs() < f64::EPSILON
+        ));
+    }
+
+    #[test]
+    fn updates_local_display_before_edge_detection() {
+        let mut router = InputRouter::new(layout(Edge::Right));
+        router.set_local_display(200.0, 100.0);
+
+        let local_decision = router.handle_captured(InputEvent::MouseMove { x: 99.0, y: 50.0 });
+        assert!(!local_decision.suppress_local);
+        assert!(local_decision.messages.is_empty());
+
+        let remote_decision = router.handle_captured(InputEvent::MouseMove { x: 199.0, y: 99.0 });
+        assert!(matches!(
+            remote_decision.messages.as_slice(),
+            [
+                PeerMessage::Active {
+                    remote_active: true
+                },
+                PeerMessage::Input {
+                    event: InputEvent::MouseMove { x: 1.0, y }
+                }
+            ] if (*y - 39.0).abs() < f64::EPSILON
         ));
     }
 }

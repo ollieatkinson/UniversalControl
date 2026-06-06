@@ -31,6 +31,14 @@ The peer protocol sends periodic heartbeat messages in both directions. If a pee
 
 Use these before the full two-machine run to verify the platform input layer.
 
+Print display geometry for layout calibration:
+
+```sh
+cargo run -- probe displays
+```
+
+Use the primary display `width`/`height` values to fill `local_width`/`local_height` on the input-owner machine and `remote_width`/`remote_height` for the receiver. Record negative `x`/`y` origins in notes because they prove how the OS represents displays positioned left or above the primary display.
+
 Print observed events without suppressing them:
 
 ```sh
@@ -118,9 +126,10 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 
 ## Next Engineering Steps
 
-1. Run the input-owner role on Windows and receiver role on macOS.
-2. Confirm capture, suppression, and injection behavior with Accessibility enabled on macOS.
-3. Reverse the roles and test macOS as input owner.
-4. Replace `rdev` mapping with explicit platform scancodes if modifiers/layouts are wrong.
-5. Add explicit focus/modifier cleanup messages around reconnect.
-6. Add TLS pairing once basic control is stable.
+1. Run `cargo run -- probe displays` on both macOS and Windows and commit redacted geometry summaries.
+2. Run the input-owner role on Windows and receiver role on macOS.
+3. Confirm capture, suppression, and injection behavior with Accessibility enabled on macOS.
+4. Reverse the roles and test macOS as input owner.
+5. Replace `rdev` mapping with explicit platform scancodes if modifiers/layouts are wrong.
+6. Add explicit focus/modifier cleanup messages around reconnect and input-owner-side active-state reset after disconnect.
+7. Add TLS pairing once basic control is stable.

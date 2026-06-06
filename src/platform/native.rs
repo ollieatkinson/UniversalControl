@@ -10,6 +10,7 @@ use std::{
 };
 
 use anyhow::Result;
+use display_info::DisplayInfo;
 use rdev::{Button, Event, EventType, Key};
 use tokio::sync::mpsc;
 use tracing::{info, warn};
@@ -114,6 +115,51 @@ pub fn probe_listen(count: usize) -> Result<()> {
     .map_err(|error| anyhow::anyhow!("{error:?}"))
 }
 
+pub fn probe_displays() -> Result<()> {
+    let displays =
+        DisplayInfo::all().map_err(|error| anyhow::anyhow!("failed to list displays: {error}"))?;
+
+    println!("displays: {}", displays.len());
+    println!(
+        "| index | primary | builtin | name | friendly_name | x | y | width | height | scale | rotation | hz | width_mm | height_mm |"
+    );
+    println!(
+        "| --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+    );
+
+    for (index, display) in displays.iter().enumerate() {
+        println!(
+            "| {index} | {} | {} | {} | {} | {} | {} | {} | {} | {:.2} | {:.0} | {:.2} | {} | {} |",
+            display.is_primary,
+            display.is_builtin,
+            markdown_cell(&display.name),
+            markdown_cell(&display.friendly_name),
+            display.x,
+            display.y,
+            display.width,
+            display.height,
+            display.scale_factor,
+            display.rotation,
+            display.frequency,
+            display.width_mm,
+            display.height_mm,
+        );
+    }
+
+    if let Some((min_x, min_y, max_x, max_y)) = virtual_bounds(&displays) {
+        println!();
+        println!(
+            "virtual_bounds: x={} y={} width={} height={}",
+            min_x,
+            min_y,
+            max_x - min_x,
+            max_y - min_y
+        );
+    }
+
+    Ok(())
+}
+
 pub fn probe_grab(count: usize, suppress: bool) -> Result<()> {
     let remaining = Arc::new(AtomicUsize::new(count.max(1)));
     let remaining_events = Arc::clone(&remaining);
@@ -132,6 +178,27 @@ pub fn probe_grab(count: usize, suppress: bool) -> Result<()> {
         if suppress { None } else { Some(event) }
     })
     .map_err(|error| anyhow::anyhow!("{error:?}"))
+}
+
+fn markdown_cell(value: &str) -> String {
+    value.replace('|', "\\|")
+}
+
+fn virtual_bounds(displays: &[DisplayInfo]) -> Option<(i32, i32, i32, i32)> {
+    let first = displays.first()?;
+    let mut min_x = first.x;
+    let mut min_y = first.y;
+    let mut max_x = first.x + first.width as i32;
+    let mut max_y = first.y + first.height as i32;
+
+    for display in &displays[1..] {
+        min_x = min_x.min(display.x);
+        min_y = min_y.min(display.y);
+        max_x = max_x.max(display.x + display.width as i32);
+        max_y = max_y.max(display.y + display.height as i32);
+    }
+
+    Some((min_x, min_y, max_x, max_y))
 }
 
 pub fn probe_inject_key(key: &str) -> Result<()> {

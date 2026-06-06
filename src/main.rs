@@ -127,6 +127,8 @@ enum DiscoveryCommand {
 
 #[derive(Debug, Subcommand)]
 enum ProbeCommand {
+    /// Print native display geometry for layout calibration.
+    Displays,
     /// Print observed native input events without suppressing them.
     Listen {
         #[arg(short, long, default_value_t = 10)]
@@ -226,6 +228,7 @@ async fn main() -> Result<()> {
             }),
         },
         Command::Probe { command } => match command {
+            ProbeCommand::Displays => platform::probe_displays(),
             ProbeCommand::Listen { count } => platform::probe_listen(count),
             ProbeCommand::Grab { count, suppress } => platform::probe_grab(count, suppress),
             ProbeCommand::Inject { key } => platform::probe_inject_key(&key),

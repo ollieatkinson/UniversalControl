@@ -50,6 +50,11 @@ pub fn probe_listen(_count: usize) -> Result<()> {
     Ok(())
 }
 
+pub fn probe_displays() -> Result<()> {
+    warn!("probe displays is only available on macOS and Windows");
+    Ok(())
+}
+
 pub fn probe_grab(_count: usize, _suppress: bool) -> Result<()> {
     warn!("probe grab is only available on macOS and Windows");
     Ok(())

@@ -75,6 +75,7 @@ Record:
 
 - Windows version and build
 - network adapters and active interface
+- display geometry from `cargo run -- probe displays`
 - whether Apple Bonjour is installed
 - whether the Windows implementation is advertising anything
 - local firewall state for inbound UDP 5353, UDP 3722, and the chosen TCP port
@@ -98,6 +99,14 @@ Repo-native discovery command:
 ```powershell
 cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact
 ```
+
+Repo-native display geometry command:
+
+```powershell
+cargo run -- probe displays
+```
+
+Record the primary display bounds and any negative display origins. These values calibrate `local_width`, `local_height`, `remote_width`, `remote_height`, and `remote_edge` before a bridge run.
 
 If Bonjour's `dns-sd.exe` is installed and available on `PATH`, also compare:
 

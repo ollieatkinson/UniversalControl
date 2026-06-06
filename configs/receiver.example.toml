@@ -1,0 +1,11 @@
+node_name = "macbook"
+role = "receiver"
+peer_addr = "192.168.1.20:24800"
+
+[layout]
+local_width = 1728
+local_height = 1117
+remote_width = 2560
+remote_height = 1440
+remote_edge = "left"
+

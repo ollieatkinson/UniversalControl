@@ -1,0 +1,11 @@
+node_name = "windows-desk"
+role = "input_owner"
+listen_addr = "0.0.0.0:24800"
+
+[layout]
+local_width = 2560
+local_height = 1440
+remote_width = 1728
+remote_height = 1117
+remote_edge = "right"
+

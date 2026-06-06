@@ -10,7 +10,8 @@ separate AnyKBFlow bridge.
 Windows bridge discovery, heartbeats, reconnects, receiver-side injected
 key/button release cleanup, startup common-latch cleanup, planned focus-return
 cleanup, input-owner peer-close route reset, and a native display geometry probe
-are in place, but native Universal Control discovery is still not proven:
+plus peer display-size exchange are in place, but native Universal Control
+discovery is still not proven:
 
 - Windows has not yet proven it can resolve the Mac's `_companion-link._tcp`
   advertisement with the Rust mDNS backend.
@@ -113,3 +114,25 @@ Only run this when a real Mac or iPad Universal Control peer is available.
 This experiment is about protocol shape, not bypassing account identity or
 private trust. Stop if logs show rejection that depends on Apple Account,
 iCloud Keychain, private certificates, or platform attestation.
+
+## Experiment 5: Apple-To-Apple Session Trace
+
+Only run this when Universal Control can actually transfer focus to a Mac or
+iPad target.
+
+On the source Mac:
+
+```sh
+./scripts/mac/capture-uc-session.sh --duration 120
+```
+
+When packet capture is required and you are ready to handle raw `.pcap` files:
+
+```sh
+./scripts/mac/capture-uc-session.sh --duration 120 --tcpdump
+```
+
+Use the action timeline written in the artifact README: idle, edge push, pointer
+movement, one harmless key press, one scroll, return to local, then idle. The
+goal is to label which logs and network streams change at each action before
+attempting any Windows native handshake.

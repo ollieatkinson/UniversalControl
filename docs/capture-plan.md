@@ -51,21 +51,33 @@ Record:
   - drag start and cancel
   - copy/paste if enabled
 
-Suggested commands:
+Recommended command:
 
 ```sh
-./scripts/mac/uc-probe.sh
-log stream --style compact --predicate 'process == "UniversalControl" || process == "rapportd"' > artifacts/uc-session.log
-dns-sd -B _companion-link._tcp local > artifacts/companion-link-browse.log
-sudo tcpdump -i en0 -w artifacts/uc-en0.pcap 'udp port 5353 or udp port 3722 or tcp'
-sudo tcpdump -i awdl0 -w artifacts/uc-awdl0.pcap
+./scripts/mac/capture-uc-session.sh --duration 120
 ```
+
+Add packet capture when ready to collect raw network evidence:
+
+```sh
+./scripts/mac/capture-uc-session.sh --duration 120 --tcpdump
+```
+
+What it captures:
+
+- `dns-sd -B _companion-link._tcp local`
+- `dns-sd -B _universalcontrol._tcp local`
+- unified logs for `UniversalControl`, `rapportd`, `mDNSResponder`, `nearbyd`, and `wifip2pd`
+- launchd snapshots for `com.apple.ensemble` and `com.apple.rapportd`
+- `lsof` network snapshots for `rapportd` and `UniversalControl`
+- optional `tcpdump` packet captures on `en0` plus `awdl0` when present
 
 Notes:
 
-- `tcpdump` requires admin privileges.
+- `--tcpdump` requires admin privileges and writes raw `.pcap` files that must not be committed.
 - `awdl0` may not exist or may not show traffic until peer-to-peer Wi-Fi is active.
-- Keep `log stream` and packet captures scoped to the experiment window.
+- Keep captures scoped to the experiment window.
+- Commit only redacted summaries under `docs/observations/`.
 
 ## Windows Observation Capture
 

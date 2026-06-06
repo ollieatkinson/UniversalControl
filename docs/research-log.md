@@ -214,6 +214,18 @@ published port, TXT key names, TXT value classes, launchd state, and native
 process log counts, but omits raw hostnames, addresses, instance names, TXT
 values, interface identifiers, and unified-log lines.
 
+Added a paired-session capture wrapper:
+
+```sh
+./scripts/mac/capture-uc-session.sh --duration 120
+```
+
+It captures CompanionLink and Universal Control DNS-SD browsing, unified logs,
+launchd snapshots, and `lsof` network snapshots during a real Apple-to-Apple
+Universal Control edge-push session. Passing `--tcpdump` additionally records
+raw packet captures on `en0` and `awdl0` when present. Raw session artifacts stay
+under `artifacts/`; only redacted summaries should be committed.
+
 ### Windows Bridge Progress Versus Native Gap
 
 Windows-side notes now show the separate AnyKBFlow bridge track can advertise
@@ -224,7 +236,9 @@ and releases those inputs when the peer disconnects, plus releases common
 latch-prone modifiers/buttons at receiver session start and when planned focus
 return marks the receiver inactive. The input owner now also resets routing
 state when the receiver connection closes. Those cleanup paths have not yet been
-runtime-tested with native macOS/Windows input injection. A repo-native display
+runtime-tested with native macOS/Windows input injection. Peer `Hello` messages
+now carry each side's local display width and height, letting the input owner
+replace configured remote-dimension fallbacks after connection. A repo-native display
 geometry probe is also available as
 `cargo run -- probe displays`. The first macOS run returned `displays: 0`
 through `display-info` because CoreGraphics active-display enumeration was empty

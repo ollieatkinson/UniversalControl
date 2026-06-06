@@ -55,6 +55,30 @@ cargo run -- probe inject --key KeyA
 
 Valid key names are the `rdev::Key` debug names, such as `KeyA`, `MetaLeft`, `ControlLeft`, `Alt`, `Space`, and `Return`.
 
+## Discovery Probes
+
+Browse for Apple's CompanionLink service:
+
+```sh
+cargo run -- discovery browse --service _companion-link._tcp.local. --seconds 15
+```
+
+Advertise a controlled test service from Windows so macOS can check whether it appears in `dns-sd` and unified logs:
+
+```sh
+cargo run -- discovery advertise \
+  --service _anykbflow-test._tcp.local. \
+  --instance anykbflow-windows \
+  --host anykbflow.local. \
+  --addr 192.0.2.10 \
+  --port 24800 \
+  --txt role=windows \
+  --txt probe=phase1 \
+  --seconds 60
+```
+
+Use the real LAN address for `--addr` during a two-machine test. Do not commit unredacted stable addresses or TXT values.
+
 ## macOS Permissions
 
 The native backend uses global event grab/injection. macOS needs Accessibility permission for the terminal/app running `anykbflow`. If events are not captured or injected, add the launcher app under:

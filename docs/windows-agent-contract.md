@@ -75,3 +75,11 @@ The next Windows report should answer:
 5. Can Windows advertise an mDNS service visible to macOS?
 6. Is the Windows prototype currently source-controlled somewhere outside this repo?
 7. What language/runtime is the current Windows implementation using?
+
+Useful commands from this repo:
+
+```powershell
+cargo run -- discover-companion-link --backend rust-mdns --seconds 30
+cargo run -- discover-companion-link --backend system --seconds 30
+cargo run -- discovery advertise --service _anykbflow-test._tcp.local. --instance anykbflow-windows --host anykbflow.local. --addr <redacted-lan-ip> --port 24800 --txt role=windows --txt probe=phase1 --seconds 60
+```

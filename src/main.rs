@@ -38,10 +38,50 @@ enum Command {
         #[arg(long)]
         include_apple_p2p: bool,
     },
+    /// Browse or advertise arbitrary mDNS services for interop probes.
+    Discovery {
+        #[command(subcommand)]
+        command: DiscoveryCommand,
+    },
     /// Run native input capture/injection probes.
     Probe {
         #[command(subcommand)]
         command: ProbeCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum DiscoveryCommand {
+    /// Browse an arbitrary DNS-SD service with the Rust mDNS backend.
+    Browse {
+        #[arg(long, default_value = "_companion-link._tcp.local.")]
+        service: String,
+
+        #[arg(long, default_value_t = 10)]
+        seconds: u64,
+    },
+    /// Advertise an arbitrary DNS-SD service with the Rust mDNS backend.
+    Advertise {
+        #[arg(long, default_value = "_anykbflow-test._tcp.local.")]
+        service: String,
+
+        #[arg(long, default_value = "anykbflow-windows")]
+        instance: String,
+
+        #[arg(long, default_value = "anykbflow.local.")]
+        host: String,
+
+        #[arg(long, default_value = "127.0.0.1")]
+        addr: String,
+
+        #[arg(long, default_value_t = 24800)]
+        port: u16,
+
+        #[arg(long = "txt")]
+        txt: Vec<String>,
+
+        #[arg(long, default_value_t = 30)]
+        seconds: u64,
     },
 }
 
@@ -94,6 +134,18 @@ async fn main() -> Result<()> {
             backend,
             include_apple_p2p,
         } => discovery::browse_companion_link(seconds, backend.into(), include_apple_p2p),
+        Command::Discovery { command } => match command {
+            DiscoveryCommand::Browse { service, seconds } => discovery::browse(&service, seconds),
+            DiscoveryCommand::Advertise {
+                service,
+                instance,
+                host,
+                addr,
+                port,
+                txt,
+                seconds,
+            } => discovery::advertise(&service, &instance, &host, &addr, port, &txt, seconds),
+        },
         Command::Probe { command } => match command {
             ProbeCommand::Listen { count } => platform::probe_listen(count),
             ProbeCommand::Grab { count, suppress } => platform::probe_grab(count, suppress),

@@ -78,6 +78,8 @@ async fn run_receiver(
     let mut pressed_keys = HashSet::new();
     let mut pressed_buttons = HashSet::new();
 
+    release_common_latches(&platform_tx).await;
+
     loop {
         tokio::select! {
             message = inbound.recv() => {
@@ -108,6 +110,44 @@ async fn run_receiver(
                     return Err(error);
                 }
             }
+        }
+    }
+}
+
+async fn release_common_latches(platform_tx: &tokio::sync::mpsc::Sender<PlatformCommand>) {
+    for key in [
+        "ShiftLeft",
+        "ShiftRight",
+        "ControlLeft",
+        "ControlRight",
+        "Alt",
+        "AltGr",
+        "MetaLeft",
+        "MetaRight",
+        "Function",
+    ] {
+        if platform_tx
+            .send(PlatformCommand::Inject(InputEvent::KeyRelease {
+                key: key.to_string(),
+            }))
+            .await
+            .is_err()
+        {
+            warn!("platform command channel closed while releasing common keys");
+            return;
+        }
+    }
+
+    for button in ["Left", "Right", "Middle"] {
+        if platform_tx
+            .send(PlatformCommand::Inject(InputEvent::ButtonRelease {
+                button: button.to_string(),
+            }))
+            .await
+            .is_err()
+        {
+            warn!("platform command channel closed while releasing common buttons");
+            return;
         }
     }
 }
@@ -209,5 +249,41 @@ mod tests {
 
         assert!(keys.is_empty());
         assert!(buttons.is_empty());
+    }
+
+    #[tokio::test]
+    async fn releases_common_latches_on_session_start() {
+        let (tx, mut rx) = tokio::sync::mpsc::channel(16);
+
+        release_common_latches(&tx).await;
+        drop(tx);
+
+        let mut key_releases = Vec::new();
+        let mut button_releases = Vec::new();
+        while let Some(command) = rx.recv().await {
+            match command {
+                PlatformCommand::Inject(InputEvent::KeyRelease { key }) => key_releases.push(key),
+                PlatformCommand::Inject(InputEvent::ButtonRelease { button }) => {
+                    button_releases.push(button);
+                }
+                other => panic!("unexpected release cleanup command: {other:?}"),
+            }
+        }
+
+        assert_eq!(
+            key_releases,
+            vec![
+                "ShiftLeft",
+                "ShiftRight",
+                "ControlLeft",
+                "ControlRight",
+                "Alt",
+                "AltGr",
+                "MetaLeft",
+                "MetaRight",
+                "Function",
+            ]
+        );
+        assert_eq!(button_releases, vec!["Left", "Right", "Middle"]);
     }
 }

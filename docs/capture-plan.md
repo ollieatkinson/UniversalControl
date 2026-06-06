@@ -96,7 +96,7 @@ Resolve-DnsName -Type PTR _companion-link._tcp.local
 Repo-native discovery command:
 
 ```powershell
-cargo run -- discover-companion-link --backend rust-mdns --seconds 30
+cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact
 ```
 
 If Bonjour's `dns-sd.exe` is installed and available on `PATH`, also compare:
@@ -104,6 +104,8 @@ If Bonjour's `dns-sd.exe` is installed and available on `PATH`, also compare:
 ```powershell
 cargo run -- discover-companion-link --backend system --seconds 30
 ```
+
+The Rust `--redact` output is commit-safe for normal notes: it preserves event type, service type, port, TXT key names, TXT value length/class, and address count, but hides hostnames, addresses, instance names, and TXT values. Treat system `dns-sd` output as raw until manually sanitized.
 
 Expected Windows deliverable:
 

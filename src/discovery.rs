@@ -38,19 +38,29 @@ pub struct AdvertiseOptions {
 pub fn browse_companion_link(
     seconds: u64,
     backend: DiscoveryBackend,
+    redact: bool,
     include_apple_p2p: bool,
 ) -> Result<()> {
     let seconds = seconds.max(1);
 
     match backend {
-        DiscoveryBackend::Auto if has_dns_sd() => browse_with_dns_sd(seconds),
-        DiscoveryBackend::Auto => browse(COMPANION_LINK_SERVICE, seconds, include_apple_p2p),
+        DiscoveryBackend::Auto if has_dns_sd() && !redact => browse_with_dns_sd(seconds),
+        DiscoveryBackend::Auto => {
+            browse(COMPANION_LINK_SERVICE, seconds, redact, include_apple_p2p)
+        }
+        DiscoveryBackend::System if redact => {
+            bail!(
+                "--redact is only supported by the Rust mDNS backend; rerun with --backend rust-mdns"
+            )
+        }
         DiscoveryBackend::System => browse_with_dns_sd(seconds),
-        DiscoveryBackend::RustMdns => browse(COMPANION_LINK_SERVICE, seconds, include_apple_p2p),
+        DiscoveryBackend::RustMdns => {
+            browse(COMPANION_LINK_SERVICE, seconds, redact, include_apple_p2p)
+        }
     }
 }
 
-pub fn browse(service: &str, seconds: u64, include_apple_p2p: bool) -> Result<()> {
+pub fn browse(service: &str, seconds: u64, redact: bool, include_apple_p2p: bool) -> Result<()> {
     let service = normalize_service_type(service)?;
     let browse_duration = Duration::from_secs(seconds.max(1));
     let mdns = ServiceDaemon::new().context("failed to create mDNS daemon")?;
@@ -67,13 +77,19 @@ pub fn browse(service: &str, seconds: u64, include_apple_p2p: bool) -> Result<()
     let deadline = started + browse_duration;
 
     println!("Browsing {service} with Rust mDNS for {}s", seconds.max(1));
-    println!(
-        "Review output before sharing: hostnames, addresses, and TXT values may be stable identifiers."
-    );
+    if redact {
+        println!(
+            "Redaction enabled: hostnames, addresses, instance names, and TXT values will be summarized."
+        );
+    } else {
+        println!(
+            "Review output before sharing: hostnames, addresses, and TXT values may be stable identifiers."
+        );
+    }
 
     while let Some(remaining) = deadline.checked_duration_since(Instant::now()) {
         if let Ok(event) = receiver.recv_timeout(remaining.min(Duration::from_millis(250))) {
-            print_event(started, event);
+            print_event(started, event, redact);
         }
     }
 
@@ -208,7 +224,7 @@ pub fn discover_bridge_peer(timeout: Duration) -> Result<SocketAddr> {
                     return Ok(addr);
                 }
             }
-            Ok(event) => print_event(started, event),
+            Ok(event) => print_event(started, event, false),
             Err(_) => {}
         }
     }
@@ -249,40 +265,54 @@ fn browse_with_dns_sd(seconds: u64) -> Result<()> {
     }
 }
 
-fn print_event(started: Instant, event: ServiceEvent) {
+fn print_event(started: Instant, event: ServiceEvent, redact: bool) {
     match event {
         ServiceEvent::SearchStarted(service_type) => {
+            let service_type = format_service_event_subject(&service_type, redact);
             println!(
                 "[{:>6.2?}] search_started {service_type}",
                 started.elapsed()
             );
         }
         ServiceEvent::ServiceFound(service_type, fullname) => {
+            let service_type = format_service_event_subject(&service_type, redact);
+            let fullname = format_identifier(&fullname, redact);
             println!(
                 "[{:>6.2?}] service_found service_type={service_type} fullname={fullname}",
                 started.elapsed()
             );
         }
-        ServiceEvent::ServiceResolved(info) => print_resolved(started, &info),
+        ServiceEvent::ServiceResolved(info) => print_resolved(started, &info, redact),
         ServiceEvent::ServiceRemoved(service_type, fullname) => {
+            let service_type = format_service_event_subject(&service_type, redact);
+            let fullname = format_identifier(&fullname, redact);
             println!(
                 "[{:>6.2?}] service_removed service_type={service_type} fullname={fullname}",
                 started.elapsed()
             );
         }
         ServiceEvent::SearchStopped(service_type) => {
+            let service_type = format_service_event_subject(&service_type, redact);
             println!(
                 "[{:>6.2?}] search_stopped {service_type}",
                 started.elapsed()
             );
         }
         other => {
-            println!("[{:>6.2?}] event {other:?}", started.elapsed());
+            if redact {
+                println!(
+                    "[{:>6.2?}] event kind={}",
+                    started.elapsed(),
+                    service_event_kind(&other)
+                );
+            } else {
+                println!("[{:>6.2?}] event {other:?}", started.elapsed());
+            }
         }
     }
 }
 
-fn print_resolved(started: Instant, info: &ResolvedService) {
+fn print_resolved(started: Instant, info: &ResolvedService, redact: bool) {
     let addresses = info
         .get_addresses()
         .iter()
@@ -294,16 +324,25 @@ fn print_resolved(started: Instant, info: &ResolvedService) {
     let txt = info
         .get_properties()
         .iter()
-        .map(|property| format!("{}={}", property.key(), property.val_str()))
+        .map(|property| {
+            format_txt_property(property.key(), property.val(), property.val_str(), redact)
+        })
         .collect::<Vec<_>>()
         .join(" ");
+    let fullname = format_identifier(info.get_fullname(), redact);
+    let hostname = format_identifier(info.get_hostname(), redact);
+    let addresses = if redact {
+        format!("<redacted count={}>", info.get_addresses().len())
+    } else {
+        addresses
+    };
 
     println!(
         "[{:>6.2?}] service_resolved fullname={} type={} host={} port={} addresses=[{}] txt=[{}]",
         started.elapsed(),
-        info.get_fullname(),
+        fullname,
         info.ty_domain,
-        info.get_hostname(),
+        hostname,
         info.get_port(),
         addresses,
         txt
@@ -391,6 +430,136 @@ fn parse_txt_properties(values: &[String]) -> Result<HashMap<String, String>> {
     }
 
     Ok(properties)
+}
+
+fn format_identifier(value: &str, redact: bool) -> String {
+    if redact {
+        format!("<redacted len={}>", value.len())
+    } else {
+        value.to_string()
+    }
+}
+
+fn format_service_event_subject(value: &str, redact: bool) -> String {
+    if redact {
+        value
+            .split_whitespace()
+            .next()
+            .unwrap_or("<unknown-service>")
+            .to_string()
+    } else {
+        value.to_string()
+    }
+}
+
+fn format_txt_property(key: &str, val: Option<&[u8]>, val_str: &str, redact: bool) -> String {
+    if redact {
+        format!(
+            "{key}=<redacted len={} class={}>",
+            val.map_or(0, |bytes| bytes.len()),
+            classify_txt_value(val)
+        )
+    } else {
+        format!("{key}={val_str}")
+    }
+}
+
+fn classify_txt_value(val: Option<&[u8]>) -> &'static str {
+    let Some(bytes) = val else {
+        return "flag";
+    };
+    if bytes.is_empty() {
+        return "empty";
+    }
+
+    let Ok(text) = std::str::from_utf8(bytes) else {
+        return "binary";
+    };
+    let text = text.trim();
+    if text.is_empty() {
+        return "whitespace";
+    }
+    if text.eq_ignore_ascii_case("true") || text.eq_ignore_ascii_case("false") {
+        return "boolean";
+    }
+    if text.chars().all(|character| character.is_ascii_digit()) {
+        return "integer";
+    }
+    if looks_like_version(text) {
+        return "version";
+    }
+    if looks_like_mac_address(text) {
+        return "mac-like";
+    }
+    if looks_like_uuid(text) {
+        return "uuid-like";
+    }
+    if text.len() >= 2
+        && text.len() % 2 == 0
+        && text.chars().all(|character| character.is_ascii_hexdigit())
+    {
+        return "hex";
+    }
+    if text
+        .chars()
+        .all(|character| character.is_ascii_graphic() || character == ' ')
+    {
+        return "text";
+    }
+
+    "utf8"
+}
+
+fn looks_like_version(value: &str) -> bool {
+    let mut parts = value.split('.');
+    let Some(first) = parts.next() else {
+        return false;
+    };
+    !first.is_empty()
+        && first.chars().all(|character| character.is_ascii_digit())
+        && parts.clone().next().is_some()
+        && parts.all(|part| {
+            !part.is_empty() && part.chars().all(|character| character.is_ascii_digit())
+        })
+}
+
+fn looks_like_mac_address(value: &str) -> bool {
+    let separator = if value.contains(':') {
+        ':'
+    } else if value.contains('-') {
+        '-'
+    } else {
+        return false;
+    };
+    let parts = value.split(separator).collect::<Vec<_>>();
+    parts.len() == 6
+        && parts.iter().all(|part| {
+            part.len() == 2 && part.chars().all(|character| character.is_ascii_hexdigit())
+        })
+}
+
+fn looks_like_uuid(value: &str) -> bool {
+    let parts = value.split('-').collect::<Vec<_>>();
+    let expected_lengths = [8, 4, 4, 4, 12];
+    parts.len() == expected_lengths.len()
+        && parts
+            .iter()
+            .zip(expected_lengths)
+            .all(|(part, expected_len)| {
+                part.len() == expected_len
+                    && part.chars().all(|character| character.is_ascii_hexdigit())
+            })
+}
+
+fn service_event_kind(event: &ServiceEvent) -> &'static str {
+    match event {
+        ServiceEvent::SearchStarted(_) => "search_started",
+        ServiceEvent::ServiceFound(_, _) => "service_found",
+        ServiceEvent::ServiceResolved(_) => "service_resolved",
+        ServiceEvent::ServiceRemoved(_, _) => "service_removed",
+        ServiceEvent::SearchStopped(_) => "search_stopped",
+        _ => "other",
+    }
 }
 
 fn socket_addr_from_resolved(info: &ResolvedService) -> Option<SocketAddr> {
@@ -552,5 +721,54 @@ mod tests {
         let advertised = advertise_ip_for(SocketAddr::new(ip, 24800));
 
         assert_eq!(advertised, ip);
+    }
+
+    #[test]
+    fn classifies_txt_values_for_redaction() {
+        assert_eq!(classify_txt_value(None), "flag");
+        assert_eq!(classify_txt_value(Some(b"".as_slice())), "empty");
+        assert_eq!(classify_txt_value(Some(b"true".as_slice())), "boolean");
+        assert_eq!(classify_txt_value(Some(b"1234".as_slice())), "integer");
+        assert_eq!(classify_txt_value(Some(b"1.2.3".as_slice())), "version");
+        assert_eq!(
+            classify_txt_value(Some(b"00:11:22:33:44:55".as_slice())),
+            "mac-like"
+        );
+        assert_eq!(
+            classify_txt_value(Some(b"550e8400-e29b-41d4-a716-446655440000".as_slice())),
+            "uuid-like"
+        );
+        assert_eq!(classify_txt_value(Some(b"deadbeef".as_slice())), "hex");
+        assert_eq!(classify_txt_value(Some(&[0xff, 0x00])), "binary");
+    }
+
+    #[test]
+    fn formats_txt_properties_without_leaking_values_when_redacted() {
+        assert_eq!(
+            format_txt_property("rpVr", Some(b"174.4.1".as_slice()), "174.4.1", true),
+            "rpVr=<redacted len=7 class=version>"
+        );
+        assert_eq!(
+            format_txt_property("role", Some(b"probe".as_slice()), "probe", false),
+            "role=probe"
+        );
+    }
+
+    #[test]
+    fn redacts_search_event_interface_details() {
+        assert_eq!(
+            format_service_event_subject(
+                "_companion-link._tcp.local. on 2 interfaces [en0 (12), lo0 (1)]",
+                true
+            ),
+            "_companion-link._tcp.local."
+        );
+        assert_eq!(
+            format_service_event_subject(
+                "_companion-link._tcp.local. on 2 interfaces [en0 (12), lo0 (1)]",
+                false
+            ),
+            "_companion-link._tcp.local. on 2 interfaces [en0 (12), lo0 (1)]"
+        );
     }
 }

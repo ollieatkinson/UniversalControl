@@ -34,6 +34,9 @@ enum Command {
         /// Discovery backend to use.
         #[arg(long, value_enum, default_value_t = DiscoveryBackend::Auto)]
         backend: DiscoveryBackend,
+        /// Redact hostnames, addresses, instance names, and TXT values.
+        #[arg(long)]
+        redact: bool,
         /// Include Apple peer-to-peer interfaces such as awdl on macOS.
         #[arg(long)]
         include_apple_p2p: bool,
@@ -88,6 +91,9 @@ enum DiscoveryCommand {
         service: String,
         #[arg(long, default_value_t = 10)]
         seconds: u64,
+        /// Redact hostnames, addresses, instance names, and TXT values.
+        #[arg(long)]
+        redact: bool,
         /// Include Apple peer-to-peer interfaces such as awdl on macOS.
         #[arg(long)]
         include_apple_p2p: bool,
@@ -166,8 +172,9 @@ async fn main() -> Result<()> {
         Command::DiscoverCompanionLink {
             seconds,
             backend,
+            redact,
             include_apple_p2p,
-        } => discovery::browse_companion_link(seconds, backend.into(), include_apple_p2p),
+        } => discovery::browse_companion_link(seconds, backend.into(), redact, include_apple_p2p),
         Command::AdvertiseMdns {
             seconds,
             service_type,
@@ -193,8 +200,9 @@ async fn main() -> Result<()> {
             DiscoveryCommand::Browse {
                 service,
                 seconds,
+                redact,
                 include_apple_p2p,
-            } => discovery::browse(&service, seconds, include_apple_p2p),
+            } => discovery::browse(&service, seconds, redact, include_apple_p2p),
             DiscoveryCommand::Advertise {
                 service,
                 instance,

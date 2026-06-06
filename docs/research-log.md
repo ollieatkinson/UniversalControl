@@ -142,6 +142,14 @@ Local validation on macOS:
 - `--backend rust-mdns` resolved this Mac's `_companion-link._tcp` service and printed the dynamic Rapport port plus `rp*` TXT keys.
 - Raw output was not committed because it includes local hostnames and stable-looking TXT values.
 
+Added redacted discovery output:
+
+```sh
+cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact
+```
+
+This mode is intended for Windows-machine notes that can be committed. It preserves event type, service type, port, TXT key names, TXT value length/class, and address count, while hiding hostnames, addresses, instance names, and TXT values. Redaction is only available on the Rust mDNS backend; system `dns-sd` output remains raw pass-through output.
+
 ### Repo-Native Advertisement Probe
 
 Added a bounded mDNS advertiser:

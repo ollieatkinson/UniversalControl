@@ -39,9 +39,10 @@ Useful variants:
 ```sh
 cargo run -- discover-companion-link --backend system --seconds 10
 cargo run -- discover-companion-link --backend rust-mdns --seconds 10
+cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact
 ```
 
-`auto` uses the system `dns-sd` command when available, otherwise it uses the pure Rust mDNS backend. Review output before sharing because hostnames, addresses, and TXT values can be stable identifiers.
+`auto` uses the system `dns-sd` command when available, otherwise it uses the pure Rust mDNS backend. With `--redact`, `auto` uses the Rust backend because system `dns-sd` output is pass-through and cannot be sanitized. Review unredacted output before sharing because hostnames, addresses, instance names, and TXT values can be stable identifiers.
 
 Run this on Windows to advertise a benign probe service while the Mac watches with `dns-sd`:
 

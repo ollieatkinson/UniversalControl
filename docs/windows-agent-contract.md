@@ -70,7 +70,7 @@ The next Windows report should answer:
 
 1. Does Windows see this Mac's `_companion-link._tcp.local` advertisement?
 2. Which TXT keys and port are visible?
-3. What happens when running `cargo run -- discover-companion-link --backend rust-mdns --seconds 30`?
+3. What happens when running `cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact`?
 4. If Bonjour is installed, what happens with `cargo run -- discover-companion-link --backend system --seconds 30`?
 5. What happens when Windows runs `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe`?
 6. Does macOS see the Windows service with `dns-sd -B _anykbflow-probe._tcp local`?
@@ -87,8 +87,10 @@ The Mac-side watcher for questions 6 and 7 is:
 Useful commands from this repo:
 
 ```powershell
-cargo run -- discover-companion-link --backend rust-mdns --seconds 30
+cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact
 cargo run -- discover-companion-link --backend system --seconds 30
 cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
 cargo run -- discovery advertise --service _anykbflow-probe._tcp.local. --instance "AnyKBFlow Probe" --addr <redacted-lan-ip> --port 49152 --txt phase=visibility --txt role=windows-probe --seconds 60
 ```
+
+The redacted Rust mDNS output should preserve event type, service type, port, TXT key names, TXT value length/class, and address count. Do not commit unredacted `dns-sd` or `--backend system` output unless it has been manually reviewed and sanitized.

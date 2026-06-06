@@ -2,7 +2,7 @@ use anyhow::Result;
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 
-use crate::protocol::InputEvent;
+use crate::protocol::{DisplayGeometry, InputEvent};
 
 #[derive(Debug)]
 pub struct CaptureEvent {
@@ -53,6 +53,10 @@ pub fn probe_listen(_count: usize) -> Result<()> {
 pub fn probe_displays() -> Result<()> {
     warn!("probe displays is only available on macOS and Windows");
     Ok(())
+}
+
+pub fn primary_display_geometry() -> Result<Option<DisplayGeometry>> {
+    Ok(None)
 }
 
 pub fn probe_grab(_count: usize, _suppress: bool) -> Result<()> {

@@ -21,7 +21,7 @@ use rdev::{Button, Event, EventType, Key};
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 
-use crate::protocol::InputEvent;
+use crate::protocol::{DisplayGeometry, InputEvent};
 
 #[derive(Debug)]
 pub struct CaptureEvent {
@@ -166,6 +166,14 @@ pub fn probe_displays() -> Result<()> {
     Ok(())
 }
 
+pub fn primary_display_geometry() -> Result<Option<DisplayGeometry>> {
+    let (displays, _source) = display_infos()?;
+    Ok(primary_display(&displays).map(|display| DisplayGeometry {
+        width: display.width as f64,
+        height: display.height as f64,
+    }))
+}
+
 fn display_infos() -> Result<(Vec<DisplayInfo>, &'static str)> {
     let displays =
         DisplayInfo::all().map_err(|error| anyhow::anyhow!("failed to list displays: {error}"))?;
@@ -177,6 +185,13 @@ fn display_infos() -> Result<(Vec<DisplayInfo>, &'static str)> {
     }
 
     Ok((displays, "display-info"))
+}
+
+fn primary_display(displays: &[DisplayInfo]) -> Option<&DisplayInfo> {
+    displays
+        .iter()
+        .find(|display| display.is_primary)
+        .or_else(|| displays.first())
 }
 
 #[cfg(target_os = "macos")]

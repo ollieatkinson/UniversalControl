@@ -10,7 +10,7 @@ use tracing::{debug, info, warn};
 
 use crate::{
     config::{Config, Role},
-    discovery,
+    discovery, platform,
     protocol::{DisplayGeometry, PeerMessage},
 };
 
@@ -59,14 +59,7 @@ pub async fn connect(config: &Config) -> Result<Peer> {
     let (outbound_tx, mut outbound_rx) = mpsc::channel::<PeerMessage>(256);
     let (inbound_tx, inbound_rx) = mpsc::channel::<PeerMessage>(256);
 
-    let hello = PeerMessage::Hello {
-        node_name: config.node_name.clone(),
-        role: config.role,
-        local_display: DisplayGeometry {
-            width: config.layout.local_width,
-            height: config.layout.local_height,
-        },
-    };
+    let hello = hello_message(config);
     outbound_tx.send(hello).await?;
 
     tokio::spawn(async move {
@@ -118,6 +111,29 @@ pub async fn connect(config: &Config) -> Result<Peer> {
     })
 }
 
+fn hello_message(config: &Config) -> PeerMessage {
+    let detected_display = match platform::primary_display_geometry() {
+        Ok(display) => display,
+        Err(error) => {
+            warn!("failed to detect primary display geometry for hello: {error}");
+            None
+        }
+    };
+
+    PeerMessage::Hello {
+        node_name: config.node_name.clone(),
+        role: config.role,
+        local_display: hello_display_geometry(config, detected_display),
+    }
+}
+
+fn hello_display_geometry(config: &Config, detected: Option<DisplayGeometry>) -> DisplayGeometry {
+    detected.unwrap_or(DisplayGeometry {
+        width: config.layout.local_width,
+        height: config.layout.local_height,
+    })
+}
+
 pub async fn send(outbound: &mpsc::Sender<PeerMessage>, message: PeerMessage) -> Result<()> {
     outbound
         .send(message)
@@ -130,4 +146,58 @@ pub fn ensure_receiver_has_peer(config: &Config) -> Result<()> {
         warn!("receiver peer_addr omitted; using mDNS discovery");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{Edge, Layout};
+
+    fn config() -> Config {
+        Config {
+            node_name: "node-test".to_string(),
+            role: Role::InputOwner,
+            listen_addr: "127.0.0.1:24800".parse().ok(),
+            peer_addr: None,
+            layout: Layout {
+                local_width: 100.0,
+                local_height: 50.0,
+                remote_width: 80.0,
+                remote_height: 40.0,
+                remote_edge: Edge::Right,
+            },
+        }
+    }
+
+    #[test]
+    fn hello_geometry_uses_detected_display_when_available() {
+        let geometry = hello_display_geometry(
+            &config(),
+            Some(DisplayGeometry {
+                width: 300.0,
+                height: 200.0,
+            }),
+        );
+
+        assert_eq!(
+            geometry,
+            DisplayGeometry {
+                width: 300.0,
+                height: 200.0
+            }
+        );
+    }
+
+    #[test]
+    fn hello_geometry_falls_back_to_config() {
+        let geometry = hello_display_geometry(&config(), None);
+
+        assert_eq!(
+            geometry,
+            DisplayGeometry {
+                width: 100.0,
+                height: 50.0
+            }
+        );
+    }
 }

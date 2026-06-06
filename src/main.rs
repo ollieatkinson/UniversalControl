@@ -52,6 +52,9 @@ enum Command {
         /// Hostname to publish, with or without the .local. suffix. Defaults to this machine's hostname.
         #[arg(long)]
         hostname: Option<String>,
+        /// Explicit IP address to publish. If omitted, local interface addresses are selected automatically.
+        #[arg(long)]
+        addr: Option<String>,
         /// TCP port to publish in the SRV record.
         #[arg(long, default_value_t = 49152)]
         port: u16,
@@ -64,6 +67,77 @@ enum Command {
         /// Include Apple peer-to-peer interfaces such as awdl on macOS.
         #[arg(long)]
         include_apple_p2p: bool,
+    },
+    /// Browse or advertise arbitrary mDNS services for interop probes.
+    Discovery {
+        #[command(subcommand)]
+        command: DiscoveryCommand,
+    },
+    /// Run native input capture/injection probes.
+    Probe {
+        #[command(subcommand)]
+        command: ProbeCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum DiscoveryCommand {
+    /// Browse an arbitrary DNS-SD service with the Rust mDNS backend.
+    Browse {
+        #[arg(long, default_value = "_companion-link._tcp.local.")]
+        service: String,
+        #[arg(long, default_value_t = 10)]
+        seconds: u64,
+        /// Include Apple peer-to-peer interfaces such as awdl on macOS.
+        #[arg(long)]
+        include_apple_p2p: bool,
+    },
+    /// Advertise an arbitrary DNS-SD service with the Rust mDNS backend.
+    Advertise {
+        #[arg(long, default_value = "_anykbflow-probe._tcp")]
+        service: String,
+        #[arg(long, default_value = "AnyKBFlow Probe")]
+        instance: String,
+        /// Hostname to publish. Defaults to this machine's hostname.
+        #[arg(long)]
+        host: Option<String>,
+        /// Explicit IP address to publish. If omitted, local interface addresses are selected automatically.
+        #[arg(long)]
+        addr: Option<String>,
+        #[arg(long, default_value_t = 49152)]
+        port: u16,
+        #[arg(long = "txt")]
+        txt: Vec<String>,
+        #[arg(long, default_value_t = 30)]
+        seconds: u64,
+        /// Allow advertising Apple-owned service types such as _companion-link._tcp.
+        #[arg(long)]
+        allow_apple_service: bool,
+        /// Include Apple peer-to-peer interfaces such as awdl on macOS.
+        #[arg(long)]
+        include_apple_p2p: bool,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum ProbeCommand {
+    /// Print observed native input events without suppressing them.
+    Listen {
+        #[arg(short, long, default_value_t = 10)]
+        count: usize,
+    },
+    /// Grab native input events, optionally suppressing local delivery.
+    Grab {
+        #[arg(short, long, default_value_t = 10)]
+        count: usize,
+
+        #[arg(long)]
+        suppress: bool,
+    },
+    /// Inject a single key press/release.
+    Inject {
+        #[arg(long, default_value = "KeyA")]
+        key: String,
     },
 }
 
@@ -99,6 +173,7 @@ async fn main() -> Result<()> {
             service_type,
             instance,
             hostname,
+            addr,
             port,
             txt,
             allow_apple_service,
@@ -108,11 +183,45 @@ async fn main() -> Result<()> {
             service_type,
             instance,
             hostname,
+            addr,
             port,
             txt,
             allow_apple_service,
             include_apple_p2p,
         }),
+        Command::Discovery { command } => match command {
+            DiscoveryCommand::Browse {
+                service,
+                seconds,
+                include_apple_p2p,
+            } => discovery::browse(&service, seconds, include_apple_p2p),
+            DiscoveryCommand::Advertise {
+                service,
+                instance,
+                host,
+                addr,
+                port,
+                txt,
+                seconds,
+                allow_apple_service,
+                include_apple_p2p,
+            } => discovery::advertise_mdns(discovery::AdvertiseOptions {
+                seconds,
+                service_type: service,
+                instance,
+                hostname: host,
+                addr,
+                port,
+                txt,
+                allow_apple_service,
+                include_apple_p2p,
+            }),
+        },
+        Command::Probe { command } => match command {
+            ProbeCommand::Listen { count } => platform::probe_listen(count),
+            ProbeCommand::Grab { count, suppress } => platform::probe_grab(count, suppress),
+            ProbeCommand::Inject { key } => platform::probe_inject_key(&key),
+        },
     }
 }
 

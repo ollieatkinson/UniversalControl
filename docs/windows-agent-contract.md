@@ -77,3 +77,12 @@ The next Windows report should answer:
 7. Does macOS resolve the Windows service with `dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local`?
 8. Is the Windows prototype currently source-controlled somewhere outside this repo?
 9. What language/runtime is the current Windows implementation using?
+
+Useful commands from this repo:
+
+```powershell
+cargo run -- discover-companion-link --backend rust-mdns --seconds 30
+cargo run -- discover-companion-link --backend system --seconds 30
+cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
+cargo run -- discovery advertise --service _anykbflow-probe._tcp.local. --instance "AnyKBFlow Probe" --addr <redacted-lan-ip> --port 49152 --txt phase=visibility --txt role=windows-probe --seconds 60
+```

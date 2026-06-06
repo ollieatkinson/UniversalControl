@@ -10,24 +10,48 @@ Please pull this repo and test the native backend on macOS.
    cargo check
    ```
 
-2. Run as receiver with the Windows machine as input owner:
+2. Probe passive capture:
+
+   ```sh
+   cargo run -- probe listen --count 20
+   ```
+
+3. Probe grab without suppression:
+
+   ```sh
+   cargo run -- probe grab --count 20
+   ```
+
+4. Probe grab with suppression:
+
+   ```sh
+   cargo run -- probe grab --count 20 --suppress
+   ```
+
+5. Probe injection:
+
+   ```sh
+   cargo run -- probe inject --key KeyA
+   ```
+
+6. Run as receiver with the Windows machine as input owner:
 
    ```sh
    cargo run -- --config configs/receiver.example.toml
    ```
 
-3. Run as input owner with the Windows machine as receiver:
+7. Run as input owner with the Windows machine as receiver:
 
    ```sh
    cargo run -- --config configs/input-owner.example.toml
    ```
 
-4. Record whether `rdev::grab` captures Keychron events.
-5. Record whether returning `None` from the grab callback suppresses local keyboard and mouse delivery.
-6. Record whether `rdev::simulate` injects into normal apps.
-7. Record required macOS permissions and whether logout/restart was needed.
-8. Record modifier behavior for Command, Option, Control, and Fn/function row.
-9. Check whether Secure Input breaks capture in Terminal, password fields, browsers, and IDEs.
+8. Record whether `rdev::grab` captures Keychron events.
+9. Record whether returning `None` from the grab callback suppresses local keyboard and mouse delivery.
+10. Record whether `rdev::simulate` injects into normal apps.
+11. Record required macOS permissions and whether logout/restart was needed.
+12. Record modifier behavior for Command, Option, Control, and Fn/function row.
+13. Check whether Secure Input breaks capture in Terminal, password fields, browsers, and IDEs.
 
 ## Notes To Push Back
 

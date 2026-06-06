@@ -56,9 +56,7 @@ impl Config {
             Role::InputOwner if self.listen_addr.is_none() => {
                 bail!("input_owner role requires listen_addr");
             }
-            Role::Receiver if self.peer_addr.is_none() => {
-                bail!("receiver role requires peer_addr");
-            }
+            Role::Receiver => {}
             _ => {}
         }
 

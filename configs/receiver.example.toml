@@ -1,6 +1,7 @@
 node_name = "macbook"
 role = "receiver"
-peer_addr = "192.168.1.20:24800"
+# Optional. If omitted, the receiver discovers an input_owner via _anykbflow._tcp.local.
+# peer_addr = "192.168.1.20:24800"
 
 [layout]
 local_width = 1728

@@ -59,6 +59,8 @@ dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local
 
 The advertiser refuses Apple-owned service types such as `_companion-link._tcp` unless `--allow-apple-service` is supplied for a controlled native-compatibility experiment.
 
+The fallback bridge advertises `_anykbflow._tcp.local.` for project-owned peer discovery. Native Apple compatibility experiments continue to use `_companion-link._tcp.local.` and are tracked separately.
+
 ## Current Findings
 
 - macOS Universal Control is implemented by `/System/Library/CoreServices/UniversalControl.app`, bundle identifier `com.apple.universalcontrol`.

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::{TcpListener, TcpStream},
@@ -10,6 +10,7 @@ use tracing::{debug, info, warn};
 
 use crate::{
     config::{Config, Role},
+    discovery,
     protocol::PeerMessage,
 };
 
@@ -27,15 +28,18 @@ pub async fn connect(config: &Config) -> Result<Peer> {
             let listener = TcpListener::bind(listen_addr)
                 .await
                 .with_context(|| format!("failed to bind {listen_addr}"))?;
+            discovery::spawn_bridge_advertisement(&config.node_name, listen_addr)?;
             info!("waiting for receiver on {}", listen_addr);
             let (stream, remote_addr) = listener.accept().await?;
             info!("receiver connected from {}", remote_addr);
             stream
         }
         Role::Receiver => {
-            let peer_addr = config
-                .peer_addr
-                .context("receiver role requires peer_addr")?;
+            let peer_addr = match config.peer_addr {
+                Some(peer_addr) => peer_addr,
+                None => discovery::discover_bridge_peer(Duration::from_secs(30))
+                    .context("failed to discover AnyKBFlow input owner")?,
+            };
             loop {
                 match TcpStream::connect(peer_addr).await {
                     Ok(stream) => {
@@ -118,7 +122,7 @@ pub async fn send(outbound: &mpsc::Sender<PeerMessage>, message: PeerMessage) ->
 
 pub fn ensure_receiver_has_peer(config: &Config) -> Result<()> {
     if config.role == Role::Receiver && config.peer_addr.is_none() {
-        bail!("receiver role needs peer_addr");
+        warn!("receiver peer_addr omitted; using mDNS discovery");
     }
     Ok(())
 }

@@ -1,6 +1,7 @@
 use std::{
     collections::{BTreeSet, HashMap},
     io,
+    net::{IpAddr, SocketAddr, UdpSocket},
     process::{Command, Stdio},
     thread,
     time::{Duration, Instant},
@@ -11,6 +12,7 @@ use mdns_sd::{ResolvedService, ServiceDaemon, ServiceEvent, ServiceInfo};
 
 const COMPANION_LINK_SERVICE: &str = "_companion-link._tcp.local.";
 const DNS_SD_SERVICE: &str = "_companion-link._tcp";
+const ANYKBFLOW_SERVICE: &str = "_anykbflow._tcp.local.";
 
 #[derive(Clone, Copy, Debug)]
 pub enum DiscoveryBackend {
@@ -139,6 +141,76 @@ pub fn advertise_mdns(options: AdvertiseOptions) -> Result<()> {
 
     mdns.shutdown().context("failed to shut down mDNS daemon")?;
     Ok(())
+}
+
+pub fn spawn_bridge_advertisement(node_name: &str, listen_addr: SocketAddr) -> Result<()> {
+    let instance = sanitize_instance_name(node_name);
+    let host = format!("{instance}.local.");
+    let port = listen_addr.port();
+    let advertise_addr = advertise_ip_for(listen_addr);
+    let properties = HashMap::from([
+        ("role".to_string(), "input_owner".to_string()),
+        ("protocol".to_string(), "json-lines-v1".to_string()),
+    ]);
+    let mdns = ServiceDaemon::new().context("failed to create mDNS daemon")?;
+    let service_info = ServiceInfo::new(
+        ANYKBFLOW_SERVICE,
+        &instance,
+        &host,
+        advertise_addr,
+        port,
+        Some(properties),
+    )
+    .context("failed to build AnyKBFlow service info")?;
+    let fullname = service_info.get_fullname().to_string();
+
+    mdns.register(service_info)
+        .with_context(|| format!("failed to advertise {fullname}"))?;
+    println!("advertising {fullname} at {advertise_addr}:{port}");
+
+    thread::spawn(move || {
+        let _mdns = mdns;
+        loop {
+            thread::park();
+        }
+    });
+
+    Ok(())
+}
+
+pub fn discover_bridge_peer(timeout: Duration) -> Result<SocketAddr> {
+    let mdns = ServiceDaemon::new().context("failed to create mDNS daemon")?;
+    let receiver = mdns
+        .browse(ANYKBFLOW_SERVICE)
+        .context("failed to browse AnyKBFlow service")?;
+    let started = Instant::now();
+    let deadline = started + timeout;
+
+    println!(
+        "discovering {ANYKBFLOW_SERVICE} for {}s",
+        timeout.as_secs().max(1)
+    );
+
+    while let Some(remaining) = deadline.checked_duration_since(Instant::now()) {
+        match receiver.recv_timeout(remaining.min(Duration::from_millis(250))) {
+            Ok(ServiceEvent::ServiceResolved(info)) => {
+                if let Some(addr) = socket_addr_from_resolved(&info) {
+                    println!("discovered {} at {}", info.get_fullname(), addr);
+                    mdns.stop_browse(ANYKBFLOW_SERVICE)
+                        .context("failed to stop AnyKBFlow browse")?;
+                    mdns.shutdown().context("failed to shut down mDNS daemon")?;
+                    return Ok(addr);
+                }
+            }
+            Ok(event) => print_event(started, event),
+            Err(_) => {}
+        }
+    }
+
+    mdns.stop_browse(ANYKBFLOW_SERVICE)
+        .context("failed to stop AnyKBFlow browse")?;
+    mdns.shutdown().context("failed to shut down mDNS daemon")?;
+    bail!("no AnyKBFlow input owner discovered");
 }
 
 fn browse_with_dns_sd(seconds: u64) -> Result<()> {
@@ -315,6 +387,58 @@ fn parse_txt_properties(values: &[String]) -> Result<HashMap<String, String>> {
     Ok(properties)
 }
 
+fn socket_addr_from_resolved(info: &ResolvedService) -> Option<SocketAddr> {
+    let mut addrs: Vec<IpAddr> = info
+        .get_addresses()
+        .iter()
+        .map(|addr| addr.to_ip_addr())
+        .collect();
+    addrs.sort_by_key(|addr| {
+        (
+            addr.is_loopback(),
+            !addr.is_ipv4(),
+            addr.is_unspecified(),
+            addr.to_string(),
+        )
+    });
+    addrs
+        .into_iter()
+        .find(|addr| !addr.is_unspecified())
+        .map(|addr| SocketAddr::new(addr, info.get_port()))
+}
+
+fn sanitize_instance_name(value: &str) -> String {
+    let mut name = value
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                ch
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>();
+    if name.is_empty() {
+        name = "anykbflow".to_string();
+    }
+    name.truncate(48);
+    name
+}
+
+fn advertise_ip_for(listen_addr: SocketAddr) -> IpAddr {
+    if !listen_addr.ip().is_unspecified() {
+        return listen_addr.ip();
+    }
+
+    UdpSocket::bind((IpAddr::from([0, 0, 0, 0]), 0))
+        .and_then(|socket| {
+            socket.connect((IpAddr::from([8, 8, 8, 8]), 80))?;
+            socket.local_addr()
+        })
+        .map(|addr| addr.ip())
+        .unwrap_or_else(|_| IpAddr::from([127, 0, 0, 1]))
+}
+
 fn has_dns_sd() -> bool {
     Command::new("dns-sd")
         .arg("-help")
@@ -327,6 +451,13 @@ fn has_dns_sd() -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        net::{IpAddr, Ipv4Addr},
+        str::FromStr,
+    };
+
+    use mdns_sd::ServiceInfo;
+
     use super::*;
 
     #[test]
@@ -378,5 +509,42 @@ mod tests {
 
         assert_eq!(properties.get("phase"), Some(&"visibility".to_string()));
         assert_eq!(properties.get("role"), Some(&"probe".to_string()));
+    }
+
+    #[test]
+    fn sanitize_instance_name_keeps_dns_sd_friendly_name() {
+        assert_eq!(sanitize_instance_name("Windows Desk"), "Windows-Desk");
+        assert_eq!(sanitize_instance_name(""), "anykbflow");
+    }
+
+    #[test]
+    fn socket_addr_prefers_non_loopback_ipv4() {
+        let service = ServiceInfo::new(
+            ANYKBFLOW_SERVICE,
+            "desk",
+            "desk.local.",
+            &[
+                IpAddr::V4(Ipv4Addr::LOCALHOST),
+                IpAddr::from_str("192.0.2.10").unwrap(),
+            ][..],
+            24800,
+            None,
+        )
+        .unwrap();
+        let resolved = service.as_resolved_service();
+
+        let addr = socket_addr_from_resolved(&resolved).unwrap();
+
+        assert_eq!(addr.ip(), IpAddr::from_str("192.0.2.10").unwrap());
+        assert_eq!(addr.port(), 24800);
+    }
+
+    #[test]
+    fn advertise_ip_uses_explicit_bind_address() {
+        let ip = IpAddr::from_str("192.0.2.44").unwrap();
+
+        let advertised = advertise_ip_for(SocketAddr::new(ip, 24800));
+
+        assert_eq!(advertised, ip);
     }
 }

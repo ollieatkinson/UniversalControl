@@ -23,7 +23,7 @@ On the other machine:
 cargo run -- --config configs/receiver.example.toml
 ```
 
-Edit `peer_addr`, screen sizes, and `remote_edge` before running.
+Edit screen sizes and `remote_edge` before running. The input owner advertises `_anykbflow._tcp.local.` and the receiver discovers it automatically when `peer_addr` is omitted. Add `peer_addr = "host:24800"` to the receiver config to bypass discovery.
 
 ## Native Probes
 
@@ -83,6 +83,14 @@ The same default advertisement is available through the shorter alias:
 ```sh
 cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
 ```
+
+The software-KVM fallback uses its own service:
+
+```sh
+_anykbflow._tcp.local.
+```
+
+This is deliberately separate from Apple's `_companion-link._tcp.local.` so bridge discovery does not pretend to be native Universal Control.
 
 ## macOS Permissions
 

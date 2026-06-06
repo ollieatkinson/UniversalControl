@@ -18,7 +18,7 @@ pub enum PlatformCommand {
 pub fn spawn(
     capture: bool,
 ) -> Result<(mpsc::Receiver<CaptureEvent>, mpsc::Sender<PlatformCommand>)> {
-    let (_capture_tx, capture_rx) = mpsc::channel(256);
+    let (capture_tx, capture_rx) = mpsc::channel(256);
     let (command_tx, mut command_rx) = mpsc::channel(256);
 
     if capture {
@@ -35,6 +35,11 @@ pub fn spawn(
                 }
             }
         }
+    });
+
+    tokio::spawn(async move {
+        let _capture_tx = capture_tx;
+        std::future::pending::<()>().await;
     });
 
     Ok((capture_rx, command_tx))

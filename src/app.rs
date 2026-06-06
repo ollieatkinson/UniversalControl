@@ -1,4 +1,7 @@
+use std::time::Duration;
+
 use anyhow::Result;
+use tokio::time;
 use tracing::{debug, info, warn};
 
 use crate::{
@@ -19,7 +22,7 @@ pub async fn run(config: Config) -> Result<()> {
 
     match config.role {
         Role::InputOwner => run_input_owner(config, &mut captured_rx, &peer.outbound).await,
-        Role::Receiver => run_receiver(&mut peer.inbound, platform_tx).await,
+        Role::Receiver => run_receiver(&mut peer.inbound, &peer.outbound, platform_tx).await,
     }
 }
 
@@ -29,40 +32,64 @@ async fn run_input_owner(
     outbound: &tokio::sync::mpsc::Sender<PeerMessage>,
 ) -> Result<()> {
     let mut router = InputRouter::new(config.layout);
+    let mut heartbeat = time::interval(Duration::from_secs(5));
 
-    while let Some(captured) = captured_rx.recv().await {
-        let decision = router.handle_captured(captured.event);
-        if captured.suppress.send(decision.suppress_local).is_err() {
-            warn!("capture suppress response channel closed");
-        }
+    loop {
+        tokio::select! {
+            captured = captured_rx.recv() => {
+                let Some(captured) = captured else {
+                    warn!("input capture channel closed");
+                    return Ok(());
+                };
 
-        for message in decision.messages {
-            debug!("sending routed message: {:?}", message);
-            network::send(outbound, message).await?;
+                let decision = router.handle_captured(captured.event);
+                if captured.suppress.send(decision.suppress_local).is_err() {
+                    warn!("capture suppress response channel closed");
+                }
+
+                for message in decision.messages {
+                    debug!("sending routed message: {:?}", message);
+                    network::send(outbound, message).await?;
+                }
+            }
+            _ = heartbeat.tick() => {
+                network::send(outbound, PeerMessage::Heartbeat).await?;
+            }
         }
     }
-
-    Ok(())
 }
 
 async fn run_receiver(
     inbound: &mut tokio::sync::mpsc::Receiver<PeerMessage>,
+    outbound: &tokio::sync::mpsc::Sender<PeerMessage>,
     platform_tx: tokio::sync::mpsc::Sender<PlatformCommand>,
 ) -> Result<()> {
-    while let Some(message) = inbound.recv().await {
-        match message {
-            PeerMessage::Hello { node_name } => {
-                info!("input owner identified as {}", node_name);
+    let mut heartbeat = time::interval(Duration::from_secs(5));
+
+    loop {
+        tokio::select! {
+            message = inbound.recv() => {
+                let Some(message) = message else {
+                    warn!("peer connection closed");
+                    return Ok(());
+                };
+
+                match message {
+                    PeerMessage::Hello { node_name } => {
+                        info!("input owner identified as {}", node_name);
+                    }
+                    PeerMessage::Active { remote_active } => {
+                        info!("remote_active={}", remote_active);
+                    }
+                    PeerMessage::Input { event } => {
+                        platform_tx.send(PlatformCommand::Inject(event)).await?;
+                    }
+                    PeerMessage::Heartbeat => {}
+                }
             }
-            PeerMessage::Active { remote_active } => {
-                info!("remote_active={}", remote_active);
+            _ = heartbeat.tick() => {
+                network::send(outbound, PeerMessage::Heartbeat).await?;
             }
-            PeerMessage::Input { event } => {
-                platform_tx.send(PlatformCommand::Inject(event)).await?;
-            }
-            PeerMessage::Heartbeat => {}
         }
     }
-
-    Ok(())
 }

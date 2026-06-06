@@ -38,6 +38,33 @@ enum Command {
         #[arg(long)]
         include_apple_p2p: bool,
     },
+    /// Run native input capture/injection probes.
+    Probe {
+        #[command(subcommand)]
+        command: ProbeCommand,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum ProbeCommand {
+    /// Print observed native input events without suppressing them.
+    Listen {
+        #[arg(short, long, default_value_t = 10)]
+        count: usize,
+    },
+    /// Grab native input events, optionally suppressing local delivery.
+    Grab {
+        #[arg(short, long, default_value_t = 10)]
+        count: usize,
+
+        #[arg(long)]
+        suppress: bool,
+    },
+    /// Inject a single key press/release.
+    Inject {
+        #[arg(long, default_value = "KeyA")]
+        key: String,
+    },
 }
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -67,6 +94,11 @@ async fn main() -> Result<()> {
             backend,
             include_apple_p2p,
         } => discovery::browse_companion_link(seconds, backend.into(), include_apple_p2p),
+        Command::Probe { command } => match command {
+            ProbeCommand::Listen { count } => platform::probe_listen(count),
+            ProbeCommand::Grab { count, suppress } => platform::probe_grab(count, suppress),
+            ProbeCommand::Inject { key } => platform::probe_inject_key(&key),
+        },
     }
 }
 

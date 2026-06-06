@@ -25,6 +25,36 @@ cargo run -- --config configs/receiver.example.toml
 
 Edit `peer_addr`, screen sizes, and `remote_edge` before running.
 
+## Native Probes
+
+Use these before the full two-machine run to verify the platform input layer.
+
+Print observed events without suppressing them:
+
+```sh
+cargo run -- probe listen --count 20
+```
+
+Grab events but allow them through:
+
+```sh
+cargo run -- probe grab --count 20
+```
+
+Grab and suppress events:
+
+```sh
+cargo run -- probe grab --count 20 --suppress
+```
+
+Inject one key press/release:
+
+```sh
+cargo run -- probe inject --key KeyA
+```
+
+Valid key names are the `rdev::Key` debug names, such as `KeyA`, `MetaLeft`, `ControlLeft`, `Alt`, `Space`, and `Return`.
+
 ## macOS Permissions
 
 The native backend uses global event grab/injection. macOS needs Accessibility permission for the terminal/app running `anykbflow`. If events are not captured or injected, add the launcher app under:

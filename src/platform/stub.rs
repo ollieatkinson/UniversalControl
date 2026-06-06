@@ -39,3 +39,18 @@ pub fn spawn(
 
     Ok((capture_rx, command_tx))
 }
+
+pub fn probe_listen(_count: usize) -> Result<()> {
+    warn!("probe listen is only available on macOS and Windows");
+    Ok(())
+}
+
+pub fn probe_grab(_count: usize, _suppress: bool) -> Result<()> {
+    warn!("probe grab is only available on macOS and Windows");
+    Ok(())
+}
+
+pub fn probe_inject_key(_key: &str) -> Result<()> {
+    warn!("probe inject is only available on macOS and Windows");
+    Ok(())
+}

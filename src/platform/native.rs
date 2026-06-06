@@ -1,4 +1,13 @@
-use std::{sync::mpsc as std_mpsc, thread, time::Duration};
+use std::{
+    process,
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+        mpsc as std_mpsc,
+    },
+    thread,
+    time::Duration,
+};
 
 use anyhow::Result;
 use rdev::{Button, Event, EventType, Key};
@@ -89,6 +98,49 @@ fn from_rdev_event(event: &Event) -> Option<InputEvent> {
         EventType::MouseMove { x, y } => Some(InputEvent::MouseMove { x, y }),
         EventType::Wheel { delta_x, delta_y } => Some(InputEvent::Wheel { delta_x, delta_y }),
     }
+}
+
+pub fn probe_listen(count: usize) -> Result<()> {
+    let remaining = Arc::new(AtomicUsize::new(count.max(1)));
+    let remaining_events = Arc::clone(&remaining);
+
+    eprintln!("listening for {} native input events", count.max(1));
+    rdev::listen(move |event: Event| {
+        eprintln!("{event:?}");
+        if remaining_events.fetch_sub(1, Ordering::SeqCst) <= 1 {
+            process::exit(0);
+        }
+    })
+    .map_err(|error| anyhow::anyhow!("{error:?}"))
+}
+
+pub fn probe_grab(count: usize, suppress: bool) -> Result<()> {
+    let remaining = Arc::new(AtomicUsize::new(count.max(1)));
+    let remaining_events = Arc::clone(&remaining);
+
+    eprintln!(
+        "grabbing {} native input events; suppress={}",
+        count.max(1),
+        suppress
+    );
+    rdev::grab(move |event: Event| {
+        eprintln!("{event:?}");
+        if remaining_events.fetch_sub(1, Ordering::SeqCst) <= 1 {
+            process::exit(0);
+        }
+
+        if suppress { None } else { Some(event) }
+    })
+    .map_err(|error| anyhow::anyhow!("{error:?}"))
+}
+
+pub fn probe_inject_key(key: &str) -> Result<()> {
+    let key = parse_key(key);
+    eprintln!("injecting {key:?} press/release");
+    rdev::simulate(&EventType::KeyPress(key)).map_err(|error| anyhow::anyhow!("{error}"))?;
+    thread::sleep(Duration::from_millis(50));
+    rdev::simulate(&EventType::KeyRelease(key)).map_err(|error| anyhow::anyhow!("{error}"))?;
+    Ok(())
 }
 
 fn inject(event: InputEvent) -> Result<()> {

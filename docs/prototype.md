@@ -67,18 +67,21 @@ Print observed events without suppressing them:
 
 ```sh
 cargo run -- probe listen --count 20
+cargo run -- probe listen-events --count 20
 ```
 
 Grab events but allow them through:
 
 ```sh
 cargo run -- probe grab --count 20
+cargo run -- probe grab-events --count 20
 ```
 
 Grab and suppress events:
 
 ```sh
 cargo run -- probe grab --count 20 --suppress
+cargo run -- probe grab-events --count 20 --suppress
 ```
 
 Inject one key press/release:
@@ -101,6 +104,8 @@ scrolls the current focus target.
 
 Valid key names are the `rdev::Key` debug names, such as `KeyA`, `MetaLeft`, `ControlLeft`, `Alt`, `Space`, and `Return`.
 Valid button names are `Left`, `Right`, and `Middle`.
+
+The `*-events` probes print normalized `InputEvent` JSON in the same shape sent over the bridge protocol.
 
 ## Discovery Probes
 

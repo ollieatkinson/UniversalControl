@@ -50,6 +50,11 @@ pub fn probe_listen(_count: usize) -> Result<()> {
     Ok(())
 }
 
+pub fn probe_listen_events(_count: usize) -> Result<()> {
+    warn!("probe listen-events is only available on macOS and Windows");
+    Ok(())
+}
+
 pub fn probe_displays() -> Result<()> {
     warn!("probe displays is only available on macOS and Windows");
     Ok(())
@@ -61,6 +66,11 @@ pub fn primary_display_geometry() -> Result<Option<DisplayGeometry>> {
 
 pub fn probe_grab(_count: usize, _suppress: bool) -> Result<()> {
     warn!("probe grab is only available on macOS and Windows");
+    Ok(())
+}
+
+pub fn probe_grab_events(_count: usize, _suppress: bool) -> Result<()> {
+    warn!("probe grab-events is only available on macOS and Windows");
     Ok(())
 }
 

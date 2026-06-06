@@ -139,9 +139,22 @@ enum ProbeCommand {
         #[arg(short, long, default_value_t = 10)]
         count: usize,
     },
+    /// Print normalized AnyKBFlow input events without suppressing them.
+    ListenEvents {
+        #[arg(long, default_value_t = 10)]
+        count: usize,
+    },
     /// Grab native input events, optionally suppressing local delivery.
     Grab {
         #[arg(short, long, default_value_t = 10)]
+        count: usize,
+
+        #[arg(long)]
+        suppress: bool,
+    },
+    /// Grab normalized AnyKBFlow input events, optionally suppressing local delivery.
+    GrabEvents {
+        #[arg(long, default_value_t = 10)]
         count: usize,
 
         #[arg(long)]
@@ -262,7 +275,11 @@ async fn main() -> Result<()> {
             }
             ProbeCommand::Displays => platform::probe_displays(),
             ProbeCommand::Listen { count } => platform::probe_listen(count),
+            ProbeCommand::ListenEvents { count } => platform::probe_listen_events(count),
             ProbeCommand::Grab { count, suppress } => platform::probe_grab(count, suppress),
+            ProbeCommand::GrabEvents { count, suppress } => {
+                platform::probe_grab_events(count, suppress)
+            }
             ProbeCommand::Inject { key } => platform::probe_inject_key(&key),
             ProbeCommand::InjectMouse { x, y } => platform::probe_inject_mouse(x, y),
             ProbeCommand::InjectButton { button } => platform::probe_inject_button(&button),

@@ -14,18 +14,21 @@ Please pull this repo and test the native backend on macOS.
 
    ```sh
    cargo run -- probe listen --count 20
+   cargo run -- probe listen-events --count 20
    ```
 
 3. Probe grab without suppression:
 
    ```sh
    cargo run -- probe grab --count 20
+   cargo run -- probe grab-events --count 20
    ```
 
 4. Probe grab with suppression:
 
    ```sh
    cargo run -- probe grab --count 20 --suppress
+   cargo run -- probe grab-events --count 20 --suppress
    ```
 
 5. Probe injection:
@@ -52,9 +55,10 @@ Please pull this repo and test the native backend on macOS.
 8. Record whether `rdev::grab` captures Keychron events.
 9. Record whether returning `None` from the grab callback suppresses local keyboard and mouse delivery.
 10. Record whether `rdev::simulate` injects key, pointer, click, and wheel events into normal apps.
-11. Record required macOS permissions and whether logout/restart was needed.
-12. Record modifier behavior for Command, Option, Control, and Fn/function row.
-13. Check whether Secure Input breaks capture in Terminal, password fields, browsers, and IDEs.
+11. Record whether normalized `InputEvent` JSON has the expected key names, text values, button names, pointer coordinates, and wheel deltas.
+12. Record required macOS permissions and whether logout/restart was needed.
+13. Record modifier behavior for Command, Option, Control, and Fn/function row.
+14. Check whether Secure Input breaks capture in Terminal, password fields, browsers, and IDEs.
 
 ## Notes To Push Back
 

@@ -121,6 +121,22 @@ pub fn probe_listen(count: usize) -> Result<()> {
     .map_err(|error| anyhow::anyhow!("{error:?}"))
 }
 
+pub fn probe_listen_events(count: usize) -> Result<()> {
+    let remaining = Arc::new(AtomicUsize::new(count.max(1)));
+    let remaining_events = Arc::clone(&remaining);
+
+    eprintln!("listening for {} normalized input events", count.max(1));
+    rdev::listen(move |event: Event| {
+        if let Some(input) = from_rdev_event(&event) {
+            print_input_event(&input);
+            if remaining_events.fetch_sub(1, Ordering::SeqCst) <= 1 {
+                process::exit(0);
+            }
+        }
+    })
+    .map_err(|error| anyhow::anyhow!("{error:?}"))
+}
+
 pub fn probe_displays() -> Result<()> {
     let (displays, source) = display_infos()?;
 
@@ -271,6 +287,35 @@ pub fn probe_grab(count: usize, suppress: bool) -> Result<()> {
         if suppress { None } else { Some(event) }
     })
     .map_err(|error| anyhow::anyhow!("{error:?}"))
+}
+
+pub fn probe_grab_events(count: usize, suppress: bool) -> Result<()> {
+    let remaining = Arc::new(AtomicUsize::new(count.max(1)));
+    let remaining_events = Arc::clone(&remaining);
+
+    eprintln!(
+        "grabbing {} normalized input events; suppress={}",
+        count.max(1),
+        suppress
+    );
+    rdev::grab(move |event: Event| {
+        if let Some(input) = from_rdev_event(&event) {
+            print_input_event(&input);
+            if remaining_events.fetch_sub(1, Ordering::SeqCst) <= 1 {
+                process::exit(0);
+            }
+        }
+
+        if suppress { None } else { Some(event) }
+    })
+    .map_err(|error| anyhow::anyhow!("{error:?}"))
+}
+
+fn print_input_event(event: &InputEvent) {
+    match serde_json::to_string(event) {
+        Ok(line) => println!("{line}"),
+        Err(error) => eprintln!("failed to encode input event: {error}"),
+    }
 }
 
 fn markdown_cell(value: &str) -> String {

@@ -55,6 +55,10 @@ pub async fn connect(config: &Config) -> Result<Peer> {
         }
     };
 
+    peer_from_stream(config, stream).await
+}
+
+pub(crate) async fn peer_from_stream(config: &Config, stream: TcpStream) -> Result<Peer> {
     let (read_half, mut write_half) = stream.into_split();
     let (outbound_tx, mut outbound_rx) = mpsc::channel::<PeerMessage>(256);
     let (inbound_tx, inbound_rx) = mpsc::channel::<PeerMessage>(256);

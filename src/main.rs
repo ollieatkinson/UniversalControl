@@ -128,6 +128,8 @@ enum DiscoveryCommand {
 
 #[derive(Debug, Subcommand)]
 enum ProbeCommand {
+    /// Exercise JSON peer messages over a loopback TCP connection.
+    BridgeNetworkSmoke,
     /// Simulate edge routing and receiver injection without native input.
     BridgeSmoke,
     /// Print native display geometry for layout calibration.
@@ -231,6 +233,10 @@ async fn main() -> Result<()> {
             }),
         },
         Command::Probe { command } => match command {
+            ProbeCommand::BridgeNetworkSmoke => {
+                let config = config::Config::load(&cli.config)?;
+                bridge_smoke::run_network(config).await
+            }
             ProbeCommand::BridgeSmoke => {
                 let config = config::Config::load(&cli.config)?;
                 bridge_smoke::run(config)

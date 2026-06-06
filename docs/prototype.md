@@ -39,6 +39,14 @@ cargo run -- --config configs/input-owner.example.toml probe bridge-smoke
 
 This loads the input-owner config, simulates an edge crossing and `KeyA` press/release, prints the JSON peer messages, and prints the receiver-side injection effect. Native macOS/Windows builds use detected primary display size for local edge routing; Linux/WSL falls back to the config.
 
+Run a loopback TCP protocol smoke test:
+
+```sh
+cargo run -- --config configs/input-owner.example.toml probe bridge-network-smoke
+```
+
+This creates an in-process input owner and receiver over `127.0.0.1`, exchanges peer `Hello` messages using the real JSON-lines network tasks, then sends `Active`, mouse move, and `KeyA` press/release messages from owner to receiver.
+
 Print display geometry for layout calibration:
 
 ```sh
@@ -134,7 +142,7 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 
 ## Next Engineering Steps
 
-1. Run `cargo run -- --config configs/input-owner.example.toml probe bridge-smoke` on both machines.
+1. Run `probe bridge-smoke` and `probe bridge-network-smoke` on both machines.
 2. Run `cargo run -- probe displays` on both macOS and Windows and commit redacted geometry summaries.
 3. Run the input-owner role on Windows and receiver role on macOS.
 4. Confirm input-owner edge detection and receiver hello use the same primary display dimensions as `probe displays`.

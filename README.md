@@ -1,8 +1,30 @@
 # UniversalControl
 
-Reverse-engineering notes and tooling for making a Windows machine participate in the Mac Universal Control-style keyboard, mouse, drag, and clipboard experience.
+Reverse-engineering notes, tooling, and prototypes for making a Windows machine participate in the Mac Universal Control-style keyboard, mouse, drag, and clipboard experience.
 
 The repository is currently in the evidence-gathering phase. The primary target is native macOS Universal Control compatibility: keep the Mac side running Apple's `UniversalControl.app` and make Windows participate if the protocol allows it. A project-owned Mac/Windows bridge is a fallback only if native Rapport/CompanionLink authentication proves impossible from Windows.
+
+## Tracks
+
+### Native Universal Control
+
+This is the preferred path. The Mac should stay on Apple's native Universal Control stack, and Windows should try to become visible to macOS discovery and session setup.
+
+Start with:
+
+- [docs/research-log.md](docs/research-log.md)
+- [docs/protocol-hypothesis.md](docs/protocol-hypothesis.md)
+- [docs/native-compatibility-checklist.md](docs/native-compatibility-checklist.md)
+- [docs/capture-plan.md](docs/capture-plan.md)
+- [scripts/mac/uc-probe.sh](scripts/mac/uc-probe.sh)
+
+### AnyKBFlow Prototype
+
+`anykbflow` is an early Rust software KVM prototype for sharing a Keychron keyboard and mouse between macOS and Windows without relying on Logitech Flow or Bluetooth profile switching.
+
+It has a TCP JSON-lines peer protocol, edge-crossing router, and a macOS/Windows native input backend based on `rdev` grab/simulate. Linux builds use a no-op backend so the shared code can be checked in this workspace.
+
+See [docs/prototype.md](docs/prototype.md) for setup and current limitations.
 
 ## Current Findings
 

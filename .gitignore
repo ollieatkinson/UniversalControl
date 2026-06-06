@@ -1,2 +1,5 @@
 artifacts/
 .DS_Store
+/target/
+*.log
+anykbflow.toml

@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{collections::HashSet, time::Duration};
 
 use anyhow::Result;
 use tokio::time;
@@ -8,7 +8,7 @@ use crate::{
     config::{Config, Role},
     network,
     platform::{self, PlatformCommand},
-    protocol::PeerMessage,
+    protocol::{InputEvent, PeerMessage},
     router::InputRouter,
 };
 
@@ -75,12 +75,15 @@ async fn run_receiver(
     platform_tx: tokio::sync::mpsc::Sender<PlatformCommand>,
 ) -> Result<()> {
     let mut heartbeat = time::interval(Duration::from_secs(5));
+    let mut pressed_keys = HashSet::new();
+    let mut pressed_buttons = HashSet::new();
 
     loop {
         tokio::select! {
             message = inbound.recv() => {
                 let Some(message) = message else {
                     warn!("peer connection closed");
+                    release_pressed(&platform_tx, &mut pressed_keys, &mut pressed_buttons).await;
                     return Ok(());
                 };
 
@@ -92,14 +95,119 @@ async fn run_receiver(
                         info!("remote_active={}", remote_active);
                     }
                     PeerMessage::Input { event } => {
+                        track_pressed(&event, &mut pressed_keys, &mut pressed_buttons);
                         platform_tx.send(PlatformCommand::Inject(event)).await?;
                     }
                     PeerMessage::Heartbeat => {}
                 }
             }
             _ = heartbeat.tick() => {
-                network::send(outbound, PeerMessage::Heartbeat).await?;
+                if let Err(error) = network::send(outbound, PeerMessage::Heartbeat).await {
+                    warn!("heartbeat failed: {error}");
+                    release_pressed(&platform_tx, &mut pressed_keys, &mut pressed_buttons).await;
+                    return Err(error);
+                }
             }
         }
+    }
+}
+
+fn track_pressed(
+    event: &InputEvent,
+    pressed_keys: &mut HashSet<String>,
+    pressed_buttons: &mut HashSet<String>,
+) {
+    match event {
+        InputEvent::KeyPress { key, .. } => {
+            pressed_keys.insert(key.clone());
+        }
+        InputEvent::KeyRelease { key } => {
+            pressed_keys.remove(key);
+        }
+        InputEvent::ButtonPress { button } => {
+            pressed_buttons.insert(button.clone());
+        }
+        InputEvent::ButtonRelease { button } => {
+            pressed_buttons.remove(button);
+        }
+        InputEvent::MouseMove { .. } | InputEvent::Wheel { .. } => {}
+    }
+}
+
+async fn release_pressed(
+    platform_tx: &tokio::sync::mpsc::Sender<PlatformCommand>,
+    pressed_keys: &mut HashSet<String>,
+    pressed_buttons: &mut HashSet<String>,
+) {
+    for key in pressed_keys.drain() {
+        if platform_tx
+            .send(PlatformCommand::Inject(InputEvent::KeyRelease { key }))
+            .await
+            .is_err()
+        {
+            warn!("platform command channel closed while releasing keys");
+            return;
+        }
+    }
+
+    for button in pressed_buttons.drain() {
+        if platform_tx
+            .send(PlatformCommand::Inject(InputEvent::ButtonRelease {
+                button,
+            }))
+            .await
+            .is_err()
+        {
+            warn!("platform command channel closed while releasing buttons");
+            return;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tracks_pressed_keys_and_buttons() {
+        let mut keys = HashSet::new();
+        let mut buttons = HashSet::new();
+
+        track_pressed(
+            &InputEvent::KeyPress {
+                key: "ControlLeft".to_string(),
+                text: None,
+            },
+            &mut keys,
+            &mut buttons,
+        );
+        track_pressed(
+            &InputEvent::ButtonPress {
+                button: "Left".to_string(),
+            },
+            &mut keys,
+            &mut buttons,
+        );
+
+        assert!(keys.contains("ControlLeft"));
+        assert!(buttons.contains("Left"));
+
+        track_pressed(
+            &InputEvent::KeyRelease {
+                key: "ControlLeft".to_string(),
+            },
+            &mut keys,
+            &mut buttons,
+        );
+        track_pressed(
+            &InputEvent::ButtonRelease {
+                button: "Left".to_string(),
+            },
+            &mut keys,
+            &mut buttons,
+        );
+
+        assert!(keys.is_empty());
+        assert!(buttons.is_empty());
     }
 }

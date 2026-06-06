@@ -31,6 +31,14 @@ The peer protocol sends periodic heartbeat messages in both directions. If a pee
 
 Use these before the full two-machine run to verify the platform input layer.
 
+Run a deterministic bridge routing smoke test without native input capture:
+
+```sh
+cargo run -- --config configs/input-owner.example.toml probe bridge-smoke
+```
+
+This loads the input-owner config, simulates an edge crossing and `KeyA` press/release, prints the JSON peer messages, and prints the receiver-side injection effect. Native macOS/Windows builds use detected primary display size for local edge routing; Linux/WSL falls back to the config.
+
 Print display geometry for layout calibration:
 
 ```sh
@@ -126,10 +134,11 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 
 ## Next Engineering Steps
 
-1. Run `cargo run -- probe displays` on both macOS and Windows and commit redacted geometry summaries.
-2. Run the input-owner role on Windows and receiver role on macOS.
-3. Confirm input-owner edge detection and receiver hello use the same primary display dimensions as `probe displays`.
-4. Reverse the roles and test macOS as input owner.
-5. Replace `rdev` mapping with explicit platform scancodes if modifiers/layouts are wrong.
-6. Validate input-owner route reset and receiver focus/modifier cleanup on native macOS and Windows backends during planned return-to-local and forced disconnect.
-7. Add TLS pairing once basic control is stable.
+1. Run `cargo run -- --config configs/input-owner.example.toml probe bridge-smoke` on both machines.
+2. Run `cargo run -- probe displays` on both macOS and Windows and commit redacted geometry summaries.
+3. Run the input-owner role on Windows and receiver role on macOS.
+4. Confirm input-owner edge detection and receiver hello use the same primary display dimensions as `probe displays`.
+5. Reverse the roles and test macOS as input owner.
+6. Replace `rdev` mapping with explicit platform scancodes if modifiers/layouts are wrong.
+7. Validate input-owner route reset and receiver focus/modifier cleanup on native macOS and Windows backends during planned return-to-local and forced disconnect.
+8. Add TLS pairing once basic control is stable.

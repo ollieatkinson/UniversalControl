@@ -1,4 +1,5 @@
 mod app;
+mod bridge_smoke;
 mod config;
 mod discovery;
 mod network;
@@ -127,6 +128,8 @@ enum DiscoveryCommand {
 
 #[derive(Debug, Subcommand)]
 enum ProbeCommand {
+    /// Simulate edge routing and receiver injection without native input.
+    BridgeSmoke,
     /// Print native display geometry for layout calibration.
     Displays,
     /// Print observed native input events without suppressing them.
@@ -228,6 +231,10 @@ async fn main() -> Result<()> {
             }),
         },
         Command::Probe { command } => match command {
+            ProbeCommand::BridgeSmoke => {
+                let config = config::Config::load(&cli.config)?;
+                bridge_smoke::run(config)
+            }
             ProbeCommand::Displays => platform::probe_displays(),
             ProbeCommand::Listen { count } => platform::probe_listen(count),
             ProbeCommand::Grab { count, suppress } => platform::probe_grab(count, suppress),

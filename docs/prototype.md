@@ -79,7 +79,16 @@ Inject one key press/release:
 cargo run -- probe inject --key KeyA
 ```
 
+Inject pointer, button, and wheel events:
+
+```sh
+cargo run -- probe inject-mouse --x 200 --y 200
+cargo run -- probe inject-button --button Left
+cargo run -- probe inject-wheel --delta-y 3
+```
+
 Valid key names are the `rdev::Key` debug names, such as `KeyA`, `MetaLeft`, `ControlLeft`, `Alt`, `Space`, and `Return`.
+Valid button names are `Left`, `Right`, and `Middle`.
 
 ## Discovery Probes
 

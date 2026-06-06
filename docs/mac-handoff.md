@@ -32,6 +32,9 @@ Please pull this repo and test the native backend on macOS.
 
    ```sh
    cargo run -- probe inject --key KeyA
+   cargo run -- probe inject-mouse --x 200 --y 200
+   cargo run -- probe inject-button --button Left
+   cargo run -- probe inject-wheel --delta-y 3
    ```
 
 6. Run as receiver with the Windows machine as input owner:
@@ -48,7 +51,7 @@ Please pull this repo and test the native backend on macOS.
 
 8. Record whether `rdev::grab` captures Keychron events.
 9. Record whether returning `None` from the grab callback suppresses local keyboard and mouse delivery.
-10. Record whether `rdev::simulate` injects into normal apps.
+10. Record whether `rdev::simulate` injects key, pointer, click, and wheel events into normal apps.
 11. Record required macOS permissions and whether logout/restart was needed.
 12. Record modifier behavior for Command, Option, Control, and Fn/function row.
 13. Check whether Secure Input breaks capture in Terminal, password fields, browsers, and IDEs.

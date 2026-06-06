@@ -152,6 +152,25 @@ enum ProbeCommand {
         #[arg(long, default_value = "KeyA")]
         key: String,
     },
+    /// Inject a single absolute mouse move.
+    InjectMouse {
+        #[arg(long)]
+        x: f64,
+        #[arg(long)]
+        y: f64,
+    },
+    /// Inject a single mouse button press/release.
+    InjectButton {
+        #[arg(long, default_value = "Left")]
+        button: String,
+    },
+    /// Inject a single wheel event.
+    InjectWheel {
+        #[arg(long, default_value_t = 0)]
+        delta_x: i64,
+        #[arg(long, default_value_t = 1)]
+        delta_y: i64,
+    },
 }
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -245,6 +264,11 @@ async fn main() -> Result<()> {
             ProbeCommand::Listen { count } => platform::probe_listen(count),
             ProbeCommand::Grab { count, suppress } => platform::probe_grab(count, suppress),
             ProbeCommand::Inject { key } => platform::probe_inject_key(&key),
+            ProbeCommand::InjectMouse { x, y } => platform::probe_inject_mouse(x, y),
+            ProbeCommand::InjectButton { button } => platform::probe_inject_button(&button),
+            ProbeCommand::InjectWheel { delta_x, delta_y } => {
+                platform::probe_inject_wheel(delta_x, delta_y)
+            }
         },
     }
 }

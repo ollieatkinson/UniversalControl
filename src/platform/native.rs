@@ -303,6 +303,27 @@ pub fn probe_inject_key(key: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn probe_inject_mouse(x: f64, y: f64) -> Result<()> {
+    eprintln!("injecting mouse move to x={x} y={y}");
+    rdev::simulate(&EventType::MouseMove { x, y }).map_err(|error| anyhow::anyhow!("{error}"))
+}
+
+pub fn probe_inject_button(button: &str) -> Result<()> {
+    let button = parse_button(button);
+    eprintln!("injecting {button:?} button press/release");
+    rdev::simulate(&EventType::ButtonPress(button)).map_err(|error| anyhow::anyhow!("{error}"))?;
+    thread::sleep(Duration::from_millis(50));
+    rdev::simulate(&EventType::ButtonRelease(button))
+        .map_err(|error| anyhow::anyhow!("{error}"))?;
+    Ok(())
+}
+
+pub fn probe_inject_wheel(delta_x: i64, delta_y: i64) -> Result<()> {
+    eprintln!("injecting wheel delta_x={delta_x} delta_y={delta_y}");
+    rdev::simulate(&EventType::Wheel { delta_x, delta_y })
+        .map_err(|error| anyhow::anyhow!("{error}"))
+}
+
 fn inject(event: InputEvent) -> Result<()> {
     let event_type = match event {
         InputEvent::KeyPress { key, .. } => EventType::KeyPress(parse_key(&key)),

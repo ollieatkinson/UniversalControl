@@ -68,3 +68,18 @@ pub fn probe_inject_key(_key: &str) -> Result<()> {
     warn!("probe inject is only available on macOS and Windows");
     Ok(())
 }
+
+pub fn probe_inject_mouse(_x: f64, _y: f64) -> Result<()> {
+    warn!("probe inject-mouse is only available on macOS and Windows");
+    Ok(())
+}
+
+pub fn probe_inject_button(_button: &str) -> Result<()> {
+    warn!("probe inject-button is only available on macOS and Windows");
+    Ok(())
+}
+
+pub fn probe_inject_wheel(_delta_x: i64, _delta_y: i64) -> Result<()> {
+    warn!("probe inject-wheel is only available on macOS and Windows");
+    Ok(())
+}

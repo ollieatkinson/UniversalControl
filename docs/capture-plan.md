@@ -136,7 +136,41 @@ Expected evidence:
 - If browse succeeds but resolve fails, record the interface number and firewall state.
 - If neither succeeds, record Windows network profile, firewall state, and whether UDP 5353 multicast is allowed.
 
-Controlled Apple-service experiments must be separated from this benign check. Only use `--service-type _companion-link._tcp --allow-apple-service` while macOS `rapportd` and `UniversalControl` logs are being captured, and only with a redacted TXT shape derived from observed Apple peers.
+Controlled Apple-service experiments must be separated from this benign check.
+Only use `--service-type _companion-link._tcp --allow-apple-service` while
+macOS `rapportd` and `UniversalControl` logs are being captured. Start with the
+minimal project probe below; do not mimic Apple `rp*` TXT fields until a real
+Apple-peer TXT shape has been captured and redacted.
+
+## Controlled CompanionLink Candidate Check
+
+Use this only after the benign Windows advertisement check has established that
+macOS can see Windows mDNS services on the current network.
+
+On macOS first:
+
+```sh
+./scripts/mac/watch-companion-link-candidate.sh --duration 90 --instance "AnyKBFlow Native Probe"
+```
+
+On Windows while the macOS watcher is running:
+
+```powershell
+cargo run -- advertise-mdns `
+  --service-type _companion-link._tcp `
+  --instance "AnyKBFlow Native Probe" `
+  --hostname anykbflow-native-probe `
+  --port 49152 `
+  --txt probe=visibility `
+  --txt role=windows-native-candidate `
+  --allow-apple-service `
+  --seconds 60
+```
+
+This minimal candidate deliberately does not copy Apple `rp*` TXT fields. It is
+only meant to answer whether `rapportd` or `UniversalControl` reacts to a
+Windows-owned `_companion-link._tcp` service at all. Preserve raw artifacts under
+`artifacts/`, then commit only redacted summaries.
 
 ## First Experiments
 

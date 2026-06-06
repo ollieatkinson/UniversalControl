@@ -190,6 +190,39 @@ It writes an ignored artifact directory containing:
 
 This is intended to run while Windows advertises `_anykbflow-probe._tcp` or a controlled `_companion-link._tcp` experiment. Raw output is not committed because it can contain hostnames, addresses, TXT values, and local interface identifiers.
 
+Added a native-specific wrapper:
+
+```sh
+./scripts/mac/watch-companion-link-candidate.sh --duration 90 --instance "AnyKBFlow Native Probe"
+```
+
+It wraps the generic watcher with service type `_companion-link._tcp` so a
+Windows-controlled candidate advertisement can be observed together with
+`rapportd`, `UniversalControl`, and `mDNSResponder` logs. This is the next
+candidate-admission smoke test after basic Windows-to-macOS mDNS visibility is
+proven.
+
+### Windows Bridge Progress Versus Native Gap
+
+Windows-side notes now show the separate AnyKBFlow bridge track can advertise
+`_anykbflow._tcp.local.`, discover that service from the receiver role, keep a
+TCP JSON-lines session alive with heartbeats, and reconnect after receiver
+process restarts under WSL. The receiver also tracks injected key/button state
+and releases those inputs when the peer disconnects, plus releases common
+latch-prone modifiers/buttons at receiver session start. That cleanup has not
+yet been runtime-tested with native macOS/Windows input injection.
+
+Those bridge observations are useful fallback progress, but they do not prove
+native Universal Control compatibility. The native-first gaps remain:
+
+- Windows still needs a redacted Rust mDNS browse proving whether it can resolve
+  the Mac's `_companion-link._tcp` advertisement on the real network.
+- macOS still needs to resolve a Windows-advertised benign probe on the real
+  network.
+- macOS still needs a controlled `_companion-link._tcp` candidate run to show
+  whether `rapportd` or `UniversalControl` ignores, accepts, or rejects a
+  Windows-owned candidate.
+
 ### Native macOS Priority
 
 The preferred Mac-side architecture is to leave Apple's `UniversalControl.app` in control. The Windows side should first try to become visible to native macOS discovery and session setup. A Mac-side bridge should be treated as a fallback only after captures prove one of these hard blockers:

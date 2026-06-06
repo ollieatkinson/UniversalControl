@@ -16,6 +16,7 @@ Start with:
 - [docs/protocol-hypothesis.md](docs/protocol-hypothesis.md)
 - [docs/native-compatibility-checklist.md](docs/native-compatibility-checklist.md)
 - [docs/capture-plan.md](docs/capture-plan.md)
+- [docs/native-candidate-experiments.md](docs/native-candidate-experiments.md)
 - [scripts/mac/uc-probe.sh](scripts/mac/uc-probe.sh)
 
 ### AnyKBFlow Prototype
@@ -80,10 +81,12 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [docs/protocol-hypothesis.md](docs/protocol-hypothesis.md): current model of discovery, trust, control, and HID data flow.
 - [docs/native-compatibility-checklist.md](docs/native-compatibility-checklist.md): gates for keeping the Mac side on native Universal Control.
 - [docs/capture-plan.md](docs/capture-plan.md): repeatable experiments for macOS and Windows captures.
+- [docs/native-candidate-experiments.md](docs/native-candidate-experiments.md): immediate native discovery and candidate-admission experiments.
 - [docs/windows-interop-plan.md](docs/windows-interop-plan.md): native-first Windows peer strategy and fallback bridge criteria.
 - [docs/windows-agent-contract.md](docs/windows-agent-contract.md): where the Windows machine should write observations.
 - [scripts/mac/uc-probe.sh](scripts/mac/uc-probe.sh): read-only macOS probe for Universal Control/Rapport surfaces.
 - [scripts/mac/watch-mdns-service.sh](scripts/mac/watch-mdns-service.sh): bounded mDNS plus log watcher for Windows advertisement checks.
+- [scripts/mac/watch-companion-link-candidate.sh](scripts/mac/watch-companion-link-candidate.sh): native-focused watcher for controlled `_companion-link._tcp` candidate checks.
 
 ## Running The macOS Probe
 

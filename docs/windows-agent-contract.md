@@ -66,7 +66,7 @@ Redact before committing:
 
 ## First Requested Windows Report
 
-The next Windows report should answer:
+The next native-focused Windows report should answer:
 
 1. Does Windows see this Mac's `_companion-link._tcp.local` advertisement?
 2. Which TXT keys and port are visible?
@@ -77,6 +77,7 @@ The next Windows report should answer:
 7. Does macOS resolve the Windows service with `dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local`?
 8. Is the Windows prototype currently source-controlled somewhere outside this repo?
 9. What language/runtime is the current Windows implementation using?
+10. After macOS confirms the benign probe is visible, what happens when Windows advertises the minimal `_companion-link._tcp` native candidate below while the Mac runs `scripts/mac/watch-companion-link-candidate.sh`?
 
 The Mac-side watcher for questions 6 and 7 is:
 
@@ -91,6 +92,7 @@ cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact
 cargo run -- discover-companion-link --backend system --seconds 30
 cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
 cargo run -- discovery advertise --service _anykbflow-probe._tcp.local. --instance "AnyKBFlow Probe" --addr <redacted-lan-ip> --port 49152 --txt phase=visibility --txt role=windows-probe --seconds 60
+cargo run -- advertise-mdns --service-type _companion-link._tcp --instance "AnyKBFlow Native Probe" --hostname anykbflow-native-probe --port 49152 --txt probe=visibility --txt role=windows-native-candidate --allow-apple-service --seconds 60
 ```
 
 The redacted Rust mDNS output should preserve event type, service type, port, TXT key names, TXT value length/class, and address count. Do not commit unredacted `dns-sd` or `--backend system` output unless it has been manually reviewed and sanitized.

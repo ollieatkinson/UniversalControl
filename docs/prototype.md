@@ -62,7 +62,7 @@ Valid key names are the `rdev::Key` debug names, such as `KeyA`, `MetaLeft`, `Co
 Browse for Apple's CompanionLink service:
 
 ```sh
-cargo run -- discovery browse --service _companion-link._tcp.local. --seconds 15
+cargo run -- discovery browse --service _companion-link._tcp.local. --seconds 15 --redact
 ```
 
 Advertise a controlled test service from Windows so macOS can check whether it appears in `dns-sd` and unified logs:
@@ -111,7 +111,7 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 - Peer setup is manual. The input owner listens; the receiver connects.
 - No encryption or pairing yet.
 - No clipboard sync yet.
-- Reconnect is basic: receiver-side common latches and tracked injected keys/buttons are released, but input-owner-side local state and active remote focus still need more explicit cleanup.
+- Reconnect is basic: the roles re-enter their connection loops and receiver-side common latches plus tracked injected keys/buttons are released, but input-owner-side local state and active remote focus still need more explicit cleanup.
 - The native input backend is based on `rdev` and should be treated as a spike layer, not the final platform code.
 - Key mapping uses physical `rdev` key names. This should be replaced with platform scancode mapping once the Mac and Windows spike data is available.
 - The Linux backend is intentionally no-op so the shared daemon can be checked in this workspace.
@@ -122,5 +122,5 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 2. Confirm capture, suppression, and injection behavior with Accessibility enabled on macOS.
 3. Reverse the roles and test macOS as input owner.
 4. Replace `rdev` mapping with explicit platform scancodes if modifiers/layouts are wrong.
-5. Add reconnect and heartbeat handling.
+5. Add explicit focus/modifier cleanup messages around reconnect.
 6. Add TLS pairing once basic control is stable.

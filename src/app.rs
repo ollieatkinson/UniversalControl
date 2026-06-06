@@ -85,7 +85,8 @@ async fn run_receiver(
             message = inbound.recv() => {
                 let Some(message) = message else {
                     warn!("peer connection closed");
-                    release_pressed(&platform_tx, &mut pressed_keys, &mut pressed_buttons).await;
+                    release_remote_state(&platform_tx, &mut pressed_keys, &mut pressed_buttons)
+                        .await;
                     return Ok(());
                 };
 
@@ -95,6 +96,14 @@ async fn run_receiver(
                     }
                     PeerMessage::Active { remote_active } => {
                         info!("remote_active={}", remote_active);
+                        if !remote_active {
+                            release_remote_state(
+                                &platform_tx,
+                                &mut pressed_keys,
+                                &mut pressed_buttons,
+                            )
+                            .await;
+                        }
                     }
                     PeerMessage::Input { event } => {
                         track_pressed(&event, &mut pressed_keys, &mut pressed_buttons);
@@ -106,12 +115,22 @@ async fn run_receiver(
             _ = heartbeat.tick() => {
                 if let Err(error) = network::send(outbound, PeerMessage::Heartbeat).await {
                     warn!("heartbeat failed: {error}");
-                    release_pressed(&platform_tx, &mut pressed_keys, &mut pressed_buttons).await;
+                    release_remote_state(&platform_tx, &mut pressed_keys, &mut pressed_buttons)
+                        .await;
                     return Err(error);
                 }
             }
         }
     }
+}
+
+async fn release_remote_state(
+    platform_tx: &tokio::sync::mpsc::Sender<PlatformCommand>,
+    pressed_keys: &mut HashSet<String>,
+    pressed_buttons: &mut HashSet<String>,
+) {
+    release_pressed(platform_tx, pressed_keys, pressed_buttons).await;
+    release_common_latches(platform_tx).await;
 }
 
 async fn release_common_latches(platform_tx: &tokio::sync::mpsc::Sender<PlatformCommand>) {
@@ -285,5 +304,36 @@ mod tests {
             ]
         );
         assert_eq!(button_releases, vec!["Left", "Right", "Middle"]);
+    }
+
+    #[tokio::test]
+    async fn release_remote_state_releases_tracked_and_common_latches() {
+        let (tx, mut rx) = tokio::sync::mpsc::channel(32);
+        let mut keys = HashSet::from(["KeyA".to_string()]);
+        let mut buttons = HashSet::from(["Left".to_string()]);
+
+        release_remote_state(&tx, &mut keys, &mut buttons).await;
+        drop(tx);
+
+        let mut key_releases = Vec::new();
+        let mut button_releases = Vec::new();
+        while let Some(command) = rx.recv().await {
+            match command {
+                PlatformCommand::Inject(InputEvent::KeyRelease { key }) => key_releases.push(key),
+                PlatformCommand::Inject(InputEvent::ButtonRelease { button }) => {
+                    button_releases.push(button);
+                }
+                other => panic!("unexpected cleanup command: {other:?}"),
+            }
+        }
+
+        assert!(keys.is_empty());
+        assert!(buttons.is_empty());
+        assert!(key_releases.contains(&"KeyA".to_string()));
+        assert!(key_releases.contains(&"ShiftLeft".to_string()));
+        assert!(key_releases.contains(&"MetaLeft".to_string()));
+        assert!(button_releases.contains(&"Left".to_string()));
+        assert!(button_releases.contains(&"Right".to_string()));
+        assert!(button_releases.contains(&"Middle".to_string()));
     }
 }

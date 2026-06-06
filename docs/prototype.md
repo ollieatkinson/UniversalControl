@@ -25,7 +25,7 @@ cargo run -- --config configs/receiver.example.toml
 
 Edit screen sizes and `remote_edge` before running. The input owner advertises `_anykbflow._tcp.local.` and the receiver discovers it automatically when `peer_addr` is omitted. Add `peer_addr = "host:24800"` to the receiver config to bypass discovery.
 
-The peer protocol sends periodic heartbeat messages in both directions. If a peer disconnects, both roles re-enter their connection loop after a short delay: the input owner listens again and the receiver re-discovers or reconnects. The receiver releases common modifier keys and mouse buttons when a session starts, and releases any keys or buttons it injected and still considers pressed before starting the next session.
+The peer protocol sends periodic heartbeat messages in both directions. If a peer disconnects, both roles re-enter their connection loop after a short delay: the input owner listens again and the receiver re-discovers or reconnects. The receiver releases common modifier keys and mouse buttons when a session starts, when focus returns local, and when a connection fails; it also releases any keys or buttons it injected and still considers pressed.
 
 ## Native Probes
 
@@ -119,7 +119,7 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 - Peer setup is manual. The input owner listens; the receiver connects.
 - No encryption or pairing yet.
 - No clipboard sync yet.
-- Reconnect is basic: the roles re-enter their connection loops and receiver-side common latches plus tracked injected keys/buttons are released, but input-owner-side local state and active remote focus still need more explicit cleanup.
+- Reconnect is basic: the roles re-enter their connection loops and receiver-side common latches plus tracked injected keys/buttons are released, but input-owner-side local state still needs native runtime validation.
 - The native input backend is based on `rdev` and should be treated as a spike layer, not the final platform code.
 - Key mapping uses physical `rdev` key names. This should be replaced with platform scancode mapping once the Mac and Windows spike data is available.
 - The Linux backend is intentionally no-op so the shared daemon can be checked in this workspace.
@@ -131,5 +131,5 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 3. Confirm capture, suppression, and injection behavior with Accessibility enabled on macOS.
 4. Reverse the roles and test macOS as input owner.
 5. Replace `rdev` mapping with explicit platform scancodes if modifiers/layouts are wrong.
-6. Add explicit focus/modifier cleanup messages around reconnect and input-owner-side active-state reset after disconnect.
+6. Validate focus/modifier cleanup on native macOS and Windows backends during planned return-to-local and forced disconnect.
 7. Add TLS pairing once basic control is stable.

@@ -142,6 +142,29 @@ Local validation on macOS:
 - `--backend rust-mdns` resolved this Mac's `_companion-link._tcp` service and printed the dynamic Rapport port plus `rp*` TXT keys.
 - Raw output was not committed because it includes local hostnames and stable-looking TXT values.
 
+### Repo-Native Advertisement Probe
+
+Added a bounded mDNS advertiser:
+
+```sh
+cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
+```
+
+Defaults:
+
+- service type: `_anykbflow-probe._tcp.local.`
+- instance: `AnyKBFlow Probe`
+- hostname: the local machine hostname, unless `--hostname` is supplied
+- port: `49152`
+
+The command rejects Apple-owned service types such as `_companion-link._tcp` unless `--allow-apple-service` is supplied. That guard keeps routine visibility checks separate from controlled native-compatibility experiments.
+
+Local validation on macOS:
+
+- `dns-sd -B _anykbflow-probe._tcp local` saw the advertised `AnyKBFlow Probe` service.
+- `dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local` resolved the hostname, port, and TXT values.
+- Because this validation ran on one Mac, the resolver reported the loopback interface; Windows-to-Mac visibility still needs a Windows-machine report.
+
 ### Native macOS Priority
 
 The preferred Mac-side architecture is to leave Apple's `UniversalControl.app` in control. The Windows side should first try to become visible to native macOS discovery and session setup. A Mac-side bridge should be treated as a fallback only after captures prove one of these hard blockers:

@@ -110,6 +110,30 @@ Expected Windows deliverable:
 - a redacted Markdown note under `docs/windows-inbox/`
 - any source patches for discovery/advertising under the implementation tree once it exists
 
+## Windows-To-Mac Advertisement Check
+
+On Windows:
+
+```powershell
+cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
+```
+
+On macOS, while the Windows command is running:
+
+```sh
+dns-sd -B _anykbflow-probe._tcp local
+dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local
+```
+
+Expected evidence:
+
+- macOS browse sees `AnyKBFlow Probe`.
+- macOS resolve shows the Windows hostname, published port, and TXT values.
+- If browse succeeds but resolve fails, record the interface number and firewall state.
+- If neither succeeds, record Windows network profile, firewall state, and whether UDP 5353 multicast is allowed.
+
+Controlled Apple-service experiments must be separated from this benign check. Only use `--service-type _companion-link._tcp --allow-apple-service` while macOS `rapportd` and `UniversalControl` logs are being captured, and only with a redacted TXT shape derived from observed Apple peers.
+
 ## First Experiments
 
 1. Compare `_companion-link._tcp` TXT records while Universal Control is disabled and enabled.

@@ -38,6 +38,33 @@ enum Command {
         #[arg(long)]
         include_apple_p2p: bool,
     },
+    /// Advertise a bounded mDNS test service for visibility checks.
+    AdvertiseMdns {
+        /// Advertise duration in seconds.
+        #[arg(long, default_value_t = 30)]
+        seconds: u64,
+        /// DNS-SD service type, with or without the .local. suffix.
+        #[arg(long, default_value = "_anykbflow-probe._tcp")]
+        service_type: String,
+        /// Instance name to publish.
+        #[arg(long, default_value = "AnyKBFlow Probe")]
+        instance: String,
+        /// Hostname to publish, with or without the .local. suffix. Defaults to this machine's hostname.
+        #[arg(long)]
+        hostname: Option<String>,
+        /// TCP port to publish in the SRV record.
+        #[arg(long, default_value_t = 49152)]
+        port: u16,
+        /// TXT property as key=value. Repeat for multiple properties.
+        #[arg(long = "txt")]
+        txt: Vec<String>,
+        /// Allow advertising Apple-owned service types such as _companion-link._tcp.
+        #[arg(long)]
+        allow_apple_service: bool,
+        /// Include Apple peer-to-peer interfaces such as awdl on macOS.
+        #[arg(long)]
+        include_apple_p2p: bool,
+    },
 }
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -67,6 +94,25 @@ async fn main() -> Result<()> {
             backend,
             include_apple_p2p,
         } => discovery::browse_companion_link(seconds, backend.into(), include_apple_p2p),
+        Command::AdvertiseMdns {
+            seconds,
+            service_type,
+            instance,
+            hostname,
+            port,
+            txt,
+            allow_apple_service,
+            include_apple_p2p,
+        } => discovery::advertise_mdns(discovery::AdvertiseOptions {
+            seconds,
+            service_type,
+            instance,
+            hostname,
+            port,
+            txt,
+            allow_apple_service,
+            include_apple_p2p,
+        }),
     }
 }
 

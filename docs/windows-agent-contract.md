@@ -72,6 +72,8 @@ The next Windows report should answer:
 2. Which TXT keys and port are visible?
 3. What happens when running `cargo run -- discover-companion-link --backend rust-mdns --seconds 30`?
 4. If Bonjour is installed, what happens with `cargo run -- discover-companion-link --backend system --seconds 30`?
-5. Can Windows advertise an mDNS service visible to macOS?
-6. Is the Windows prototype currently source-controlled somewhere outside this repo?
-7. What language/runtime is the current Windows implementation using?
+5. What happens when Windows runs `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe`?
+6. Does macOS see the Windows service with `dns-sd -B _anykbflow-probe._tcp local`?
+7. Does macOS resolve the Windows service with `dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local`?
+8. Is the Windows prototype currently source-controlled somewhere outside this repo?
+9. What language/runtime is the current Windows implementation using?

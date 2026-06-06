@@ -26,7 +26,7 @@ It has a TCP JSON-lines peer protocol, edge-crossing router, and a macOS/Windows
 
 See [docs/prototype.md](docs/prototype.md) for setup and current limitations.
 
-## Native Discovery Probe
+## Native mDNS Probes
 
 Run this on macOS or Windows to browse for Apple's native Rapport/CompanionLink service:
 
@@ -42,6 +42,21 @@ cargo run -- discover-companion-link --backend rust-mdns --seconds 10
 ```
 
 `auto` uses the system `dns-sd` command when available, otherwise it uses the pure Rust mDNS backend. Review output before sharing because hostnames, addresses, and TXT values can be stable identifiers.
+
+Run this on Windows to advertise a benign probe service while the Mac watches with `dns-sd`:
+
+```sh
+cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
+```
+
+On the Mac:
+
+```sh
+dns-sd -B _anykbflow-probe._tcp local
+dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local
+```
+
+The advertiser refuses Apple-owned service types such as `_companion-link._tcp` unless `--allow-apple-service` is supplied for a controlled native-compatibility experiment.
 
 ## Current Findings
 

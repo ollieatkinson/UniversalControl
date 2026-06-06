@@ -8,6 +8,8 @@ The preferred outcome is a Windows peer that works with Apple's native macOS `Un
 - Windows can resolve the Mac's `_companion-link._tcp` instance and capture all TXT keys.
 - `cargo run -- discover-companion-link --backend rust-mdns --seconds 30` produces either a resolved Mac service or a clear failure mode on Windows.
 - macOS can see a Windows-advertised test service.
+- `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe` on Windows is visible from macOS with `dns-sd -B _anykbflow-probe._tcp local`.
+- macOS can resolve that Windows-advertised service with `dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local`.
 - macOS logs show whether `rapportd` or `UniversalControl` reacts to the Windows advertisement.
 - The Windows advertisement can be toggled on and off while macOS logs are captured.
 
@@ -17,6 +19,7 @@ Evidence required:
 - filtered macOS `rapportd` and `UniversalControl` logs
 - exact Windows source or command that advertised the service
 - exact `anykbflow discover-companion-link` command and redacted output
+- exact `anykbflow advertise-mdns` command and redacted macOS browse/resolve output
 
 ## Phase 2: Candidate Admission
 

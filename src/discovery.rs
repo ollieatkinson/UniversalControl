@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::{Context, Result, bail};
-use mdns_sd::{ServiceDaemon, ServiceEvent};
+use mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
 
 const COMPANION_LINK_SERVICE: &str = "_companion-link._tcp.local.";
 const DNS_SD_SERVICE: &str = "_companion-link._tcp";
@@ -17,6 +17,17 @@ pub enum DiscoveryBackend {
     Auto,
     System,
     RustMdns,
+}
+
+pub struct AdvertiseOptions {
+    pub seconds: u64,
+    pub service_type: String,
+    pub instance: String,
+    pub hostname: Option<String>,
+    pub port: u16,
+    pub txt: Vec<String>,
+    pub allow_apple_service: bool,
+    pub include_apple_p2p: bool,
 }
 
 pub fn browse_companion_link(
@@ -32,6 +43,64 @@ pub fn browse_companion_link(
         DiscoveryBackend::System => browse_with_dns_sd(seconds),
         DiscoveryBackend::RustMdns => browse_with_rust_mdns(seconds, include_apple_p2p),
     }
+}
+
+pub fn advertise_mdns(options: AdvertiseOptions) -> Result<()> {
+    let seconds = options.seconds.max(1);
+    let service_type = normalize_service_type(&options.service_type)?;
+    let hostname_source = match options.hostname.as_deref() {
+        Some(hostname) => hostname.to_string(),
+        None => default_hostname()?,
+    };
+    let hostname = normalize_hostname(&hostname_source)?;
+
+    if is_apple_service_type(&service_type) && !options.allow_apple_service {
+        bail!(
+            "refusing to advertise Apple service type {service_type}; rerun with --allow-apple-service for a controlled native-compatibility experiment"
+        );
+    }
+
+    let txt = parse_txt_properties(&options.txt)?;
+    let mdns = ServiceDaemon::new().context("failed to create mDNS daemon")?;
+
+    if options.include_apple_p2p {
+        mdns.include_apple_p2p(true)
+            .context("failed to include Apple peer-to-peer interfaces")?;
+    }
+
+    let service = ServiceInfo::new(
+        &service_type,
+        &options.instance,
+        &hostname,
+        "",
+        options.port,
+        txt.as_slice(),
+    )
+    .context("failed to create mDNS service info")?
+    .enable_addr_auto();
+    let fullname = service.get_fullname().to_string();
+
+    println!(
+        "Advertising {fullname} at {hostname}:{} for {seconds}s",
+        options.port
+    );
+    println!(
+        "Review output before sharing: hostnames, service names, and TXT values may be stable identifiers."
+    );
+
+    mdns.register(service)
+        .context("failed to register mDNS service")?;
+    thread::sleep(Duration::from_secs(seconds));
+
+    if let Ok(unregister_events) = mdns.unregister(&fullname) {
+        while unregister_events
+            .recv_timeout(Duration::from_millis(250))
+            .is_ok()
+        {}
+    }
+
+    mdns.shutdown().context("failed to shut down mDNS daemon")?;
+    Ok(())
 }
 
 fn browse_with_dns_sd(seconds: u64) -> Result<()> {
@@ -147,6 +216,150 @@ fn browse_with_rust_mdns(seconds: u64, include_apple_p2p: bool) -> Result<()> {
         .context("failed to stop companion-link browse")?;
     mdns.shutdown().context("failed to shut down mDNS daemon")?;
     Ok(())
+}
+
+fn normalize_service_type(value: &str) -> Result<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        bail!("service type must not be empty");
+    }
+
+    let service_type = trim_local_suffix(trimmed);
+    if !service_type.starts_with('_')
+        || !(service_type.ends_with("._tcp") || service_type.ends_with("._udp"))
+    {
+        bail!("service type must look like _name._tcp or _name._udp");
+    }
+
+    Ok(format!("{service_type}.local."))
+}
+
+fn normalize_hostname(value: &str) -> Result<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        bail!("hostname must not be empty");
+    }
+
+    Ok(format!("{}.local.", trim_local_suffix(trimmed)))
+}
+
+fn default_hostname() -> Result<String> {
+    if let Ok(computer_name) = std::env::var("COMPUTERNAME")
+        && !computer_name.trim().is_empty()
+    {
+        return Ok(computer_name);
+    }
+
+    if let Ok(hostname) = std::env::var("HOSTNAME")
+        && !hostname.trim().is_empty()
+    {
+        return Ok(hostname);
+    }
+
+    let output = Command::new("hostname")
+        .stdin(Stdio::null())
+        .output()
+        .context("failed to run hostname; pass --hostname explicitly")?;
+    if !output.status.success() {
+        bail!("hostname command failed; pass --hostname explicitly");
+    }
+
+    let hostname = String::from_utf8(output.stdout)
+        .context("hostname output was not UTF-8")?
+        .trim()
+        .to_string();
+    if hostname.is_empty() {
+        bail!("hostname command returned an empty value; pass --hostname explicitly");
+    }
+    Ok(hostname)
+}
+
+fn trim_local_suffix(value: &str) -> &str {
+    let without_dot = value.trim_end_matches('.');
+    without_dot.strip_suffix(".local").unwrap_or(without_dot)
+}
+
+fn is_apple_service_type(service_type: &str) -> bool {
+    service_type.eq_ignore_ascii_case("_companion-link._tcp.local.")
+        || service_type.eq_ignore_ascii_case("_universalcontrol._tcp.local.")
+}
+
+fn parse_txt_properties(values: &[String]) -> Result<Vec<(String, String)>> {
+    let mut properties = Vec::with_capacity(values.len());
+
+    for value in values {
+        let (key, val) = value
+            .split_once('=')
+            .with_context(|| format!("TXT property must be key=value: {value}"))?;
+        let key = key.trim();
+        if key.is_empty() {
+            bail!("TXT property key must not be empty");
+        }
+        properties.push((key.to_string(), val.to_string()));
+    }
+
+    Ok(properties)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalizes_service_type_suffixes() {
+        assert_eq!(
+            normalize_service_type("_anykbflow-probe._tcp").unwrap(),
+            "_anykbflow-probe._tcp.local."
+        );
+        assert_eq!(
+            normalize_service_type("_anykbflow-probe._tcp.local").unwrap(),
+            "_anykbflow-probe._tcp.local."
+        );
+        assert_eq!(
+            normalize_service_type("_anykbflow-probe._tcp.local.").unwrap(),
+            "_anykbflow-probe._tcp.local."
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_service_type() {
+        assert!(normalize_service_type("anykbflow").is_err());
+        assert!(normalize_service_type("_anykbflow-probe._http").is_err());
+    }
+
+    #[test]
+    fn normalizes_hostname_suffixes() {
+        assert_eq!(
+            normalize_hostname("anykbflow-probe").unwrap(),
+            "anykbflow-probe.local."
+        );
+        assert_eq!(
+            normalize_hostname("anykbflow-probe.local.").unwrap(),
+            "anykbflow-probe.local."
+        );
+    }
+
+    #[test]
+    fn uses_explicit_hostname_when_provided() {
+        assert_eq!(
+            normalize_hostname("windows-peer.local").unwrap(),
+            "windows-peer.local."
+        );
+    }
+
+    #[test]
+    fn parses_txt_properties() {
+        let values = vec!["phase=visibility".to_string(), "role=probe".to_string()];
+        let properties = parse_txt_properties(&values).unwrap();
+
+        assert_eq!(
+            properties,
+            vec![
+                ("phase".to_string(), "visibility".to_string()),
+                ("role".to_string(), "probe".to_string()),
+            ]
+        );
+    }
 }
 
 fn has_dns_sd() -> bool {

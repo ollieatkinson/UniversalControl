@@ -1,0 +1,43 @@
+# UniversalControl
+
+Reverse-engineering notes and tooling for making a Windows machine participate in the Mac Universal Control-style keyboard, mouse, drag, and clipboard experience.
+
+The repository is currently in the evidence-gathering phase. The primary target is native macOS Universal Control compatibility: keep the Mac side running Apple's `UniversalControl.app` and make Windows participate if the protocol allows it. A project-owned Mac/Windows bridge is a fallback only if native Rapport/CompanionLink authentication proves impossible from Windows.
+
+## Current Findings
+
+- macOS Universal Control is implemented by `/System/Library/CoreServices/UniversalControl.app`, bundle identifier `com.apple.universalcontrol`.
+- On macOS 26.5.1, the app is launched as `com.apple.ensemble`.
+- Launchd starts it from Rapport matching events for:
+  - discovery of `_companion-link._tcp`
+  - a server match for `com.apple.universalcontrol`
+- The app has private entitlements for `com.apple.CompanionLink`, HID event dispatch, NearbyInteraction, Skylight Universal Control, and Wi-Fi peer-to-peer services.
+- Local Bonjour browsing shows this Mac advertises `_companion-link._tcp` through `rapportd`, not a dedicated `_universalcontrol._tcp` service.
+
+Those facts make Rapport/CompanionLink the first interop surface to understand. See [docs/protocol-hypothesis.md](docs/protocol-hypothesis.md).
+
+## Repo Layout
+
+- [docs/research-log.md](docs/research-log.md): dated evidence and source notes.
+- [docs/protocol-hypothesis.md](docs/protocol-hypothesis.md): current model of discovery, trust, control, and HID data flow.
+- [docs/native-compatibility-checklist.md](docs/native-compatibility-checklist.md): gates for keeping the Mac side on native Universal Control.
+- [docs/capture-plan.md](docs/capture-plan.md): repeatable experiments for macOS and Windows captures.
+- [docs/windows-interop-plan.md](docs/windows-interop-plan.md): native-first Windows peer strategy and fallback bridge criteria.
+- [docs/windows-agent-contract.md](docs/windows-agent-contract.md): where the Windows machine should write observations.
+- [scripts/mac/uc-probe.sh](scripts/mac/uc-probe.sh): read-only macOS probe for Universal Control/Rapport surfaces.
+
+## Running The macOS Probe
+
+```sh
+./scripts/mac/uc-probe.sh
+```
+
+The script writes timestamped output under `artifacts/`, which is intentionally ignored by git because the output can contain device names, local addresses, and stable identifiers.
+
+## Ground Rules
+
+- Work from observable behavior, public documentation, and local system evidence.
+- Keep Apple-account secrets, Keychain material, packet captures, and device identifiers out of git unless explicitly redacted.
+- Treat Apple-private authentication as a compatibility constraint, not something to bypass.
+- Prefer native macOS Universal Control compatibility until evidence shows Windows cannot satisfy the trust/session requirements safely or legally.
+- Keep the clean-room Windows/Mac bridge as the fallback, not the default.

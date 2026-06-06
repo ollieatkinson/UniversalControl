@@ -1,0 +1,78 @@
+# Native Compatibility Checklist
+
+The preferred outcome is a Windows peer that works with Apple's native macOS `UniversalControl.app`. Use this checklist to avoid prematurely falling back to a custom Mac agent.
+
+## Phase 1: Visibility
+
+- Windows can browse `_companion-link._tcp.local`.
+- Windows can resolve the Mac's `_companion-link._tcp` instance and capture all TXT keys.
+- macOS can see a Windows-advertised test service.
+- macOS logs show whether `rapportd` or `UniversalControl` reacts to the Windows advertisement.
+- The Windows advertisement can be toggled on and off while macOS logs are captured.
+
+Evidence required:
+
+- redacted DNS-SD records from both sides
+- filtered macOS `rapportd` and `UniversalControl` logs
+- exact Windows source or command that advertised the service
+
+## Phase 2: Candidate Admission
+
+- Windows advertises a service shape derived from observed Apple peers.
+- macOS creates a Rapport matching event or otherwise identifies Windows as a Universal Control candidate.
+- Any rejection reason is captured from unified logs.
+
+Evidence required:
+
+- before/after logs from `log stream`
+- resolved TXT records for an Apple peer and Windows peer
+- packet capture showing DNS-SD exchange
+
+## Phase 3: Session Setup
+
+- Windows accepts or opens the same TCP/UDP connections observed during Apple-to-Apple Universal Control.
+- Message framing is identified.
+- Authentication challenge/response messages are labeled.
+- The failure point, if any, is reproducible.
+
+Evidence required:
+
+- paired Apple-to-Apple control trace
+- Windows attempt trace
+- side-by-side state machine notes
+
+## Phase 4: Universal Control Service Negotiation
+
+- The session reaches a message or route for `com.apple.universalcontrol`.
+- Device capabilities can be decoded enough to understand role, display, input, and feature flags.
+- The peer can reach a target-ready or equivalent state.
+
+Evidence required:
+
+- decoded message names or stable message IDs
+- macOS logs confirming Universal Control service handling
+- notes for unknown fields and values
+
+## Phase 5: Input Data Plane
+
+- Pointer movement, button, scroll, and keyboard events are isolated in the stream.
+- Event encoding is decoded.
+- Session keys, if used, are negotiated in-session and available to Windows.
+- A synthetic event can be sent in a controlled test without compromising the Mac.
+
+Evidence required:
+
+- one minimal pointer trace
+- one minimal key trace
+- decoded or partially decoded event fields
+- validation that the Mac processes or rejects the event for a known reason
+
+## Fallback Decision
+
+Do not switch to a custom Mac agent until at least one of these is proven:
+
+- macOS requires Apple Account/iCloud Keychain identity unavailable to Windows.
+- macOS requires private Apple signatures or certificates unavailable to Windows.
+- Universal Control messages remain encrypted with non-negotiated Apple-only keys.
+- macOS never admits the Windows peer beyond discovery despite matching observable service records.
+- The only remaining route would require misleading platform attestation or bypassing user trust controls.

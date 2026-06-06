@@ -110,7 +110,8 @@ Only run this when a real Mac or iPad Universal Control peer is available.
 2. Redact values but preserve TXT key names, value length/class, service type,
    port, and address count.
 3. Compare that shape with the local Mac's self-advertisement and the minimal
-   Windows candidate above.
+   Windows candidate above using `scripts/mac/compare-uc-probe-summaries.py`
+   when both sides have redacted baseline summaries.
 4. Only after that, consider a Windows `_companion-link._tcp` advertisement that
    uses a structurally similar non-sensitive TXT shape.
 

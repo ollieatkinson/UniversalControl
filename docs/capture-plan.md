@@ -19,6 +19,17 @@ Run:
   --output docs/observations/YYYY-MM-DD-redacted-macos-uc-probe.md
 ```
 
+Compare two redacted baseline states:
+
+```sh
+./scripts/mac/compare-uc-probe-summaries.py \
+  docs/observations/YYYY-MM-DD-redacted-macos-uc-probe-before.md \
+  docs/observations/YYYY-MM-DD-redacted-macos-uc-probe-after.md \
+  --before-label before \
+  --after-label after \
+  --output docs/observations/YYYY-MM-DD-redacted-macos-uc-probe-compare.md
+```
+
 Expected output:
 
 - OS version and network interfaces
@@ -40,6 +51,10 @@ and value classes, protocol-relevant ports, socket counts, binary-string hint
 categories, and native log event/message IDs. It omits raw hostnames, addresses,
 hardware addresses, Bluetooth IDs, TXT values, defaults values, and unified-log
 lines.
+
+The comparer only reads redacted summaries. Use it to compare Universal Control
+disabled, enabled with no peer, and active Apple-peer states without committing
+raw artifact directories.
 
 ## Paired Mac Or iPad Session Capture
 

@@ -102,6 +102,12 @@ down/up, Command/Option/Control/Shift, arrow key, mouse move, button click, and
 wheel scroll. Only use `grab-events --suppress` after the non-suppressing probe
 matches the expected protocol events.
 
+Mac-side normalized event replay from
+`docs/windows-inbox/2026-06-06-oliver-pc-wsl-input-event-replay.md` is also
+pending a controlled foreground target. Replay injects the captured JSONL into
+the active desktop session, so use a disposable text field/window first and
+record whether key, pointer, button, and wheel events reproduce safely.
+
 The Mac-side watcher for questions 6 and 7 is:
 
 ```sh

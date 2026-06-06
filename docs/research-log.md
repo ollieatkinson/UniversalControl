@@ -229,6 +229,17 @@ addresses, Bluetooth IDs, TXT values, defaults values, and unified-log lines. A
 generated summary from the first local probe lives in
 `docs/observations/2026-06-06-redacted-macos-uc-probe.md`.
 
+Added a redacted-summary comparer:
+
+```sh
+./scripts/mac/compare-uc-probe-summaries.py docs/observations/before.md docs/observations/after.md
+```
+
+It compares commit-safe baseline probe summaries and reports added, removed, and
+changed fields while ignoring source artifact name and timestamp by default.
+This is meant for Universal Control disabled/enabled/active-peer state
+comparisons without exposing the raw probe artifacts.
+
 Added a paired-session capture wrapper:
 
 ```sh

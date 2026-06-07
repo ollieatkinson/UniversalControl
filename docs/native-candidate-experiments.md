@@ -299,6 +299,17 @@ When packet capture is required and you are ready to handle raw `.pcap` files:
 ./scripts/mac/capture-uc-session.sh --duration 120 --tcpdump
 ```
 
+For already-retained old sessions, use the historical log summarizer before
+digging through raw local logs:
+
+```sh
+./scripts/mac/summarize-historical-uc-log.py \
+  --start "YYYY-MM-DD HH:MM:SS" \
+  --end "YYYY-MM-DD HH:MM:SS" \
+  --context "commit-safe operator note" \
+  --output docs/observations/YYYY-MM-DD-redacted-historical-uc-log.md
+```
+
 Use the action timeline written in the artifact README: idle, edge push, pointer
 movement, one harmless key press, one scroll, return to local, then idle. The
 goal is to label which logs and network streams change at each action before
@@ -306,3 +317,7 @@ attempting any Windows native handshake. The paired summary reports focused
 native stream, target/input, sync/layout, proximity/ranging, and AWDL/Wi-Fi P2P
 counters so the Windows admission runs can be compared against the signal
 families a real Apple peer produces.
+
+Historical summaries are count-only and can identify promising native
+`UniversalControl`, `rapportd`, proximity, or Wi-Fi peer-to-peer windows, but
+they are not a substitute for the labeled action trace above.

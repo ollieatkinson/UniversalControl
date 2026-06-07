@@ -39,20 +39,20 @@
 - nearbyd lines: 115
 - wifip2pd lines: 448
 - Discovery keyword lines: 3255
-- Session/control keyword lines: 30667
+- Session/control keyword lines: 6503
 - Input/action keyword lines: 9132
 - Error/rejection keyword lines: 724
 - UniversalControl/rapportd discovery keyword lines: 77
-- UniversalControl/rapportd session/control keyword lines: 30141
+- UniversalControl/rapportd session/control keyword lines: 6365
 - UniversalControl/rapportd input/action keyword lines: 6154
 - UniversalControl/rapportd error/rejection keyword lines: 96
 - Native stream keyword lines: 0
 - Native target/input keyword lines: 60
 - Native sync/layout keyword lines: 96
-- Proximity/ranging keyword lines: 265
-- Native/proximity-process proximity keyword lines: 265
-- Wi-Fi peer-to-peer/AWDL keyword lines: 6451
-- Native/transport-process Wi-Fi P2P keyword lines: 6392
+- Proximity/ranging keyword lines: 156
+- Native/proximity-process proximity keyword lines: 156
+- Wi-Fi peer-to-peer/AWDL keyword lines: 6142
+- Native/transport-process Wi-Fi P2P keyword lines: 6083
 - Raw log lines: not included
 
 ## Network Snapshot

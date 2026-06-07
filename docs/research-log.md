@@ -653,3 +653,24 @@ treated as a useful active-session signal shape rather than an exact 120 second
 window. The script now tears down descendant process trees with interrupt and
 terminate signals, using a non-interactive `sudo kill` fallback for root-owned
 tcpdump descendants.
+
+### Historical Universal Control Log Window
+
+Added `scripts/mac/summarize-historical-uc-log.py` so retained macOS unified-log
+windows can be counted without writing raw log lines to disk. It is useful when
+an Apple-to-Apple Universal Control session already happened but the matching
+`capture-uc-session.sh` run was not started in time.
+
+Recorded `docs/observations/2026-06-05-redacted-historical-uc-log.md` for a
+reported Apple-to-Apple session window. It counted UniversalControl, Rapport,
+NearbyInteraction, and Wi-Fi peer-to-peer signal families without committing
+hostnames, addresses, device names, or raw log messages. The result is only a
+coarse historical signal: it found native stream plus proximity/Wi-Fi P2P
+families, but it is not a labeled action trace and cannot replace the fresh
+120 second edge-push capture.
+
+Updated both historical and session log counting to remove native process names
+before matching signal keywords. This prevents `UniversalControl` process names
+from inflating generic `control` counters and makes the specific stream,
+target/input, sync/layout, proximity, and Wi-Fi P2P counters the stronger
+evidence to compare against Windows native-admission attempts.

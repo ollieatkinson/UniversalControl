@@ -132,6 +132,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/mac/summarize-mdns-watch-artifact.py](scripts/mac/summarize-mdns-watch-artifact.py): redacts watcher artifacts into commit-safe Markdown summaries.
 - [scripts/mac/compare-mdns-watch-summaries.py](scripts/mac/compare-mdns-watch-summaries.py): compares two redacted watcher summaries, especially minimal versus shape-only CompanionLink candidates.
 - [scripts/mac/summarize-uc-session-artifact.py](scripts/mac/summarize-uc-session-artifact.py): redacts paired-session artifacts into commit-safe Markdown summaries.
+- [scripts/mac/summarize-historical-uc-log.py](scripts/mac/summarize-historical-uc-log.py): counts historical Universal Control/Rapport unified-log windows without committing raw log lines.
 - [scripts/capture-input-events.py](scripts/capture-input-events.py): captures normalized input events from native macOS/Windows probes, writes a redacted summary, and can route-gate the capture against an input-owner config.
 - [scripts/summarize-input-events.py](scripts/summarize-input-events.py): summarizes normalized `InputEvent` JSONL without including typed text values.
 - [scripts/compare-native-admission-pair.py](scripts/compare-native-admission-pair.py): pairs redacted Mac watcher and Windows TCP-observer summaries into one admission report.

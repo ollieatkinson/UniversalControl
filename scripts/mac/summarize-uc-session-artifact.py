@@ -235,7 +235,7 @@ def render_browse_summary(events: list[BrowseEvent]) -> list[str]:
 def summarize_logs(text: str) -> Counter[str]:
     counts: Counter[str] = Counter()
     discovery_pattern = re.compile(r"companion|_companion-link|dnsservice|browse|resolve|matching", re.I)
-    session_pattern = re.compile(r"clink|p2p|direct|stream|target|ready|focus|session|control|edge", re.I)
+    session_pattern = re.compile(r"clink|p2p|direct|stream|target|ready|focus|session|edge|control message", re.I)
     input_pattern = re.compile(r"hid|keyboard|key|pointer|mouse|scroll|drag|pasteboard|event", re.I)
     error_pattern = re.compile(r"reject|den(?:y|ied)|fail(?:ed|ure)?|(?<!no)error|invalid|refus|timeout", re.I)
     stream_pattern = re.compile(r"RPStreamServer|P2PStream|P2PDirectLink|Accept Stream|Prepare Stream", re.I)
@@ -268,37 +268,45 @@ def summarize_logs(text: str) -> Counter[str]:
         for process in NATIVE_PROCESSES:
             if process in line:
                 counts[process] += 1
-        if discovery_pattern.search(line):
+        signal_text = log_signal_text(line)
+        if discovery_pattern.search(signal_text):
             counts["discovery_keywords"] += 1
             if native_session_process:
                 counts["native_discovery_keywords"] += 1
-        if session_pattern.search(line):
+        if session_pattern.search(signal_text):
             counts["session_keywords"] += 1
             if native_session_process:
                 counts["native_session_keywords"] += 1
-        if input_pattern.search(line):
+        if input_pattern.search(signal_text):
             counts["input_keywords"] += 1
             if native_session_process:
                 counts["native_input_keywords"] += 1
-        if error_pattern.search(line):
+        if error_pattern.search(signal_text):
             counts["error_keywords"] += 1
             if native_session_process:
                 counts["native_error_keywords"] += 1
-        if stream_pattern.search(line) and native_session_process:
+        if stream_pattern.search(signal_text) and native_session_process:
             counts["native_stream_keywords"] += 1
-        if target_pattern.search(line) and native_session_process:
+        if target_pattern.search(signal_text) and native_session_process:
             counts["native_target_keywords"] += 1
-        if sync_layout_pattern.search(line) and native_session_process:
+        if sync_layout_pattern.search(signal_text) and native_session_process:
             counts["native_sync_layout_keywords"] += 1
-        if proximity_pattern.search(line):
+        if proximity_pattern.search(signal_text):
             counts["proximity_keywords"] += 1
             if native_proximity_process:
                 counts["native_proximity_keywords"] += 1
-        if p2p_transport_pattern.search(line):
+        if p2p_transport_pattern.search(signal_text):
             counts["p2p_transport_keywords"] += 1
             if native_p2p_transport_process:
                 counts["native_p2p_transport_keywords"] += 1
     return counts
+
+
+def log_signal_text(line: str) -> str:
+    text = line
+    for process in NATIVE_PROCESSES:
+        text = text.replace(process, "")
+    return text
 
 
 def summarize_lsof(text: str) -> Counter[str]:

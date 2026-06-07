@@ -101,6 +101,22 @@ Recommended command:
   --output docs/observations/YYYY-MM-DD-redacted-uc-session.md
 ```
 
+If the real Apple-to-Apple session already happened and the unified log still
+retains the relevant window, summarize the historical window without writing raw
+log lines:
+
+```sh
+./scripts/mac/summarize-historical-uc-log.py \
+  --start "YYYY-MM-DD HH:MM:SS" \
+  --end "YYYY-MM-DD HH:MM:SS" \
+  --context "commit-safe operator note" \
+  --output docs/observations/YYYY-MM-DD-redacted-historical-uc-log.md
+```
+
+Use historical summaries to find promising windows. They do not replace a fresh
+labeled action trace because they cannot tie edge push, target movement,
+keyboard input, scroll, and return-to-local to exact timestamps.
+
 Add packet capture when ready to collect raw network evidence:
 
 ```sh
@@ -116,6 +132,7 @@ What it captures:
 - `lsof` network snapshots for `rapportd` and `UniversalControl`
 - optional `tcpdump` packet captures on `en0` plus `awdl0` when present
 - `scripts/mac/summarize-uc-session-artifact.py` creates the commit-safe Markdown summary from the ignored artifact folder.
+- `scripts/mac/summarize-historical-uc-log.py` creates a commit-safe count-only summary from old unified logs when no capture artifact exists.
 
 The session summary reports broad discovery/session/input counters plus the
 same focused native counters used by Windows admission captures: stream,

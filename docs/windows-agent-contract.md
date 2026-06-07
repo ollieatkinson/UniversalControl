@@ -69,17 +69,23 @@ Redact before committing:
 
 The next native-focused Windows report should answer:
 
-1. Does Windows see this Mac's `_companion-link._tcp.local` advertisement?
-2. Which TXT keys and port are visible?
-3. What happens when running `python scripts/windows/capture-companion-link-discovery.py`?
-4. If Bonjour is installed, what happens with `cargo run -- discover-companion-link --backend system --seconds 30`?
-5. What happens when Windows runs `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe`?
-6. Does macOS see the Windows service with `dns-sd -B _anykbflow-probe._tcp local`?
-7. Does macOS resolve the Windows service with `dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local`?
-8. Is the Windows prototype currently source-controlled somewhere outside this repo?
-9. What language/runtime is the current Windows implementation using?
-10. After macOS confirms the benign probe is visible, what happens when Windows advertises the minimal `_companion-link._tcp` native candidate below while the Mac runs `scripts/mac/watch-companion-link-candidate.sh`?
-11. What does `cargo run -- probe displays` report from a native Windows terminal, with display names redacted but bounds, scale, primary flag, and negative origins preserved?
+1. What happens when running
+   `python scripts/windows/capture-apple-account-environment.py` from a native
+   Windows terminal?
+2. Is iCloud for Windows or another supported Apple Windows app installed, and
+   does the operator locally confirm it is signed in to the same Apple Account
+   as the Mac? Do not write the account identifier to git.
+3. Does Windows see this Mac's `_companion-link._tcp.local` advertisement?
+4. Which TXT keys and port are visible?
+5. What happens when running `python scripts/windows/capture-companion-link-discovery.py`?
+6. If Bonjour is installed, what happens with `cargo run -- discover-companion-link --backend system --seconds 30`?
+7. What happens when Windows runs `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe`?
+8. Does macOS see the Windows service with `dns-sd -B _anykbflow-probe._tcp local`?
+9. Does macOS resolve the Windows service with `dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local`?
+10. Is the Windows prototype currently source-controlled somewhere outside this repo?
+11. What language/runtime is the current Windows implementation using?
+12. After macOS confirms the benign probe is visible, what happens when Windows advertises the minimal `_companion-link._tcp` native candidate below while the Mac runs `scripts/mac/watch-companion-link-candidate.sh`?
+13. What does `cargo run -- probe displays` report from a native Windows terminal, with display names redacted but bounds, scale, primary flag, and negative origins preserved?
 
 Mac-side bridge-smoke and bridge-network-smoke follow-up from the 2026-06-06
 Windows notes is answered in
@@ -160,6 +166,7 @@ For the shape-only follow-up, use:
 Useful commands from this repo:
 
 ```powershell
+python scripts/windows/capture-apple-account-environment.py
 python scripts/windows/capture-companion-link-discovery.py
 cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact *> artifacts/windows-companion-link-discovery.txt
 python scripts/windows/summarize-companion-link-discovery-output.py `

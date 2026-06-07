@@ -378,11 +378,34 @@ Sources:
 - <https://support.apple.com/guide/security-pdf/handoff-security-secf78dbe639/web>
 
 Interpretation for Windows: native Universal Control is not disproven, but it
-is high risk. The immediate proof gates are still Windows passive browsing of
-the Mac `_companion-link._tcp` advertisement, macOS visibility of a benign
-Windows mDNS probe, a controlled Windows `_companion-link._tcp` candidate run
-with macOS `rapportd`/`UniversalControl` logs, and Apple-to-Apple baseline
-captures before any deeper Windows native handshake attempt.
+is high risk. The immediate proof gates are a native Windows Apple
+Account/iCloud environment report, Windows passive browsing of the Mac
+`_companion-link._tcp` advertisement, macOS visibility of a benign Windows mDNS
+probe, a controlled Windows `_companion-link._tcp` candidate run with macOS
+`rapportd`/`UniversalControl` logs, and Apple-to-Apple baseline captures before
+any deeper Windows native handshake attempt.
+
+### Windows Apple Account Environment Probe
+
+Added `scripts/windows/capture-apple-account-environment.py` so the Windows
+machine can report whether a legitimate Apple Account path is locally plausible
+before native admission is declared blocked. The probe is meant to run from a
+native Windows terminal and writes:
+
+- a sanitized JSON transcript under ignored `artifacts/`
+- a redacted Markdown summary under `docs/windows-inbox/`
+
+It records supported-software and account-surface shape only: iCloud, Apple,
+and Bonjour product/package names, Apple service/process names, known
+executable candidate presence without paths, account-related registry surface
+presence and value-name classes without values, Apple-related Credential
+Manager target counts without target names, and Apple-related certificate counts
+without subjects.
+
+The summary deliberately omits Apple Account identifiers, credential target
+names, registry values, certificate subjects, install paths, hostnames,
+usernames, and IP addresses. A human still needs to confirm locally that the
+Windows Apple software is signed in to the same Apple Account as the Mac.
 
 ### Shape-Only CompanionLink Candidate
 

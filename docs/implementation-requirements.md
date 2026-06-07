@@ -67,6 +67,18 @@ extracting protected Apple Account or iCloud Keychain secrets, private
 certificates unavailable through supported Windows Apple software, private
 entitlements, or misleading platform attestation.
 
+The first Windows check for this layer is intentionally non-secret-bearing:
+
+```powershell
+python scripts/windows/capture-apple-account-environment.py
+```
+
+That report must not prove the Apple Account itself by writing the identifier to
+git. It should only prove whether supported Apple software, account-state
+registry surfaces, Credential Manager target counts, and Apple-related
+certificate counts exist. The operator still confirms locally that the Windows
+Apple software is signed in to the same Apple Account as the Mac.
+
 ### 3. Rapport/CompanionLink Session
 
 After discovery, we need to identify:
@@ -183,14 +195,16 @@ The immediate implementation blockers are evidence blockers, not code volume:
 
 1. Restore or work around the local Universal Control link option enough to keep
    collecting Apple-to-Apple active session baselines.
-2. Run the Windows passive CompanionLink browse and benign advertisement
+2. Run the Windows Apple Account/iCloud environment probe from native Windows so
+   identity absence is not mistaken for a protocol failure.
+3. Run the Windows passive CompanionLink browse and benign advertisement
    captures on the real LAN.
-3. Run the minimal and shape-only CompanionLink candidate captures with Mac logs
+4. Run the minimal and shape-only CompanionLink candidate captures with Mac logs
    active.
-4. If macOS connects to the Windows candidate, build the smallest TCP framing
+5. If macOS connects to the Windows candidate, build the smallest TCP framing
    probe that records frame shapes without logging raw payloads.
-5. Compare any Windows reaction against the Apple-to-Apple session baseline.
-6. Decide whether to continue native session work or promote the bridge into the
+6. Compare any Windows reaction against the Apple-to-Apple session baseline.
+7. Decide whether to continue native session work or promote the bridge into the
    primary implementation track.
 
 Until gate 3 or 4 moves, the right implementation work is instrumentation,

@@ -175,6 +175,9 @@ Record:
 - Windows version and build
 - network adapters and active interface
 - display geometry from `cargo run -- probe displays`
+- whether iCloud for Windows or another supported Apple Windows app is installed
+- whether the operator locally confirmed same-Apple-Account sign-in without
+  writing the account identifier to git
 - whether Apple Bonjour is installed
 - whether the Windows implementation is advertising anything
 - local firewall state for inbound UDP 5353, UDP 3722, and the chosen TCP port
@@ -194,6 +197,17 @@ Resolve-DnsName -Type PTR _companion-link._tcp.local
 ```
 
 Repo-native discovery command:
+
+```powershell
+python scripts/windows/capture-apple-account-environment.py
+```
+
+This writes a sanitized JSON transcript under ignored `artifacts/` and a
+redacted summary under `docs/windows-inbox/`. It records supported Apple
+software, service/process names, account-related registry-surface presence,
+Credential Manager target counts, and Apple-related certificate counts without
+account identifiers, credential target names, registry values, certificate
+subjects, install paths, hostnames, usernames, or IP addresses.
 
 ```powershell
 python scripts/windows/capture-companion-link-discovery.py

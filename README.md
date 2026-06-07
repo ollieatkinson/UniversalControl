@@ -29,6 +29,24 @@ It has a TCP JSON-lines peer protocol, edge-crossing router, and a macOS/Windows
 
 See [docs/prototype.md](docs/prototype.md) for setup and current limitations.
 
+## Windows Apple Account Probe
+
+Run this from a native Windows terminal before deciding that same-account
+Continuity trust blocks native Universal Control admission:
+
+```sh
+python scripts/windows/capture-apple-account-environment.py
+```
+
+The wrapper writes a sanitized JSON transcript under ignored `artifacts/` and a
+redacted summary under `docs/windows-inbox/`. It records only the presence and
+classes of supported Apple software, iCloud/Bonjour services, account-related
+registry surfaces, Credential Manager targets, and Apple-related certificates.
+It does not include Apple Account identifiers, credential names, registry
+values, certificate subjects, install paths, hostnames, usernames, or IP
+addresses. The operator still confirms locally that Windows is signed in to the
+same Apple Account as the Mac.
+
 ## Native mDNS Probes
 
 Run this on macOS or Windows to browse for Apple's native Rapport/CompanionLink service:
@@ -139,6 +157,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/capture-input-events.py](scripts/capture-input-events.py): captures normalized input events from native macOS/Windows probes, writes a redacted summary, and can route-gate the capture against an input-owner config.
 - [scripts/summarize-input-events.py](scripts/summarize-input-events.py): summarizes normalized `InputEvent` JSONL without including typed text values.
 - [scripts/compare-native-admission-pair.py](scripts/compare-native-admission-pair.py): pairs redacted Mac watcher and Windows TCP-observer summaries into one admission report.
+- [scripts/windows/capture-apple-account-environment.py](scripts/windows/capture-apple-account-environment.py): captures a redacted Windows Apple Account/iCloud environment summary without account identifiers or secrets.
 - [scripts/windows/capture-companion-link-discovery.py](scripts/windows/capture-companion-link-discovery.py): captures Windows passive CompanionLink discovery, writes a redacted summary, and compares it with the local baseline.
 - [scripts/windows/summarize-companion-link-discovery-output.py](scripts/windows/summarize-companion-link-discovery-output.py): redacts `discover-companion-link --redact` output into commit-safe Markdown.
 - [scripts/windows/compare-companion-link-discovery-summaries.py](scripts/windows/compare-companion-link-discovery-summaries.py): compares two redacted CompanionLink discovery summaries.

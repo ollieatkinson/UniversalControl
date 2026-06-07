@@ -14,6 +14,10 @@ peer `Hello` messages, local edge routing from detected display size, and a
 macOS display probe fallback are in place, but native Universal Control
 discovery is still not proven:
 
+- Windows has not yet reported whether iCloud for Windows, Apple's newer
+  Windows apps, Bonjour, account-state registry surfaces, Credential Manager
+  targets, or Apple-related certificates exist on the native Windows host. That
+  report is needed before treating same-account Continuity trust as impossible.
 - Windows has not yet proven it can resolve the Mac's `_companion-link._tcp`
   advertisement with the Rust mDNS backend.
 - macOS has not yet proven it can see a Windows-advertised service on the real
@@ -25,6 +29,45 @@ discovery is still not proven:
   routing, input-owner `Hello`, and loopback JSON-lines transport; this still
   needs native Windows-terminal output, external-monitor macOS output, and mouse
   coordinate comparison against a live two-machine run.
+
+## Experiment 0: Windows Apple Account Environment
+
+Run this from a native Windows terminal, not WSL, before deciding whether the
+same-Apple-Account trust gate is blocked:
+
+```powershell
+python scripts/windows/capture-apple-account-environment.py
+```
+
+The wrapper writes a sanitized JSON transcript under ignored `artifacts/` and a
+redacted Markdown summary under `docs/windows-inbox/`. It records only
+environment shape:
+
+- iCloud, Apple, and Bonjour installed product/package names and versions
+- Apple/iCloud/Bonjour service and process names
+- presence of known iCloud/Bonjour executable candidates without paths
+- presence and value-name classes for Apple account-related registry keys
+- count and class of Apple-related Credential Manager targets without target
+  names
+- count of Apple-related certificates by store, including private-key counts,
+  without certificate subjects
+
+It deliberately does not include Apple Account identifiers, credential target
+names, registry values, certificate subjects, install paths, hostnames,
+usernames, or IP addresses.
+
+Interpretation:
+
+- `apple_account_surface_present`: supported Apple software plus local account
+  or credential clues exist. Manually confirm the Windows Apple software is
+  signed in to the same Apple Account as the Mac, then keep native trust work
+  open.
+- `installed_but_no_account_surface_detected`: iCloud/Apple software exists,
+  but the probe did not find account-state clues. Open the Apple UI locally and
+  sign in before treating this as a native blocker.
+- `apple_software_missing`: install iCloud for Windows or the relevant Apple
+  Windows app before using identity absence as evidence against native
+  Universal Control.
 
 ## Experiment 1: Passive Windows Browse
 

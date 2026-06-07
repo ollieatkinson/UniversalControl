@@ -80,27 +80,34 @@ session behavior.
 
 Run the next native checks in this order:
 
-1. Windows passive browse:
+1. Windows Apple Account/iCloud environment:
+   `scripts/windows/capture-apple-account-environment.py`, which writes a
+   sanitized JSON transcript under `artifacts/` and a redacted Markdown summary
+   under `docs/windows-inbox/` without account identifiers, credential names,
+   registry values, certificate subjects, install paths, hostnames, usernames,
+   or IP addresses. Use this to decide whether iCloud for Windows or another
+   supported Apple Windows app exposes account/trust surfaces worth testing.
+2. Windows passive browse:
    `scripts/windows/capture-companion-link-discovery.py`, which runs
    `discover-companion-link --backend rust-mdns --redact`, summarizes it with
    `scripts/windows/summarize-companion-link-discovery-output.py`, and compares
    it with `scripts/windows/compare-companion-link-discovery-summaries.py`.
-2. Benign Windows-to-macOS visibility:
+3. Benign Windows-to-macOS visibility:
    `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe`
    while macOS runs
    `scripts/mac/capture-native-admission.sh --mode benign`.
-3. Controlled CompanionLink candidate:
+4. Controlled CompanionLink candidate:
    `scripts/mac/capture-native-admission.sh --mode companion-link` on macOS
    while Windows runs the printed
    `advertise-mdns --service-type _companion-link._tcp --allow-apple-service`
    command.
-4. Shape-only CompanionLink candidate:
+5. Shape-only CompanionLink candidate:
    `scripts/mac/capture-native-admission.sh --mode shape` on macOS while
    Windows runs the printed `advertise-companion-link-shape` command.
-5. Apple peer TXT and state comparison using `scripts/mac/uc-probe.sh`,
+6. Apple peer TXT and state comparison using `scripts/mac/uc-probe.sh`,
    `scripts/mac/summarize-uc-probe-artifact.py`, and
    `scripts/mac/compare-uc-probe-summaries.py`.
-6. Apple-to-Apple active session capture using
+7. Apple-to-Apple active session capture using
    `scripts/mac/capture-uc-session.sh` and
    `scripts/mac/summarize-uc-session-artifact.py`.
 

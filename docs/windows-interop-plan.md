@@ -35,18 +35,23 @@ false platform capabilities.
 
 Work items:
 
-1. Use `scripts/windows/capture-companion-link-discovery.py` on Windows for
+1. Use `scripts/windows/capture-apple-account-environment.py` from native
+   Windows to report whether iCloud for Windows or another supported Apple app,
+   Bonjour, account-state registry surfaces, Credential Manager target counts,
+   and Apple-related certificates exist without committing account identifiers
+   or secrets.
+2. Use `scripts/windows/capture-companion-link-discovery.py` on Windows for
    passive DNS-SD browsing of `_companion-link._tcp`; it summarizes
    `discover-companion-link --backend rust-mdns --redact` output and compares
    it with `scripts/windows/compare-companion-link-discovery-summaries.py`.
-2. Parse and log TXT records without assigning meanings prematurely.
-3. Compare the Rust mDNS backend with `--backend system` if Bonjour's `dns-sd.exe` is installed.
-4. Use `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe` to prove macOS can see and resolve a Windows-advertised service.
-5. Run the minimal controlled `_companion-link._tcp` candidate experiment in [native-candidate-experiments.md](native-candidate-experiments.md) using `--allow-apple-service` only while macOS logs are captured.
-6. Observe whether macOS `rapportd` or `UniversalControl` logs react to a Windows advertisement.
-7. Attempt a minimal TCP connection to the advertised `rapportd` listener only after logging what Apple peers do first.
-8. Continue native work while the session advances with observable, reproducible messages.
-9. Stop only if authentication requires Apple Account/iCloud Keychain material,
+3. Parse and log TXT records without assigning meanings prematurely.
+4. Compare the Rust mDNS backend with `--backend system` if Bonjour's `dns-sd.exe` is installed.
+5. Use `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe` to prove macOS can see and resolve a Windows-advertised service.
+6. Run the minimal controlled `_companion-link._tcp` candidate experiment in [native-candidate-experiments.md](native-candidate-experiments.md) using `--allow-apple-service` only while macOS logs are captured.
+7. Observe whether macOS `rapportd` or `UniversalControl` logs react to a Windows advertisement.
+8. Attempt a minimal TCP connection to the advertised `rapportd` listener only after logging what Apple peers do first.
+9. Continue native work while the session advances with observable, reproducible messages.
+10. Stop only if authentication requires Apple Account/iCloud Keychain material,
    private Apple signatures, or entitlement-protected peer claims that Windows
    cannot obtain through supported Apple software, supported APIs, or honest
    platform capabilities.

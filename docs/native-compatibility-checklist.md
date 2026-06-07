@@ -2,6 +2,28 @@
 
 The preferred outcome is a Windows peer that works with Apple's native macOS `UniversalControl.app`. Use this checklist to avoid prematurely falling back to a custom Mac agent.
 
+## Phase 0: Windows Apple Account Surface
+
+- `scripts/windows/capture-apple-account-environment.py` runs from a native
+  Windows terminal, not WSL.
+- The committed Windows summary reports whether iCloud for Windows, Apple's
+  Windows apps, Bonjour, account-state registry surfaces, Credential Manager
+  target counts, and Apple-related certificate counts exist.
+- The operator locally confirms whether the Windows Apple software is signed in
+  to the same Apple Account as the Mac, without writing the account identifier
+  to git.
+- If the report says `apple_software_missing`, install supported Apple Windows
+  software before using identity absence as evidence against native admission.
+
+Evidence required:
+
+- a redacted Windows inbox summary from
+  `scripts/windows/capture-apple-account-environment.py`
+- no Apple Account identifiers, credential target names, registry values,
+  certificate subjects, install paths, hostnames, usernames, or IP addresses in
+  the committed note
+- a yes/no local operator statement that same-account sign-in was checked
+
 ## Phase 1: Visibility
 
 - Windows can browse `_companion-link._tcp.local`.

@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 duration=90
 instance=""
 include_resolve=1
+output_dir=""
 
 usage() {
   cat <<'EOF'
@@ -13,6 +14,7 @@ Usage: scripts/mac/watch-companion-link-candidate.sh [options]
 Options:
   --duration SECONDS    Capture duration. Default: 90.
   --instance NAME       _companion-link._tcp instance to resolve.
+  --output-dir DIR      Write artifact files to DIR. Default: artifacts/mac-mdns-watch-<timestamp>/.
   --no-resolve          Browse only; skip dns-sd -L.
   -h, --help            Show this help.
 
@@ -33,6 +35,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --instance)
       instance="$2"
+      shift 2
+      ;;
+    --output-dir)
+      output_dir="$2"
       shift 2
       ;;
     --no-resolve)
@@ -61,6 +67,10 @@ args=(
   --duration "${duration}"
   --service "_companion-link._tcp"
 )
+
+if [[ -n "${output_dir}" ]]; then
+  args+=(--output-dir "${output_dir}")
+fi
 
 if [[ "${include_resolve}" -eq 1 ]]; then
   args+=(--instance "${instance}")

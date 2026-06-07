@@ -108,10 +108,22 @@ pending a controlled foreground target. Replay injects the captured JSONL into
 the active desktop session, so use a disposable text field/window first and
 record whether key, pointer, button, and wheel events reproduce safely.
 
-The Mac-side watcher for questions 6 and 7 is:
+The preferred Mac-side watcher for questions 6 and 7 is:
 
 ```sh
-./scripts/mac/watch-mdns-service.sh --duration 60
+./scripts/mac/capture-native-admission.sh --mode benign
+```
+
+For question 10, use:
+
+```sh
+./scripts/mac/capture-native-admission.sh --mode companion-link
+```
+
+For the shape-only follow-up, use:
+
+```sh
+./scripts/mac/capture-native-admission.sh --mode shape
 ```
 
 Useful commands from this repo:
@@ -126,9 +138,8 @@ cargo run -- advertise-mdns --service-type _companion-link._tcp --instance "AnyK
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60
 ```
 
-Use `advertise-companion-link-shape` only while the Mac-side
-`watch-companion-link-candidate.sh` capture is running with expected instance
-`AnyKBFlow Native Shape Probe`. Capture the Windows `TCP observer summary` line
-in the Windows note.
+Use `advertise-companion-link-shape` only while
+`capture-native-admission.sh --mode shape` is running on the Mac. Capture the
+Windows `TCP observer summary` line in the Windows note.
 
 The redacted Rust mDNS output should preserve event type, service type, port, TXT key names, TXT value length/class, and address count. Do not commit unredacted `dns-sd` or `--backend system` output unless it has been manually reviewed and sanitized.

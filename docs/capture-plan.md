@@ -167,6 +167,12 @@ Expected Windows deliverable:
 
 ## Windows-To-Mac Advertisement Check
 
+Preferred macOS wrapper:
+
+```sh
+./scripts/mac/capture-native-admission.sh --mode benign
+```
+
 On Windows:
 
 ```powershell
@@ -200,6 +206,12 @@ Apple-peer TXT shape has been captured and redacted.
 
 Use this only after the benign Windows advertisement check has established that
 macOS can see Windows mDNS services on the current network.
+
+Preferred macOS wrapper:
+
+```sh
+./scripts/mac/capture-native-admission.sh --mode companion-link
+```
 
 On macOS first:
 
@@ -236,6 +248,12 @@ Preserve raw artifacts under `artifacts/`, then commit only redacted summaries.
 Use this only after the minimal candidate check. It publishes the redacted
 macOS-baseline TXT key/value-class shape with deterministic placeholder values,
 not real Apple identifiers.
+
+Preferred macOS wrapper:
+
+```sh
+./scripts/mac/capture-native-admission.sh --mode shape
+```
 
 On macOS first:
 

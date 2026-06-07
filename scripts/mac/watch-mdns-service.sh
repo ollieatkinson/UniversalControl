@@ -6,6 +6,7 @@ duration=60
 service="_anykbflow-probe._tcp"
 instance="AnyKBFlow Probe"
 include_resolve=1
+output_dir=""
 
 usage() {
   cat <<'EOF'
@@ -15,6 +16,7 @@ Options:
   --duration SECONDS    Capture duration. Default: 60.
   --service TYPE        DNS-SD service type without .local. Default: _anykbflow-probe._tcp.
   --instance NAME       Instance to resolve with dns-sd -L. Default: AnyKBFlow Probe.
+  --output-dir DIR      Write artifact files to DIR. Default: artifacts/mac-mdns-watch-<timestamp>/.
   --no-resolve          Skip dns-sd -L.
   -h, --help            Show this help.
 
@@ -35,6 +37,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --instance)
       instance="$2"
+      shift 2
+      ;;
+    --output-dir)
+      output_dir="$2"
       shift 2
       ;;
     --no-resolve)
@@ -59,7 +65,15 @@ if ! [[ "${duration}" =~ ^[0-9]+$ ]] || [[ "${duration}" -lt 1 ]]; then
 fi
 
 stamp="$(date -u +"%Y%m%dT%H%M%SZ")"
-out_dir="${repo_root}/artifacts/mac-mdns-watch-${stamp}"
+if [[ -n "${output_dir}" ]]; then
+  if [[ "${output_dir}" = /* ]]; then
+    out_dir="${output_dir}"
+  else
+    out_dir="${repo_root}/${output_dir}"
+  fi
+else
+  out_dir="${repo_root}/artifacts/mac-mdns-watch-${stamp}"
+fi
 mkdir -p "${out_dir}"
 
 pids=()

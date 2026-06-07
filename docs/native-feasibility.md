@@ -81,16 +81,20 @@ Run the next native checks in this order:
    `cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact`.
 2. Benign Windows-to-macOS visibility:
    `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe`
-   while macOS runs `scripts/mac/watch-mdns-service.sh`.
+   while macOS runs
+   `scripts/mac/capture-native-admission.sh --mode benign`.
 3. Controlled CompanionLink candidate:
-   `scripts/mac/watch-companion-link-candidate.sh` on macOS while Windows runs
+   `scripts/mac/capture-native-admission.sh --mode companion-link` on macOS
+   while Windows runs the printed
    `advertise-mdns --service-type _companion-link._tcp --allow-apple-service`
-   with the minimal project probe TXT shape from
-   `docs/native-candidate-experiments.md`.
-4. Apple peer TXT and state comparison using `scripts/mac/uc-probe.sh`,
+   command.
+4. Shape-only CompanionLink candidate:
+   `scripts/mac/capture-native-admission.sh --mode shape` on macOS while
+   Windows runs the printed `advertise-companion-link-shape` command.
+5. Apple peer TXT and state comparison using `scripts/mac/uc-probe.sh`,
    `scripts/mac/summarize-uc-probe-artifact.py`, and
    `scripts/mac/compare-uc-probe-summaries.py`.
-5. Apple-to-Apple active session capture using
+6. Apple-to-Apple active session capture using
    `scripts/mac/capture-uc-session.sh` and
    `scripts/mac/summarize-uc-session-artifact.py`.
 

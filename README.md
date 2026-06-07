@@ -60,6 +60,15 @@ dns-sd -B _anykbflow-probe._tcp local
 dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local
 ```
 
+For the coordinated native-admission run, prefer the wrapper that prints the
+matching Windows command and writes a redacted summary after capture:
+
+```sh
+./scripts/mac/capture-native-admission.sh --mode benign
+./scripts/mac/capture-native-admission.sh --mode companion-link
+./scripts/mac/capture-native-admission.sh --mode shape
+```
+
 The advertiser refuses Apple-owned service types such as `_companion-link._tcp` unless `--allow-apple-service` is supplied for a controlled native-compatibility experiment.
 
 After a benign visibility check and a minimal `_companion-link._tcp` candidate
@@ -72,7 +81,8 @@ cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment
 ```
 
 Run it only while the Mac-side CompanionLink watcher is capturing `rapportd` and
-`UniversalControl` logs.
+`UniversalControl` logs; `capture-native-admission.sh --mode shape` starts that
+watcher and writes the redacted summary.
 
 The fallback bridge advertises `_anykbflow._tcp.local.` for project-owned peer discovery. Native Apple compatibility experiments continue to use `_companion-link._tcp.local.` and are tracked separately.
 
@@ -100,6 +110,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [docs/windows-agent-contract.md](docs/windows-agent-contract.md): where the Windows machine should write observations.
 - [scripts/mac/uc-probe.sh](scripts/mac/uc-probe.sh): read-only macOS probe for Universal Control/Rapport surfaces.
 - [scripts/mac/capture-uc-session.sh](scripts/mac/capture-uc-session.sh): paired Apple-to-Apple Universal Control session capture wrapper.
+- [scripts/mac/capture-native-admission.sh](scripts/mac/capture-native-admission.sh): coordinated Mac watcher plus redacted summary wrapper for Windows native-admission probes.
 - [scripts/mac/watch-mdns-service.sh](scripts/mac/watch-mdns-service.sh): bounded mDNS plus log watcher for Windows advertisement checks.
 - [scripts/mac/watch-companion-link-candidate.sh](scripts/mac/watch-companion-link-candidate.sh): native-focused watcher for controlled `_companion-link._tcp` candidate checks.
 - [scripts/mac/summarize-uc-probe-artifact.py](scripts/mac/summarize-uc-probe-artifact.py): redacts baseline macOS probe artifacts into commit-safe Markdown summaries.

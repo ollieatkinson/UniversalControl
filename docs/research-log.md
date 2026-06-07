@@ -394,3 +394,21 @@ summary comparing this shape-only candidate against the minimal
 `probe=visibility` candidate, along with the Windows TCP observer summary, to
 see whether `rapportd` or `UniversalControl` ignores it, attempts a connection,
 or logs a concrete rejection reason.
+
+### Native Admission Capture Wrapper
+
+Added `scripts/mac/capture-native-admission.sh` for the immediate
+Windows-to-macOS native admission checks:
+
+```sh
+./scripts/mac/capture-native-admission.sh --mode benign
+./scripts/mac/capture-native-admission.sh --mode companion-link
+./scripts/mac/capture-native-admission.sh --mode shape
+```
+
+The wrapper prints the matching Windows advertisement command, runs the correct
+macOS watcher, stores raw artifacts under ignored `artifacts/`, and writes a
+redacted `docs/observations/` summary through
+`scripts/mac/summarize-mdns-watch-artifact.py`. It does not replace the raw
+watcher scripts; it just removes the manual artifact-directory lookup during
+coordinated LAN runs.

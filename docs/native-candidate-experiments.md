@@ -49,6 +49,12 @@ cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windo
 On macOS at the same time:
 
 ```sh
+./scripts/mac/capture-native-admission.sh --mode benign
+```
+
+Manual equivalent:
+
+```sh
 ./scripts/mac/watch-mdns-service.sh --duration 90
 ./scripts/mac/summarize-mdns-watch-artifact.py artifacts/mac-mdns-watch-YYYYMMDDTHHMMSSZ \
   --expected-instance "AnyKBFlow Probe" \
@@ -64,6 +70,12 @@ This is a controlled log-reaction experiment. It deliberately uses a project
 probe TXT shape rather than pretending to know Apple's `rp*` fields.
 
 On macOS first:
+
+```sh
+./scripts/mac/capture-native-admission.sh --mode companion-link
+```
+
+Manual equivalent:
 
 ```sh
 ./scripts/mac/watch-companion-link-candidate.sh \
@@ -118,6 +130,12 @@ values that match the observed key set and value classes:
 - `rpVr`: number
 
 On macOS first:
+
+```sh
+./scripts/mac/capture-native-admission.sh --mode shape
+```
+
+Manual equivalent:
 
 ```sh
 ./scripts/mac/watch-companion-link-candidate.sh \

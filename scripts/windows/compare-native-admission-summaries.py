@@ -36,7 +36,13 @@ HIGHLIGHT_FIELDS = [
     "TCP Observer / Read limit reached",
     "TCP Observer / Closed by peer after data",
     "TCP Observer / Additional-read hex lengths",
+    "TCP Observer / Read byte counts",
+    "TCP Observer / Read byte sequences",
+    "TCP Observer / Inter-read gap buckets",
+    "TCP Observer / Apple AWDL small-flow length hits",
+    "TCP Observer / Apple AWDL large-flow length hits",
     "Interpretation / macOS attempted advertised TCP port",
+    "Interpretation / Apple AWDL length fingerprint overlap",
 ]
 
 

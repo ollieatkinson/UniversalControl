@@ -413,8 +413,11 @@ Expected evidence:
   connection, or logs a concrete rejection reason.
 - Windows summary includes whether the TCP observer accepted any connections,
   per-connection read counts, total byte counts, first-read byte counts,
-  first-read hex lengths, additional-read hex lengths, read-limit status, and
-  peer-close-after-data status without raw peer addresses or payload bytes.
+  read byte counts, read byte sequences, inter-read gap buckets, Apple AWDL
+  small/large length-family hits, read-limit status, and peer-close-after-data
+  status without raw peer addresses or payload bytes. Old transcripts may also
+  summarize hex-string lengths, but new observer output does not print payload
+  hex.
 - Compare any Windows TCP observer length/timing behavior with the Apple
   session AWDL payload-length fingerprints before assuming the first accepted
   connection is the Universal Control data path.

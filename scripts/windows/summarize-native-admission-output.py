@@ -6,8 +6,12 @@ from __future__ import annotations
 import argparse
 import re
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+
+
+APPLE_AWDL_SMALL_LENGTHS = {"55", "82", "93", "97", "122", "126", "140", "174"}
+APPLE_AWDL_LARGE_LENGTHS = {"621", "1428"}
 
 
 @dataclass
@@ -23,6 +27,7 @@ class ObserverConnection:
     read_limit_reached: bool | None = None
     closed_by_peer: bool | None = None
     read_hex_lens: list[int] | None = None
+    read_events: list[tuple[int, int, int]] = field(default_factory=list)
 
 
 def main() -> int:
@@ -52,13 +57,16 @@ def render_summary(path: Path, text: str) -> str:
     connections = parse_connections(text)
     cargo = summarize_cargo(text)
     errors = summarize_errors(text)
+    read_lengths = all_read_lengths(connections)
+    read_gap_buckets = all_read_gap_buckets(connections)
+    awdl_hits = apple_awdl_length_hits(read_lengths)
 
     lines = [
         "# Redacted Windows Native Admission Output Summary",
         "",
         "## Source",
         "",
-        f"- Transcript file: `{path}`",
+        f"- Transcript file: `{display_path(path)}`",
         "- Raw output: not included",
         "",
         "## Command Result",
@@ -93,12 +101,21 @@ def render_summary(path: Path, text: str) -> str:
         f"- Read limit reached: {format_bool(any(connection.read_limit_reached for connection in connections))}",
         f"- Closed by peer after data: {format_bool(any(connection.closed_by_peer for connection in connections))}",
         f"- Additional-read hex lengths: {format_set(str(length) for connection in connections for length in (connection.read_hex_lens or []))}",
+        f"- Read byte counts: {format_counter(Counter(str(length) for length in read_lengths))}",
+        f"- Read byte sequences: {format_read_sequences(connections)}",
+        f"- Inter-read gap buckets: {format_counter(read_gap_buckets)}",
+        f"- Apple AWDL small-flow length hits: {awdl_hits['small']}",
+        f"- Apple AWDL large-flow length hits: {awdl_hits['large']}",
         "",
         "## Interpretation",
         "",
         f"- macOS attempted advertised TCP port: {format_bool(bool(connections))}",
+        f"- Apple AWDL length fingerprint overlap: {awdl_overlap_interpretation(awdl_hits)}",
         "- Notes:",
         "  - Inspect the raw transcript locally before deleting it.",
+        "  - New observer output records read lengths and timing only, not payload bytes.",
+        "  - Older transcripts may include local-only hex prefixes; this summary preserves only their hex-string lengths.",
+        "  - Compare read byte sequences and gap buckets with the Apple-to-Apple AWDL payload-length fingerprints before treating a TCP attempt as native Universal Control data-path progress.",
         "  - Do not commit raw peer addresses, hostnames, or TCP payload bytes.",
         "",
     ]
@@ -165,8 +182,14 @@ def parse_connections(text: str) -> list[ObserverConnection]:
     first_read_pattern = re.compile(
         r"^TCP observer connection #(?P<index>\d+) first_read_bytes=(?P<bytes>\d+) first_read_hex=(?P<hex>[0-9a-fA-F]*)$"
     )
+    first_read_length_pattern = re.compile(
+        r"^TCP observer connection #(?P<index>\d+) first_read_elapsed_ms=(?P<elapsed>\d+) first_read_bytes=(?P<bytes>\d+)$"
+    )
     read_pattern = re.compile(
         r"^TCP observer connection #(?P<index>\d+) read #(?P<read_index>\d+) elapsed_ms=(?P<elapsed>\d+) bytes=(?P<bytes>\d+) hex_prefix=(?P<hex>[0-9a-fA-F]*)$"
+    )
+    read_length_pattern = re.compile(
+        r"^TCP observer connection #(?P<index>\d+) read #(?P<read_index>\d+) elapsed_ms=(?P<elapsed>\d+) bytes=(?P<bytes>\d+)$"
     )
     summary_pattern = re.compile(
         r"^TCP observer connection #(?P<index>\d+) summary reads=(?P<reads>\d+) total_bytes=(?P<total_bytes>\d+) duration_ms=(?P<duration_ms>\d+) read_limit_reached=(?P<read_limit_reached>true|false) closed_by_peer=(?P<closed_by_peer>true|false)$"
@@ -197,6 +220,24 @@ def parse_connections(text: str) -> list[ObserverConnection]:
             connection.outcome = "first_read"
             connection.first_read_bytes = int(first_read.group("bytes"))
             connection.first_read_hex_len = len(first_read.group("hex"))
+            connection.read_events.append((1, 0, int(first_read.group("bytes"))))
+            continue
+
+        first_read_length = first_read_length_pattern.match(stripped)
+        if first_read_length:
+            connection = connections.setdefault(
+                first_read_length.group("index"),
+                ObserverConnection(index=first_read_length.group("index"), peer="<unknown>"),
+            )
+            connection.outcome = "first_read"
+            connection.first_read_bytes = int(first_read_length.group("bytes"))
+            connection.read_events.append(
+                (
+                    1,
+                    int(first_read_length.group("elapsed")),
+                    int(first_read_length.group("bytes")),
+                )
+            )
             continue
 
         read = read_pattern.match(stripped)
@@ -208,6 +249,28 @@ def parse_connections(text: str) -> list[ObserverConnection]:
             if connection.read_hex_lens is None:
                 connection.read_hex_lens = []
             connection.read_hex_lens.append(len(read.group("hex")))
+            connection.read_events.append(
+                (
+                    int(read.group("read_index")),
+                    int(read.group("elapsed")),
+                    int(read.group("bytes")),
+                )
+            )
+            continue
+
+        read_length = read_length_pattern.match(stripped)
+        if read_length:
+            connection = connections.setdefault(
+                read_length.group("index"),
+                ObserverConnection(index=read_length.group("index"), peer="<unknown>"),
+            )
+            connection.read_events.append(
+                (
+                    int(read_length.group("read_index")),
+                    int(read_length.group("elapsed")),
+                    int(read_length.group("bytes")),
+                )
+            )
             continue
 
         summary = summary_pattern.match(stripped)
@@ -238,6 +301,60 @@ def parse_connections(text: str) -> list[ObserverConnection]:
                 break
 
     return [connections[index] for index in sorted(connections, key=int)]
+
+
+def all_read_lengths(connections: list[ObserverConnection]) -> list[int]:
+    return [
+        bytes_read
+        for connection in connections
+        for _, _, bytes_read in sorted(connection.read_events)
+    ]
+
+
+def all_read_gap_buckets(connections: list[ObserverConnection]) -> Counter[str]:
+    buckets: Counter[str] = Counter()
+    for connection in connections:
+        previous_elapsed: int | None = None
+        for _, elapsed, _ in sorted(connection.read_events):
+            if previous_elapsed is not None:
+                buckets[gap_bucket(max(0, elapsed - previous_elapsed))] += 1
+            previous_elapsed = elapsed
+    return buckets
+
+
+def gap_bucket(milliseconds: int) -> str:
+    if milliseconds < 1:
+        return "<1ms"
+    if milliseconds < 10:
+        return "1-10ms"
+    if milliseconds < 100:
+        return "10-100ms"
+    if milliseconds < 1000:
+        return "100ms-1s"
+    return ">=1s"
+
+
+def apple_awdl_length_hits(lengths: list[int]) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    for length in lengths:
+        text = str(length)
+        if text in APPLE_AWDL_SMALL_LENGTHS:
+            counts["small"] += 1
+        if text in APPLE_AWDL_LARGE_LENGTHS:
+            counts["large"] += 1
+    return counts
+
+
+def awdl_overlap_interpretation(hits: Counter[str]) -> str:
+    small = hits["small"]
+    large = hits["large"]
+    if small and large:
+        return "small and large Apple-session length families observed; compare timing before escalating"
+    if small:
+        return "small-message Apple-session length family observed"
+    if large:
+        return "large-message Apple-session length family observed"
+    return "no Apple-session length-family overlap observed"
 
 
 def summarize_cargo(text: str) -> Counter[str]:
@@ -308,6 +425,23 @@ def format_set(values) -> str:
     if not unique:
         return "none"
     return ", ".join(f"`{value}`" for value in unique)
+
+
+def format_read_sequences(connections: list[ObserverConnection]) -> str:
+    rendered: list[str] = []
+    for connection in connections:
+        lengths = [str(bytes_read) for _, _, bytes_read in sorted(connection.read_events)]
+        if lengths:
+            rendered.append(f"`#{connection.index}:{','.join(lengths[:16])}`")
+    return ", ".join(rendered) if rendered else "none"
+
+
+def display_path(path: Path) -> str:
+    parts = path.parts
+    for marker in ("artifacts", "docs"):
+        if marker in parts:
+            return "/".join(parts[parts.index(marker) :])
+    return path.name
 
 
 def format_bool(value) -> str:

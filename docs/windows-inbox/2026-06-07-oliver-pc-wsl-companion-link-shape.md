@@ -65,12 +65,14 @@ The TCP observer prints:
 
 - each accepted peer address
 - whether the peer closed, timed out, or sent immediate bytes
-- a short first-read hex prefix when immediate bytes are sent
+- length/timing-only read metadata when immediate bytes are sent
 - final `accepted_connections=<n>` summary
 
 The summarizer preserves counts, service type, port, accepted connection
-counts, first-read byte counts, and first-read hex lengths. It redacts raw peer
-addresses, hostnames, and payload bytes.
+counts, first-read byte counts, read byte sequences, inter-read gap buckets, and
+Apple AWDL length-family hit counts. It redacts raw peer addresses, hostnames,
+and payload bytes. Older local transcripts may include hex prefixes; current
+observer output no longer prints payload hex.
 
 ## Questions For Mac Side
 

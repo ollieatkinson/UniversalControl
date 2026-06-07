@@ -17,8 +17,8 @@ use mdns_sd::{ResolvedService, ServiceDaemon, ServiceEvent, ServiceInfo};
 const COMPANION_LINK_SERVICE: &str = "_companion-link._tcp.local.";
 const DNS_SD_SERVICE: &str = "_companion-link._tcp";
 const ANYKBFLOW_SERVICE: &str = "_anykbflow._tcp.local.";
-const TCP_OBSERVER_READ_LIMIT: usize = 8;
-const TCP_OBSERVER_READ_CHUNK_BYTES: usize = 256;
+const TCP_OBSERVER_READ_LIMIT: usize = 16;
+const TCP_OBSERVER_READ_CHUNK_BYTES: usize = 4096;
 const COMPANION_LINK_SHAPE_TXT: [(&str, &str); 8] = [
     ("rpAD", "000000000001"),
     ("rpBA", "02:00:00:00:00:01"),
@@ -307,14 +307,14 @@ fn observe_tcp_connection(stream: &mut impl Read, index: usize) {
             Ok(bytes) => {
                 reads += 1;
                 total_bytes += bytes;
-                let hex = hex_prefix(&buffer[..bytes]);
                 if read_index == 1 {
                     println!(
-                        "TCP observer connection #{index} first_read_bytes={bytes} first_read_hex={hex}"
+                        "TCP observer connection #{index} first_read_elapsed_ms={} first_read_bytes={bytes}",
+                        started.elapsed().as_millis()
                     );
                 } else {
                     println!(
-                        "TCP observer connection #{index} read #{read_index} elapsed_ms={} bytes={bytes} hex_prefix={hex}",
+                        "TCP observer connection #{index} read #{read_index} elapsed_ms={} bytes={bytes}",
                         started.elapsed().as_millis()
                     );
                 }
@@ -344,14 +344,6 @@ fn observe_tcp_connection(stream: &mut impl Read, index: usize) {
             reads >= TCP_OBSERVER_READ_LIMIT
         );
     }
-}
-
-fn hex_prefix(bytes: &[u8]) -> String {
-    bytes
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<Vec<_>>()
-        .join("")
 }
 
 pub fn spawn_bridge_advertisement(node_name: &str, listen_addr: SocketAddr) -> Result<()> {
@@ -936,11 +928,6 @@ mod tests {
     #[test]
     fn tcp_observer_rejects_multicast_advertise_address() {
         assert!(observe_tcp_addr(Some("224.0.0.251"), 5353, "probe.local.").is_err());
-    }
-
-    #[test]
-    fn hex_prefix_formats_probe_bytes_without_separators() {
-        assert_eq!(hex_prefix(&[0, 1, 10, 255]), "00010aff");
     }
 
     #[test]

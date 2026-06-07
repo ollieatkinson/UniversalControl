@@ -422,8 +422,8 @@ values matching the redacted local macOS baseline key/value classes:
 This is a controlled DNS-SD shape experiment, not a native Universal Control
 implementation. It does not copy Apple identifiers or account material and does
 not speak Rapport. `--observe-tcp` can be added to advertise commands to open a
-bounded TCP listener on the advertised port and log connection attempts plus a
-short first-read hex prefix. The next evidence needed is a Mac-side watcher
+bounded TCP listener on the advertised port and log connection attempts plus
+length/timing-only read metadata. The next evidence needed is a Mac-side watcher
 summary comparing this shape-only candidate against the minimal
 `probe=visibility` candidate, along with the Windows TCP observer summary, to
 see whether `rapportd` or `UniversalControl` ignores it, attempts a connection,
@@ -474,8 +474,8 @@ side of coordinated native-admission runs into commit-safe Markdown. It reads
 the ignored transcript from commands such as
 `advertise-companion-link-shape --observe-tcp` and preserves service type, port,
 observer status, accepted connection count, first-read byte counts, and
-first-read hex lengths while redacting peer addresses, hostnames, and payload
-bytes.
+first-read hex lengths from older transcripts while redacting peer addresses,
+hostnames, and payload bytes.
 
 This pairs with the Mac-side `capture-native-admission.sh` summary so one
 commit can contain both sides of the same admission attempt without raw network
@@ -494,6 +494,25 @@ the Windows summarizer preserves accepted connection counts, read counts, byte
 counts, read durations, hex-string lengths, read-limit status, and peer-close
 status. This is the next useful evidence if macOS resolves a Windows
 `_companion-link._tcp` candidate and attempts the advertised port.
+
+After the Apple-to-Apple AWDL payload-length fingerprints were added, hardened
+the Windows TCP observer for comparable native-admission evidence:
+
+- increased the read buffer from 256 bytes to 4096 bytes so 621 and 1428 byte
+  Apple-session-sized reads are not clipped by the observer
+- increased the bounded read limit from 8 to 16 reads
+- stopped printing payload hex in new observer output
+- added first-read elapsed time and per-read length-only lines
+- taught `scripts/windows/summarize-native-admission-output.py` to preserve read
+  byte counts, per-connection read byte sequences, inter-read gap buckets, and
+  small/large Apple AWDL length-family hit counts
+- kept the summarizer backward-compatible with older local transcripts that
+  included hex prefixes, preserving only hex-string lengths in committed
+  summaries
+
+This makes the Windows admission report comparable with the Apple AWDL
+length/gap fingerprints without storing TCP payload bytes in terminal output or
+git.
 
 Added `scripts/windows/capture-native-admission.py` to mirror the Mac-side
 native-admission wrapper. It prints the matching macOS watcher command, runs

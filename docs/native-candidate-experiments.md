@@ -191,8 +191,8 @@ Expected evidence:
   process names from the matched text. Those counts help distinguish an
   eligibility/transport side-channel reaction from plain DNS-SD visibility.
 - The Windows TCP observer records whether anything connects to the advertised
-  port and, if data is sent immediately, bounded read counts, byte counts, and
-  hex lengths without raw payload bytes.
+  port and, if data is sent immediately, bounded read counts, byte counts,
+  read-length sequences, and timing buckets without raw payload bytes.
 - `scripts/windows/summarize-native-admission-output.py` creates the commit-safe
   Windows summary from the ignored command transcript.
 - The committed observation is generated from the watcher artifact summary, not
@@ -283,9 +283,11 @@ signal-family baseline:
 ```
 
 The Windows summary preserves accepted connection counts, per-connection read
-counts, total byte counts, first-read byte counts, hex-string lengths,
+counts, total byte counts, first-read byte counts, read byte counts, read byte
+sequences, inter-read gap buckets, Apple AWDL length-family hits,
 read-limit status, and peer-close-after-data status without committing raw peer
-addresses or payload bytes.
+addresses or payload bytes. It may also summarize hex-string lengths from older
+transcripts, but current observer output is length/timing only.
 
 This command intentionally does not copy identifiers, certificates, account
 material, hostnames, or real `rp*` values from an Apple device. With

@@ -42,7 +42,13 @@ WINDOWS_HIGHLIGHTS = [
     "TCP Observer / Read limit reached",
     "TCP Observer / Closed by peer after data",
     "TCP Observer / Additional-read hex lengths",
+    "TCP Observer / Read byte counts",
+    "TCP Observer / Read byte sequences",
+    "TCP Observer / Inter-read gap buckets",
+    "TCP Observer / Apple AWDL small-flow length hits",
+    "TCP Observer / Apple AWDL large-flow length hits",
     "Interpretation / macOS attempted advertised TCP port",
+    "Interpretation / Apple AWDL length fingerprint overlap",
 ]
 
 
@@ -139,6 +145,7 @@ def render_report(
             "",
             "- DNS-SD browse/resolve alone is visibility, not native admission.",
             "- A Windows TCP observer connection is evidence that macOS tried the advertised SRV endpoint.",
+            "- Read-length overlap with the Apple AWDL baseline is only a framing clue; compare timing and native macOS logs before escalating.",
             "- Candidate or rejection keywords in native macOS logs should be inspected locally in raw artifacts before drawing conclusions.",
             "- Do not commit raw peer addresses, hostnames, TXT values, log lines, or TCP payload bytes.",
             "",

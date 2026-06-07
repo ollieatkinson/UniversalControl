@@ -229,6 +229,37 @@ only meant to answer whether `rapportd` or `UniversalControl` reacts to a
 Windows-owned `_companion-link._tcp` service at all. Preserve raw artifacts under
 `artifacts/`, then commit only redacted summaries.
 
+## Shape-Only CompanionLink Candidate Check
+
+Use this only after the minimal candidate check. It publishes the redacted
+macOS-baseline TXT key/value-class shape with deterministic placeholder values,
+not real Apple identifiers.
+
+On macOS first:
+
+```sh
+./scripts/mac/watch-companion-link-candidate.sh --duration 90 --instance "AnyKBFlow Native Shape Probe"
+./scripts/mac/summarize-mdns-watch-artifact.py artifacts/mac-mdns-watch-YYYYMMDDTHHMMSSZ \
+  --expected-instance "AnyKBFlow Native Shape Probe" \
+  --output docs/observations/YYYY-MM-DD-redacted-companion-link-shape-candidate.md
+```
+
+On Windows while the macOS watcher is running:
+
+```powershell
+cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --seconds 60
+```
+
+Expected evidence:
+
+- macOS browse/resolve sees `AnyKBFlow Native Shape Probe`.
+- The committed watcher summary preserves port, TXT key names, TXT value
+  classes, and native-process log counts.
+- `rapportd` or `UniversalControl` either ignores the service, attempts a
+  connection, or logs a concrete rejection reason.
+- Treat any connection attempt as a signal to build a real listener next, not as
+  Universal Control admission.
+
 ## First Experiments
 
 1. Compare `_companion-link._tcp` TXT records while Universal Control is disabled and enabled.

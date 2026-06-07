@@ -72,6 +72,30 @@ enum Command {
         #[arg(long)]
         include_apple_p2p: bool,
     },
+    /// Advertise a shape-only CompanionLink candidate with placeholder TXT values.
+    AdvertiseCompanionLinkShape {
+        /// Advertise duration in seconds.
+        #[arg(long, default_value_t = 60)]
+        seconds: u64,
+        /// Instance name to publish.
+        #[arg(long, default_value = "AnyKBFlow Native Shape Probe")]
+        instance: String,
+        /// Hostname to publish, with or without the .local. suffix.
+        #[arg(long, default_value = "anykbflow-native-shape-probe")]
+        hostname: String,
+        /// Explicit IP address to publish. If omitted, local interface addresses are selected automatically.
+        #[arg(long)]
+        addr: Option<String>,
+        /// TCP port to publish in the SRV record. The macOS baseline observed 61833.
+        #[arg(long, default_value_t = 61833)]
+        port: u16,
+        /// Include Apple peer-to-peer interfaces such as awdl on macOS.
+        #[arg(long)]
+        include_apple_p2p: bool,
+        /// Required guard for the native-compatibility shape experiment.
+        #[arg(long)]
+        acknowledge_shape_experiment: bool,
+    },
     /// Browse or advertise arbitrary mDNS services for interop probes.
     Discovery {
         #[command(subcommand)]
@@ -243,6 +267,33 @@ async fn main() -> Result<()> {
             allow_apple_service,
             include_apple_p2p,
         }),
+        Command::AdvertiseCompanionLinkShape {
+            seconds,
+            instance,
+            hostname,
+            addr,
+            port,
+            include_apple_p2p,
+            acknowledge_shape_experiment,
+        } => {
+            if !acknowledge_shape_experiment {
+                anyhow::bail!(
+                    "refusing to advertise a CompanionLink-shaped candidate without --acknowledge-shape-experiment"
+                );
+            }
+
+            discovery::advertise_mdns(discovery::AdvertiseOptions {
+                seconds,
+                service_type: "_companion-link._tcp".to_string(),
+                instance,
+                hostname: Some(hostname),
+                addr,
+                port,
+                txt: discovery::companion_link_shape_txt(),
+                allow_apple_service: true,
+                include_apple_p2p,
+            })
+        }
         Command::Discovery { command } => match command {
             DiscoveryCommand::Browse {
                 service,

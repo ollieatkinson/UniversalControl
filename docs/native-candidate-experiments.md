@@ -101,7 +101,45 @@ Do not treat a successful browse/resolve as native admission. Native admission
 requires `rapportd` or `UniversalControl` evidence that the peer became a
 candidate or was rejected for a known reason.
 
-## Experiment 4: Apple Peer TXT Shape
+## Experiment 4: Shape-Only CompanionLink Candidate
+
+This uses the local macOS baseline in
+`docs/observations/2026-06-06-redacted-macos-uc-probe.md`, not real TXT values.
+The Windows advertisement publishes `_companion-link._tcp` with placeholder
+values that match the observed key set and value classes:
+
+- `rpAD`, `rpHA`, `rpHI`, `rpHN`: hex length 12
+- `rpBA`: MAC-like placeholder
+- `rpFl`: hex length 5
+- `rpMac`: hex length 1
+- `rpVr`: number
+
+On macOS first:
+
+```sh
+./scripts/mac/watch-companion-link-candidate.sh \
+  --duration 90 \
+  --instance "AnyKBFlow Native Shape Probe"
+./scripts/mac/summarize-mdns-watch-artifact.py artifacts/mac-mdns-watch-YYYYMMDDTHHMMSSZ \
+  --expected-instance "AnyKBFlow Native Shape Probe" \
+  --output docs/observations/YYYY-MM-DD-redacted-companion-link-shape-candidate.md
+```
+
+On Windows while the macOS watcher is running:
+
+```powershell
+cargo run -- advertise-companion-link-shape `
+  --acknowledge-shape-experiment `
+  --seconds 60
+```
+
+This command intentionally does not copy identifiers, certificates, account
+material, hostnames, or real `rp*` values from an Apple device. It also does not
+open a real Rapport TCP service; it only publishes the DNS-SD shape so logs can
+show whether macOS ignores it, attempts a connection, or rejects it for a
+concrete reason.
+
+## Experiment 5: Apple Peer TXT Shape
 
 Only run this when a real Mac or iPad Universal Control peer is available.
 
@@ -119,7 +157,7 @@ This experiment is about protocol shape, not bypassing account identity or
 private trust. Stop if logs show rejection that depends on Apple Account,
 iCloud Keychain, private certificates, or platform attestation.
 
-## Experiment 5: Apple-To-Apple Session Trace
+## Experiment 6: Apple-To-Apple Session Trace
 
 Only run this when Universal Control can actually transfer focus to a Mac or
 iPad target.

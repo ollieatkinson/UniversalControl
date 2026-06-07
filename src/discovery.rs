@@ -14,6 +14,16 @@ use mdns_sd::{ResolvedService, ServiceDaemon, ServiceEvent, ServiceInfo};
 const COMPANION_LINK_SERVICE: &str = "_companion-link._tcp.local.";
 const DNS_SD_SERVICE: &str = "_companion-link._tcp";
 const ANYKBFLOW_SERVICE: &str = "_anykbflow._tcp.local.";
+const COMPANION_LINK_SHAPE_TXT: [(&str, &str); 8] = [
+    ("rpAD", "000000000001"),
+    ("rpBA", "02:00:00:00:00:01"),
+    ("rpFl", "abcde"),
+    ("rpHA", "000000000002"),
+    ("rpHI", "000000000003"),
+    ("rpHN", "000000000004"),
+    ("rpMac", "0"),
+    ("rpVr", "174"),
+];
 static BRIDGE_ADVERTISED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Clone, Copy, Debug)]
@@ -33,6 +43,13 @@ pub struct AdvertiseOptions {
     pub txt: Vec<String>,
     pub allow_apple_service: bool,
     pub include_apple_p2p: bool,
+}
+
+pub fn companion_link_shape_txt() -> Vec<String> {
+    COMPANION_LINK_SHAPE_TXT
+        .iter()
+        .map(|(key, value)| format!("{key}={value}"))
+        .collect()
 }
 
 pub fn browse_companion_link(
@@ -684,6 +701,40 @@ mod tests {
 
         assert_eq!(properties.get("phase"), Some(&"visibility".to_string()));
         assert_eq!(properties.get("role"), Some(&"probe".to_string()));
+    }
+
+    #[test]
+    fn companion_link_shape_txt_matches_redacted_baseline_classes() {
+        let txt = companion_link_shape_txt();
+        let properties = parse_txt_properties(&txt).unwrap();
+
+        assert_eq!(
+            properties.keys().cloned().collect::<BTreeSet<_>>(),
+            BTreeSet::from([
+                "rpAD".to_string(),
+                "rpBA".to_string(),
+                "rpFl".to_string(),
+                "rpHA".to_string(),
+                "rpHI".to_string(),
+                "rpHN".to_string(),
+                "rpMac".to_string(),
+                "rpVr".to_string(),
+            ])
+        );
+        assert!(properties["rpAD"].chars().all(|ch| ch.is_ascii_hexdigit()));
+        assert_eq!(properties["rpAD"].len(), 12);
+        assert_eq!(properties["rpBA"], "02:00:00:00:00:01");
+        assert!(properties["rpFl"].chars().all(|ch| ch.is_ascii_hexdigit()));
+        assert_eq!(properties["rpFl"].len(), 5);
+        assert!(properties["rpHA"].chars().all(|ch| ch.is_ascii_hexdigit()));
+        assert_eq!(properties["rpHA"].len(), 12);
+        assert!(properties["rpHI"].chars().all(|ch| ch.is_ascii_hexdigit()));
+        assert_eq!(properties["rpHI"].len(), 12);
+        assert!(properties["rpHN"].chars().all(|ch| ch.is_ascii_hexdigit()));
+        assert_eq!(properties["rpHN"].len(), 12);
+        assert!(properties["rpMac"].chars().all(|ch| ch.is_ascii_hexdigit()));
+        assert_eq!(properties["rpMac"].len(), 1);
+        assert!(properties["rpVr"].chars().all(|ch| ch.is_ascii_digit()));
     }
 
     #[test]

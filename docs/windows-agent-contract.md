@@ -123,6 +123,11 @@ cargo run -- probe displays
 cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
 cargo run -- discovery advertise --service _anykbflow-probe._tcp.local. --instance "AnyKBFlow Probe" --addr <redacted-lan-ip> --port 49152 --txt phase=visibility --txt role=windows-probe --seconds 60
 cargo run -- advertise-mdns --service-type _companion-link._tcp --instance "AnyKBFlow Native Probe" --hostname anykbflow-native-probe --port 49152 --txt probe=visibility --txt role=windows-native-candidate --allow-apple-service --seconds 60
+cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --seconds 60
 ```
+
+Use `advertise-companion-link-shape` only while the Mac-side
+`watch-companion-link-candidate.sh` capture is running with expected instance
+`AnyKBFlow Native Shape Probe`.
 
 The redacted Rust mDNS output should preserve event type, service type, port, TXT key names, TXT value length/class, and address count. Do not commit unredacted `dns-sd` or `--backend system` output unless it has been manually reviewed and sanitized.

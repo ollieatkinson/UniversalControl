@@ -372,3 +372,22 @@ the Mac `_companion-link._tcp` advertisement, macOS visibility of a benign
 Windows mDNS probe, a controlled Windows `_companion-link._tcp` candidate run
 with macOS `rapportd`/`UniversalControl` logs, and Apple-to-Apple baseline
 captures before any deeper Windows native handshake attempt.
+
+### Shape-Only CompanionLink Candidate
+
+Added `cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment`.
+It advertises `_companion-link._tcp` with deterministic placeholder `rp*` TXT
+values matching the redacted local macOS baseline key/value classes:
+
+- `rpAD`, `rpHA`, `rpHI`, `rpHN`: hex length 12
+- `rpBA`: MAC-like placeholder
+- `rpFl`: hex length 5
+- `rpMac`: hex length 1
+- `rpVr`: number
+
+This is a controlled DNS-SD shape experiment, not a native Universal Control
+implementation. It does not copy Apple identifiers or account material and does
+not run a Rapport TCP service. The next evidence needed is a Mac-side watcher
+summary comparing this shape-only candidate against the minimal
+`probe=visibility` candidate to see whether `rapportd` or `UniversalControl`
+ignores it, attempts a connection, or logs a concrete rejection reason.

@@ -26,6 +26,9 @@ Evidence required:
 
 - Windows advertises a service shape derived from observed Apple peers.
 - Before mimicking Apple `rp*` fields, Windows advertises a minimal controlled `_companion-link._tcp` probe while macOS captures `rapportd` and `UniversalControl` logs.
+- After the minimal probe, Windows advertises the shape-only placeholder `rp*`
+  TXT key/value classes from the redacted macOS baseline with
+  `advertise-companion-link-shape`.
 - macOS creates a Rapport matching event or otherwise identifies Windows as a Universal Control candidate.
 - Any rejection reason is captured from unified logs.
 
@@ -36,6 +39,8 @@ Evidence required:
 - redacted watcher summary preserving browse/resolve counts, ports, TXT key names, TXT value classes, and native-process log counts
 - packet capture showing DNS-SD exchange
 - the exact `scripts/mac/watch-companion-link-candidate.sh` command and Windows `--allow-apple-service` command used for the controlled candidate check
+- the exact `advertise-companion-link-shape` command used, when running the
+  shape-only follow-up
 
 ## Phase 3: Session Setup
 

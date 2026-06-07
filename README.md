@@ -62,6 +62,18 @@ dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local
 
 The advertiser refuses Apple-owned service types such as `_companion-link._tcp` unless `--allow-apple-service` is supplied for a controlled native-compatibility experiment.
 
+After a benign visibility check and a minimal `_companion-link._tcp` candidate
+check, this guarded command advertises a shape-only CompanionLink candidate with
+non-sensitive placeholder `rp*` TXT values matching the redacted macOS baseline
+key/value classes:
+
+```sh
+cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment
+```
+
+Run it only while the Mac-side CompanionLink watcher is capturing `rapportd` and
+`UniversalControl` logs.
+
 The fallback bridge advertises `_anykbflow._tcp.local.` for project-owned peer discovery. Native Apple compatibility experiments continue to use `_companion-link._tcp.local.` and are tracked separately.
 
 ## Current Findings

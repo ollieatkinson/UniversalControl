@@ -203,7 +203,7 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 
 1. Run `preflight` on both machines with the intended configs.
 2. Run `probe bridge-smoke` and `probe bridge-network-smoke` on both machines.
-3. Run `cargo run -- probe displays` on both macOS and Windows and commit redacted geometry summaries.
+3. Run `cargo run -- probe displays` on macOS and `python scripts/windows/capture-display-probe.py` on Windows, then commit redacted geometry summaries.
 4. Capture a short `listen-events` or `grab-events` JSONL file on one machine and replay it on the other with `probe replay-events`.
 5. Run the input-owner role on Windows and receiver role on macOS.
 6. Confirm input-owner edge detection and receiver hello use the same primary display dimensions as `probe displays`.

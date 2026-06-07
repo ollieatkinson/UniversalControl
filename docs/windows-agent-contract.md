@@ -150,7 +150,7 @@ python scripts/windows/compare-companion-link-discovery-summaries.py `
   --after-label windows-passive `
   --output docs/windows-inbox/YYYY-MM-DD-redacted-companion-link-discovery-compare.md
 cargo run -- discover-companion-link --backend system --seconds 30
-cargo run -- probe displays
+python scripts/windows/capture-display-probe.py
 python scripts/windows/capture-native-admission.py --mode benign
 python scripts/windows/capture-native-admission.py --mode companion-link
 python scripts/windows/capture-native-admission.py --mode shape
@@ -168,6 +168,11 @@ For passive CompanionLink discovery, prefer
 `scripts/windows/capture-companion-link-discovery.py`; it captures the redacted
 Rust mDNS transcript under ignored `artifacts/` and writes the commit-safe
 summary under `docs/windows-inbox/`.
+
+For native Windows display geometry, prefer
+`scripts/windows/capture-display-probe.py`; it captures `probe displays`,
+redacts display names, and preserves routing-relevant bounds under
+`docs/windows-inbox/`.
 
 For native-admission runs, prefer `scripts/windows/capture-native-admission.py`
 because it captures the full Windows output to an ignored file under

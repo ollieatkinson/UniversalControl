@@ -135,6 +135,8 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/windows/capture-companion-link-discovery.py](scripts/windows/capture-companion-link-discovery.py): captures Windows passive CompanionLink browse output and writes a redacted summary.
 - [scripts/windows/summarize-companion-link-discovery-output.py](scripts/windows/summarize-companion-link-discovery-output.py): redacts `discover-companion-link --redact` output into commit-safe Markdown.
 - [scripts/windows/compare-companion-link-discovery-summaries.py](scripts/windows/compare-companion-link-discovery-summaries.py): compares two redacted CompanionLink discovery summaries.
+- [scripts/windows/capture-display-probe.py](scripts/windows/capture-display-probe.py): captures native Windows display geometry and writes a redacted bridge-calibration summary.
+- [scripts/windows/summarize-display-probe-output.py](scripts/windows/summarize-display-probe-output.py): redacts display probe names while preserving bounds, scale, and virtual layout.
 - [scripts/windows/capture-native-admission.py](scripts/windows/capture-native-admission.py): coordinated Windows advertiser plus redacted summary wrapper for native-admission probes.
 - [scripts/windows/summarize-native-admission-output.py](scripts/windows/summarize-native-admission-output.py): redacts Windows native-admission command output into commit-safe Markdown.
 - [scripts/windows/compare-native-admission-summaries.py](scripts/windows/compare-native-admission-summaries.py): compares two redacted Windows native-admission summaries.

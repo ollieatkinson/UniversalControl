@@ -162,10 +162,19 @@ python scripts/windows/compare-companion-link-discovery-summaries.py `
 Repo-native display geometry command:
 
 ```powershell
+python scripts/windows/capture-display-probe.py
+```
+
+Manual equivalent:
+
+```powershell
 cargo run -- probe displays
 ```
 
-Record the primary display bounds and any negative display origins. These values calibrate `local_width`, `local_height`, `remote_width`, `remote_height`, and `remote_edge` before a bridge run.
+Record the primary display bounds and any negative display origins. The wrapper
+redacts display names while preserving name lengths, bounds, scale, primary
+flags, and virtual bounds. These values calibrate `local_width`, `local_height`,
+`remote_width`, `remote_height`, and `remote_edge` before a bridge run.
 
 If Bonjour's `dns-sd.exe` is installed and available on `PATH`, also compare:
 

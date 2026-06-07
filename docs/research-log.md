@@ -555,3 +555,10 @@ Windows passive browse summary can be compared directly against
 `docs/observations/2026-06-07-redacted-macos-rust-mdns-companion-link.md`. The
 comparison highlights service resolution, port, address count, TXT keys, and
 TXT value length/classes while ignoring source transcript paths by default.
+
+Added `scripts/windows/capture-display-probe.py` and
+`scripts/windows/summarize-display-probe-output.py` for native Windows display
+geometry capture. The summary redacts display names while preserving primary and
+built-in flags, logical bounds, scale, rotation, refresh rate, physical size,
+negative origins, and virtual bounds so bridge configs can be calibrated without
+committing monitor names.

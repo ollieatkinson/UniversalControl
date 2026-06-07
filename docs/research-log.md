@@ -537,3 +537,9 @@ That run also exposed that `rpFl` is `0x`-prefixed in the Rust redacted output.
 Updated the shape-only CompanionLink advertiser to use a non-sensitive
 `0x`-prefixed placeholder and taught the Rust redactor to classify this as
 `hex-prefixed` instead of generic text.
+
+Updated the Mac-side UC probe and mDNS watcher summarizers to use the same
+`hex-prefixed` class for `0x...` TXT values. Regenerated the 2026-06-06 and
+2026-06-07 redacted macOS UC probe summaries from their raw artifacts so the
+baseline, Rust mDNS discovery output, and shape-only Windows advertiser all
+preserve the same `rpFl` wire shape.

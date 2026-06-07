@@ -58,7 +58,7 @@
 - Fullname lengths: `54`
 - Interface count: 1
 - TXT keys: `rpAD`, `rpBA`, `rpFl`, `rpHA`, `rpHI`, `rpHN`, `rpMac`, `rpVr`
-- TXT value classes: `rpAD:hex:12`=2, `rpBA:mac-like`=2, `rpFl:hex:5`=2, `rpHA:hex:12`=2, `rpHI:hex:12`=2, `rpHN:hex:12`=2, `rpMac:hex:1`=2, `rpVr:number`=2
+- TXT value classes: `rpAD:hex:12`=2, `rpBA:mac-like`=2, `rpFl:hex-prefixed:7`=2, `rpHA:hex:12`=2, `rpHI:hex:12`=2, `rpHN:hex:12`=2, `rpMac:hex:1`=2, `rpVr:number`=2
 
 ### _universalcontrol._tcp Browse
 

@@ -307,6 +307,8 @@ def classify_txt_value(value: str) -> str:
         return "boolean"
     if text.isdigit():
         return "integer"
+    if re.fullmatch(r"0x[0-9A-Fa-f]+", text):
+        return "hex-prefixed"
     if re.fullmatch(r"\d+(?:\.\d+)+", text):
         return "version"
     if re.fullmatch(r"[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}", text) or re.fullmatch(

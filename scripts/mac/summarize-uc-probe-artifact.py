@@ -432,7 +432,7 @@ def render_resolve_summary(events: list[ResolveEvent]) -> list[str]:
 
 def classify_txt_value(value: str) -> str:
     if re.fullmatch(r"0x[0-9a-fA-F]+", value):
-        return f"hex:{len(value) - 2}"
+        return f"hex-prefixed:{len(value)}"
     if re.fullmatch(r"[0-9a-fA-F]+", value):
         return f"hex:{len(value)}"
     if re.fullmatch(r"\d+(?:\.\d+)?", value):

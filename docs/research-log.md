@@ -446,3 +446,13 @@ bytes.
 This pairs with the Mac-side `capture-native-admission.sh` summary so one
 commit can contain both sides of the same admission attempt without raw network
 identifiers.
+
+### Local macOS Bridge Preflight
+
+Recorded `docs/observations/2026-06-07-local-macos-bridge-preflight.md` after
+running `probe displays` plus input-owner and receiver `preflight` on native
+macOS. The preflight path detected `1710x1112`, matched `probe displays`, used
+that as the effective local display for both stale example configs, selected
+`peer_mode=mdns_discovery` for the receiver config with no `peer_addr`, and
+reported zero warnings. This answers the Windows bridge-preflight note, but it
+does not advance native Universal Control admission.

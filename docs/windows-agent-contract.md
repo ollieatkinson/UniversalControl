@@ -88,6 +88,15 @@ detection feeds bridge local routing, input-owner `Hello.local_display`, and the
 loopback JSON-lines transport. The remaining Windows priority is still native
 discovery and candidate admission, not more bridge smoke output.
 
+Mac-side bridge preflight follow-up from
+`docs/windows-inbox/2026-06-07-oliver-pc-wsl-bridge-preflight.md` is answered in
+`docs/observations/2026-06-07-local-macos-bridge-preflight.md`: native macOS
+preflight reports `detected_primary_display=1710x1112`, both example configs use
+that detected size as `effective_local_display`, receiver preflight uses
+`peer_mode=mdns_discovery` when `peer_addr` is omitted, and both preflights
+reported `warnings=0`. This validates fallback bridge assumptions only; native
+admission remains the priority.
+
 Mac-side pointer injection probes from
 `docs/windows-inbox/2026-06-06-oliver-pc-wsl-pointer-injection-probes.md` are
 still pending a controlled foreground target. Do not run `inject-button` or

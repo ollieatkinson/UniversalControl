@@ -526,6 +526,12 @@ commit-safe Markdown summaries. It preserves search/found/resolved counts,
 service type, port, redacted host/fullname lengths, address counts, and TXT
 key/value length classes.
 
+Added `scripts/windows/capture-companion-link-discovery.py` as the matching
+Windows passive-browse wrapper. It runs the redacted Rust mDNS browse, stores
+the transcript under ignored `artifacts/`, and writes the redacted summary under
+`docs/windows-inbox/`. The wrapper refuses the system backend unless explicitly
+acknowledged because `dns-sd` output is not automatically redacted.
+
 Recorded `docs/observations/2026-06-07-redacted-macos-rust-mdns-companion-link.md`
 from `cargo run -- discover-companion-link --backend rust-mdns --seconds 10
 --redact`. The local Rust mDNS backend resolved `_companion-link._tcp.local.`

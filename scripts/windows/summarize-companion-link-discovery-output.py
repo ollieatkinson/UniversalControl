@@ -94,7 +94,7 @@ def render_summary(path: Path, text: str) -> str:
         "",
         f"- CompanionLink service resolved: {format_bool(bool(resolved))}",
         f"- Output appears redacted: "
-        f"{format_bool(command['redaction_enabled'] and looks_redacted(text))}",
+        f"{format_bool(command['redaction_enabled'] and (not resolved or looks_redacted(text)))}",
         "- Notes:",
         "  - This summary is commit-safe only when the input command used `--redact`.",
         "  - Do not commit unredacted hostnames, addresses, instance names, or TXT values.",

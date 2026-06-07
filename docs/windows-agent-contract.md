@@ -71,7 +71,7 @@ The next native-focused Windows report should answer:
 
 1. Does Windows see this Mac's `_companion-link._tcp.local` advertisement?
 2. Which TXT keys and port are visible?
-3. What happens when running `cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact`?
+3. What happens when running `python scripts/windows/capture-companion-link-discovery.py`?
 4. If Bonjour is installed, what happens with `cargo run -- discover-companion-link --backend system --seconds 30`?
 5. What happens when Windows runs `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe`?
 6. Does macOS see the Windows service with `dns-sd -B _anykbflow-probe._tcp local`?
@@ -138,6 +138,7 @@ For the shape-only follow-up, use:
 Useful commands from this repo:
 
 ```powershell
+python scripts/windows/capture-companion-link-discovery.py
 cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact *> artifacts/windows-companion-link-discovery.txt
 python scripts/windows/summarize-companion-link-discovery-output.py `
   artifacts/windows-companion-link-discovery.txt `
@@ -162,6 +163,11 @@ cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --obs
 Use `capture-native-admission.py --mode shape` only while
 `capture-native-admission.sh --mode shape` is running on the Mac. Commit the
 redacted Windows summary, not the raw TCP observer transcript.
+
+For passive CompanionLink discovery, prefer
+`scripts/windows/capture-companion-link-discovery.py`; it captures the redacted
+Rust mDNS transcript under ignored `artifacts/` and writes the commit-safe
+summary under `docs/windows-inbox/`.
 
 For native-admission runs, prefer `scripts/windows/capture-native-admission.py`
 because it captures the full Windows output to an ignored file under

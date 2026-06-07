@@ -41,6 +41,7 @@ Useful variants:
 ```sh
 cargo run -- discover-companion-link --backend system --seconds 10
 cargo run -- discover-companion-link --backend rust-mdns --seconds 10
+python scripts/windows/capture-companion-link-discovery.py
 cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact > artifacts/windows-companion-link-discovery.txt 2>&1
 scripts/windows/summarize-companion-link-discovery-output.py artifacts/windows-companion-link-discovery.txt
 ```
@@ -131,6 +132,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/mac/compare-mdns-watch-summaries.py](scripts/mac/compare-mdns-watch-summaries.py): compares two redacted watcher summaries, especially minimal versus shape-only CompanionLink candidates.
 - [scripts/mac/summarize-uc-session-artifact.py](scripts/mac/summarize-uc-session-artifact.py): redacts paired-session artifacts into commit-safe Markdown summaries.
 - [scripts/compare-native-admission-pair.py](scripts/compare-native-admission-pair.py): pairs redacted Mac watcher and Windows TCP-observer summaries into one admission report.
+- [scripts/windows/capture-companion-link-discovery.py](scripts/windows/capture-companion-link-discovery.py): captures Windows passive CompanionLink browse output and writes a redacted summary.
 - [scripts/windows/summarize-companion-link-discovery-output.py](scripts/windows/summarize-companion-link-discovery-output.py): redacts `discover-companion-link --redact` output into commit-safe Markdown.
 - [scripts/windows/compare-companion-link-discovery-summaries.py](scripts/windows/compare-companion-link-discovery-summaries.py): compares two redacted CompanionLink discovery summaries.
 - [scripts/windows/capture-native-admission.py](scripts/windows/capture-native-admission.py): coordinated Windows advertiser plus redacted summary wrapper for native-admission probes.

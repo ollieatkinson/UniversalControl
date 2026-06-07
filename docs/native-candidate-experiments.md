@@ -31,6 +31,12 @@ discovery is still not proven:
 On Windows:
 
 ```powershell
+python scripts/windows/capture-companion-link-discovery.py
+```
+
+Manual equivalent:
+
+```powershell
 cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact *> artifacts/windows-companion-link-discovery.txt
 python scripts/windows/summarize-companion-link-discovery-output.py `
   artifacts/windows-companion-link-discovery.txt `

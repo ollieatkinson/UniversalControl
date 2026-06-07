@@ -141,6 +141,12 @@ Resolve-DnsName -Type PTR _companion-link._tcp.local
 Repo-native discovery command:
 
 ```powershell
+python scripts/windows/capture-companion-link-discovery.py
+```
+
+Manual equivalent:
+
+```powershell
 cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact *> artifacts/windows-companion-link-discovery.txt
 python scripts/windows/summarize-companion-link-discovery-output.py `
   artifacts/windows-companion-link-discovery.txt `
@@ -167,7 +173,7 @@ If Bonjour's `dns-sd.exe` is installed and available on `PATH`, also compare:
 cargo run -- discover-companion-link --backend system --seconds 30
 ```
 
-The Rust `--redact` output is commit-safe for normal notes: it preserves event type, service type, port, TXT key names, TXT value length/class, and address count, but hides hostnames, addresses, instance names, and TXT values. Treat system `dns-sd` output as raw until manually sanitized.
+The Rust `--redact` output is commit-safe for normal notes: it preserves event type, service type, port, TXT key names, TXT value length/class, and address count, but hides hostnames, addresses, instance names, and TXT values. The wrapper refuses `--backend system` unless `--allow-unredacted-system` is supplied. Treat system `dns-sd` output as raw until manually sanitized.
 
 Expected Windows deliverable:
 

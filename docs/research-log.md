@@ -901,3 +901,9 @@ big/little-endian length-prefix matches, while several ordinary primary-network
 HTTPS flows are TLS-record-like. This gives the Windows `--framing-probe`
 output a stronger baseline: a TLS-shaped Windows read would look unlike the
 native AWDL data path even if it had a TCP connection and some length overlap.
+
+Extended the same framing shape on both sides with entropy and byte-diversity
+buckets. These are still aggregate, non-payload fields, but they add a coarse
+encrypted/compressed-versus-structured signal for deciding whether a Windows
+read resembles the Apple AWDL baseline closely enough to justify a real parser
+or listener.

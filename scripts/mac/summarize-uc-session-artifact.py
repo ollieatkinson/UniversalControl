@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import ipaddress
+import math
 import re
 import shutil
 import subprocess
@@ -890,6 +891,8 @@ def update_tcp_flow(
             "framing_high_ratios": Counter(),
             "framing_zero_ratios": Counter(),
             "framing_control_ratios": Counter(),
+            "framing_entropy_buckets": Counter(),
+            "framing_byte_diversity_buckets": Counter(),
             "initial_framing_samples": [],
             "first_time": record.timestamp,
             "last_time": record.timestamp,
@@ -935,6 +938,8 @@ def update_tcp_flow_framing(
     increment_counter_field(flow, "framing_high_ratios", shape["high_ratio"])
     increment_counter_field(flow, "framing_zero_ratios", shape["zero_ratio"])
     increment_counter_field(flow, "framing_control_ratios", shape["control_ratio"])
+    increment_counter_field(flow, "framing_entropy_buckets", shape["entropy_bucket"])
+    increment_counter_field(flow, "framing_byte_diversity_buckets", shape["byte_diversity_bucket"])
 
     prefix_counter = flow["framing_length_prefix_candidates"]
     assert isinstance(prefix_counter, Counter)
@@ -1016,6 +1021,8 @@ def frame_shape_fields(payload: bytes) -> dict[str, str]:
         "high_ratio": ratio_bucket(classes["high"], len(payload)),
         "zero_ratio": ratio_bucket(classes["zero"], len(payload)),
         "control_ratio": ratio_bucket(classes["control"], len(payload)),
+        "entropy_bucket": entropy_bucket(payload),
+        "byte_diversity_bucket": byte_diversity_bucket(payload),
         "length_prefix_candidates": "|".join(length_prefix_candidates(payload)) or "none",
         "tls_record_like": format_bool(tls_record_like),
         "tls_record_len_match": format_bool(tls_record_len_match),
@@ -1064,6 +1071,43 @@ def ratio_bucket(count: int, total: int) -> str:
     if percent <= 89:
         return "50-89pct"
     return "90-99pct"
+
+
+def entropy_bucket(payload: bytes) -> str:
+    if not payload:
+        return "empty"
+    counts = Counter(payload)
+    total = len(payload)
+    entropy = 0.0
+    for count in counts.values():
+        probability = count / total
+        entropy -= probability * math.log2(probability)
+    if entropy < 2.0:
+        return "0-2bits"
+    if entropy < 4.0:
+        return "2-4bits"
+    if entropy < 6.0:
+        return "4-6bits"
+    if entropy < 7.0:
+        return "6-7bits"
+    return "7-8bits"
+
+
+def byte_diversity_bucket(payload: bytes) -> str:
+    if not payload:
+        return "empty"
+    unique = len(set(payload))
+    if unique == 1:
+        return "1"
+    if unique <= 4:
+        return "2-4"
+    if unique <= 16:
+        return "5-16"
+    if unique <= 64:
+        return "17-64"
+    if unique <= 128:
+        return "65-128"
+    return "129-256"
 
 
 def length_prefix_candidates(payload: bytes) -> list[str]:
@@ -1214,6 +1258,8 @@ def top_tcp_flow_shapes(
                 "framing_high_ratios": flow["framing_high_ratios"],
                 "framing_zero_ratios": flow["framing_zero_ratios"],
                 "framing_control_ratios": flow["framing_control_ratios"],
+                "framing_entropy_buckets": flow["framing_entropy_buckets"],
+                "framing_byte_diversity_buckets": flow["framing_byte_diversity_buckets"],
                 "initial_framing_samples": flow["initial_framing_samples"],
                 "flags": flow["flags"],
                 "first_offset": seconds_between(first_packet_time, first_time),
@@ -1278,6 +1324,14 @@ def render_tcp_flow_shapes(flows: list[dict[str, object]]) -> list[str]:
                 flow["framing_zero_ratios"],
                 flow["framing_control_ratios"],
             )
+        )
+        lines.append(
+            "  - framing entropy buckets: "
+            + format_counter(flow["framing_entropy_buckets"])
+        )
+        lines.append(
+            "  - framing byte-diversity buckets: "
+            + format_counter(flow["framing_byte_diversity_buckets"])
         )
         lines.append(
             "  - framing length-prefix candidates: "
@@ -1358,11 +1412,13 @@ def format_framing_samples(value: object) -> str:
         if not isinstance(item, dict):
             continue
         rendered.append(
-            "`#{}:first={},len_prefix={},tls={},ascii={},high={}`".format(
+            "`#{}:first={},len_prefix={},tls={},entropy={},diversity={},ascii={},high={}`".format(
                 index,
                 item.get("first_byte_class", "missing"),
                 item.get("length_prefix_candidates", "missing"),
                 item.get("tls_record_like", "missing"),
+                item.get("entropy_bucket", "missing"),
+                item.get("byte_diversity_bucket", "missing"),
                 item.get("ascii_ratio", "missing"),
                 item.get("high_ratio", "missing"),
             )

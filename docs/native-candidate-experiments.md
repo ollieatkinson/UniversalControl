@@ -320,9 +320,9 @@ hex-string lengths from older transcripts, but current observer output is
 length/timing only.
 
 With `--framing-probe`, the Windows summary additionally preserves
-first-byte-class buckets, length-prefix candidate counts, TLS-record-like
-counts, and compact framing samples. These are byte-class and length
-hypotheses, not payload decoding.
+first-byte-class buckets, entropy buckets, byte-diversity buckets,
+length-prefix candidate counts, TLS-record-like counts, and compact framing
+samples. These are byte-class and length hypotheses, not payload decoding.
 
 This command intentionally does not copy identifiers, certificates, account
 material, hostnames, or real `rp*` values from an Apple device. With

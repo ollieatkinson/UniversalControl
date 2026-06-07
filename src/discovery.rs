@@ -377,12 +377,14 @@ fn frame_shape_summary(bytes: &[u8]) -> String {
     let (tls_record_like, tls_record_len_match) = tls_record_shape(bytes);
 
     format!(
-        "first_byte_class={} ascii_ratio={} high_ratio={} zero_ratio={} control_ratio={} length_prefix_candidates={} tls_record_like={} tls_record_len_match={}",
+        "first_byte_class={} ascii_ratio={} high_ratio={} zero_ratio={} control_ratio={} entropy_bucket={} byte_diversity_bucket={} length_prefix_candidates={} tls_record_like={} tls_record_len_match={}",
         first_byte_class(bytes),
         ratio_bucket(byte_classes.ascii, bytes.len()),
         ratio_bucket(byte_classes.high, bytes.len()),
         ratio_bucket(byte_classes.zero, bytes.len()),
         ratio_bucket(byte_classes.control, bytes.len()),
+        entropy_bucket(bytes),
+        byte_diversity_bucket(bytes),
         format_candidates(&length_prefix_candidates),
         format_bool(tls_record_like),
         format_bool(tls_record_len_match),
@@ -435,6 +437,64 @@ fn ratio_bucket(count: usize, total: usize) -> &'static str {
         10..=49 => "10-49pct",
         50..=89 => "50-89pct",
         _ => "90-99pct",
+    }
+}
+
+fn entropy_bucket(bytes: &[u8]) -> &'static str {
+    if bytes.is_empty() {
+        return "empty";
+    }
+
+    let mut counts = [0usize; 256];
+    for byte in bytes {
+        counts[*byte as usize] += 1;
+    }
+
+    let total = bytes.len() as f64;
+    let mut entropy = 0.0f64;
+    for count in counts {
+        if count == 0 {
+            continue;
+        }
+        let probability = count as f64 / total;
+        entropy -= probability * probability.log2();
+    }
+
+    if entropy < 2.0 {
+        "0-2bits"
+    } else if entropy < 4.0 {
+        "2-4bits"
+    } else if entropy < 6.0 {
+        "4-6bits"
+    } else if entropy < 7.0 {
+        "6-7bits"
+    } else {
+        "7-8bits"
+    }
+}
+
+fn byte_diversity_bucket(bytes: &[u8]) -> &'static str {
+    if bytes.is_empty() {
+        return "empty";
+    }
+
+    let mut seen = [false; 256];
+    let mut unique = 0usize;
+    for byte in bytes {
+        let index = *byte as usize;
+        if !seen[index] {
+            seen[index] = true;
+            unique += 1;
+        }
+    }
+
+    match unique {
+        1 => "1",
+        2..=4 => "2-4",
+        5..=16 => "5-16",
+        17..=64 => "17-64",
+        65..=128 => "65-128",
+        _ => "129-256",
     }
 }
 
@@ -1092,6 +1152,8 @@ mod tests {
         let summary = frame_shape_summary(&bytes);
 
         assert!(summary.contains("first_byte_class=zero"));
+        assert!(summary.contains("entropy_bucket=2-4bits"));
+        assert!(summary.contains("byte_diversity_bucket=5-16"));
         assert!(summary.contains("length_prefix_candidates=be16_payload"));
         assert!(summary.contains("tls_record_like=no"));
     }
@@ -1103,6 +1165,7 @@ mod tests {
         let summary = frame_shape_summary(&bytes);
 
         assert!(summary.contains("first_byte_class=control"));
+        assert!(summary.contains("byte_diversity_bucket=5-16"));
         assert!(summary.contains("tls_record_like=yes"));
         assert!(summary.contains("tls_record_len_match=yes"));
     }

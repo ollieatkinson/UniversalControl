@@ -109,6 +109,8 @@ def render_summary(path: Path, text: str) -> str:
         f"- Read byte sequences: {format_read_sequences(connections)}",
         f"- Inter-read gap buckets: {format_counter(read_gap_buckets)}",
         f"- Framing first-byte classes: {format_counter(framing_counter(connections, 'first_byte_class'))}",
+        f"- Framing entropy buckets: {format_counter(framing_counter(connections, 'entropy_bucket'))}",
+        f"- Framing byte-diversity buckets: {format_counter(framing_counter(connections, 'byte_diversity_bucket'))}",
         f"- Framing length-prefix candidates: {format_counter(framing_length_prefix_counter(connections))}",
         f"- Framing TLS record-like reads: {format_counter(framing_counter(connections, 'tls_record_like'))}",
         f"- Framing TLS record length matches: {format_counter(framing_counter(connections, 'tls_record_len_match'))}",
@@ -123,7 +125,7 @@ def render_summary(path: Path, text: str) -> str:
         "- Notes:",
         "  - Inspect the raw transcript locally before deleting it.",
         "  - New observer output records read lengths and timing only, not payload bytes.",
-        "  - Framing probe output, when enabled, records byte-class buckets and length-prefix/TLS hypotheses only.",
+        "  - Framing probe output, when enabled, records byte-class, entropy, diversity, length-prefix, and TLS hypotheses only.",
         "  - Older transcripts may include local-only hex prefixes; this summary preserves only their hex-string lengths.",
         "  - Compare read byte sequences and gap buckets with the Apple-to-Apple AWDL payload-length fingerprints before treating a TCP attempt as native Universal Control data-path progress.",
         "  - Do not commit raw peer addresses, hostnames, or TCP payload bytes.",
@@ -537,12 +539,14 @@ def format_framing_samples(connections: list[ObserverConnection]) -> str:
     for connection in connections:
         for read_index, fields in sorted(connection.framing_events, key=lambda event: event[0])[:8]:
             rendered.append(
-                "`#{}/{}:first={},len_prefix={},tls={},ascii={},high={}`".format(
+                "`#{}/{}:first={},len_prefix={},tls={},entropy={},diversity={},ascii={},high={}`".format(
                     connection.index,
                     read_index,
                     fields.get("first_byte_class", "missing"),
                     fields.get("length_prefix_candidates", "missing"),
                     fields.get("tls_record_like", "missing"),
+                    fields.get("entropy_bucket", "missing"),
+                    fields.get("byte_diversity_bucket", "missing"),
                     fields.get("ascii_ratio", "missing"),
                     fields.get("high_ratio", "missing"),
                 )

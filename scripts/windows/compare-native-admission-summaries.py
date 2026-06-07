@@ -42,6 +42,8 @@ HIGHLIGHT_FIELDS = [
     "TCP Observer / Read byte sequences",
     "TCP Observer / Inter-read gap buckets",
     "TCP Observer / Framing first-byte classes",
+    "TCP Observer / Framing entropy buckets",
+    "TCP Observer / Framing byte-diversity buckets",
     "TCP Observer / Framing length-prefix candidates",
     "TCP Observer / Framing TLS record-like reads",
     "TCP Observer / Framing shape samples",

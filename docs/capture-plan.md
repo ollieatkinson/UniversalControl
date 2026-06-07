@@ -431,10 +431,10 @@ Expected evidence:
   peer-close-after-data status without raw peer addresses or payload bytes. Old
   transcripts may also summarize hex-string lengths, but new observer output
   does not print payload hex.
-- With `--framing-probe`, the Windows summary also includes first-byte class
-  buckets, length-prefix candidate counts, TLS-record-like counts, and compact
-  framing samples. These are hypotheses over byte classes and lengths only, not
-  payload dumps.
+- With `--framing-probe`, the Windows summary also includes first-byte class,
+  entropy, byte-diversity, length-prefix candidate, and TLS-record-like buckets
+  plus compact framing samples. These are hypotheses over byte classes and
+  lengths only, not payload dumps.
 - Compare any Windows TCP observer length/timing behavior with the Apple
   session AWDL payload-length fingerprints before assuming the first accepted
   connection is the Universal Control data path.

@@ -15,6 +15,15 @@ APPLE_AWDL_LARGE_LENGTHS = {"621", "1428"}
 
 
 @dataclass
+class PhaseWindowBurst:
+    phase: str
+    length_fingerprint: str
+    packet_bucket: str
+    byte_bucket: str
+    duration_bucket: str
+
+
+@dataclass
 class AwdlFlow:
     index: str
     summary: str
@@ -32,6 +41,7 @@ class AwdlFlow:
     framing_length_prefix_candidates: Counter[str] = field(default_factory=Counter)
     framing_tls_record_like: Counter[str] = field(default_factory=Counter)
     framing_tls_record_len_match: Counter[str] = field(default_factory=Counter)
+    phase_window_bursts: list[PhaseWindowBurst] = field(default_factory=list)
 
 
 def main() -> int:
@@ -124,6 +134,9 @@ def parse_awdl_flows(path: Path) -> list[AwdlFlow]:
         if stripped.startswith("- payload burst length fingerprints:"):
             current.payload_burst_length_fingerprints.update(parse_backtick_counter(stripped))
             continue
+        if stripped.startswith("- phase-window payload bursts:"):
+            current.phase_window_bursts.extend(parse_phase_window_bursts(stripped))
+            continue
         if stripped.startswith("- framing first-byte classes:"):
             current.framing_first_byte_classes.update(parse_backtick_counter(stripped))
             continue
@@ -179,11 +192,55 @@ def parse_backtick_counter(value: str) -> Counter[str]:
     return counter
 
 
+def parse_phase_window_bursts(value: str) -> list[PhaseWindowBurst]:
+    bursts: list[PhaseWindowBurst] = []
+    for item in re.findall(r"`([^`]+)`", value):
+        fields = parse_comma_fields(item)
+        phase = fields.get("phase")
+        length_fingerprint = fields.get("lengths")
+        if not phase or not length_fingerprint or length_fingerprint in {"none", "unknown"}:
+            continue
+        packets = parse_int(fields.get("packets"))
+        bytes_total = parse_int(fields.get("bytes"))
+        start_seconds = parse_seconds(fields.get("start"))
+        end_seconds = parse_seconds(fields.get("end"))
+        duration_seconds = None
+        if start_seconds is not None and end_seconds is not None:
+            duration_seconds = max(0.0, end_seconds - start_seconds)
+        bursts.append(
+            PhaseWindowBurst(
+                phase=phase,
+                length_fingerprint=length_fingerprint,
+                packet_bucket=count_bucket(packets),
+                byte_bucket=byte_bucket(bytes_total),
+                duration_bucket=duration_bucket(duration_seconds),
+            )
+        )
+    return bursts
+
+
+def parse_comma_fields(value: str) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for part in value.split(","):
+        if "=" not in part:
+            continue
+        key, field_value = part.split("=", 1)
+        fields[key.strip()] = field_value.strip()
+    return fields
+
+
 def parse_int(value: str | None) -> int | None:
     if value is None:
         return None
     match = re.search(r"\d+", value)
     return int(match.group(0)) if match else None
+
+
+def parse_seconds(value: str | None) -> float | None:
+    if value is None:
+        return None
+    match = re.fullmatch(r"(\d+(?:\.\d+)?)s", value.strip())
+    return float(match.group(1)) if match else None
 
 
 def render_report(
@@ -197,6 +254,10 @@ def render_report(
     baseline_lengths = combined_lengths(baseline_flows)
     baseline_gaps = combined_gaps(baseline_flows)
     baseline_bursts = combined_bursts(baseline_flows)
+    baseline_phase_bursts = combined_phase_window_bursts(baseline_flows)
+    baseline_phase_fingerprints_by_phase = combined_phase_window_fingerprints_by_phase(
+        baseline_flows
+    )
     baseline_framing = combined_framing(baseline_flows)
     windows_lengths = parse_backtick_counter(
         windows.get("TCP Observer / Read byte counts", "none")
@@ -259,6 +320,10 @@ def render_report(
     common_burst_duration = overlap_counter(
         windows_bursts["duration_buckets"], baseline_bursts["duration_buckets"]
     )
+    common_phase_window_fingerprints = overlap_counter(
+        windows_bursts["length_fingerprints"],
+        baseline_phase_bursts["length_fingerprints"],
+    )
     tier = evidence_tier(
         windows,
         windows_lengths,
@@ -266,6 +331,7 @@ def render_report(
         common_gaps,
         common_burst_bytes,
         common_burst_duration,
+        common_phase_window_fingerprints,
     )
 
     lines = [
@@ -291,6 +357,12 @@ def render_report(
         f"- Baseline payload burst duration buckets: {format_counter(baseline_bursts['duration_buckets'])}",
         f"- Baseline payload burst idle gap buckets: {format_counter(baseline_bursts['idle_gap_buckets'])}",
         f"- Baseline payload burst length fingerprints: {format_counter_top(baseline_bursts['length_fingerprints'], 12)}",
+        f"- Baseline phase-window burst count: {sum(baseline_phase_bursts['phases'].values())}",
+        f"- Baseline phase-window phases: {format_counter(baseline_phase_bursts['phases'])}",
+        f"- Baseline phase-window burst read-count buckets: {format_counter(baseline_phase_bursts['packet_buckets'])}",
+        f"- Baseline phase-window burst byte buckets: {format_counter(baseline_phase_bursts['byte_buckets'])}",
+        f"- Baseline phase-window burst duration buckets: {format_counter(baseline_phase_bursts['duration_buckets'])}",
+        f"- Baseline phase-window burst length fingerprints: {format_counter_top(baseline_phase_bursts['length_fingerprints'], 12)}",
         f"- Baseline framing first-byte classes: {format_counter(baseline_framing['first_byte_classes'])}",
         f"- Baseline framing entropy buckets: {format_counter(baseline_framing['entropy_buckets'])}",
         f"- Baseline framing byte-diversity buckets: {format_counter(baseline_framing['byte_diversity_buckets'])}",
@@ -336,6 +408,11 @@ def render_report(
         f"- Burst duration bucket overlap: {format_overlap(common_burst_duration, baseline_bursts['duration_buckets'])}",
         f"- Burst idle-gap bucket overlap: {format_overlap(overlap_counter(windows_bursts['idle_gap_buckets'], baseline_bursts['idle_gap_buckets']), baseline_bursts['idle_gap_buckets'])}",
         f"- Burst length-fingerprint overlap: {format_overlap(overlap_counter(windows_bursts['length_fingerprints'], baseline_bursts['length_fingerprints']), baseline_bursts['length_fingerprints'])}",
+        f"- Phase-window burst read-count bucket overlap: {format_overlap(overlap_counter(windows_bursts['read_count_buckets'], baseline_phase_bursts['packet_buckets']), baseline_phase_bursts['packet_buckets'])}",
+        f"- Phase-window burst byte bucket overlap: {format_overlap(overlap_counter(windows_bursts['byte_buckets'], baseline_phase_bursts['byte_buckets']), baseline_phase_bursts['byte_buckets'])}",
+        f"- Phase-window burst duration bucket overlap: {format_overlap(overlap_counter(windows_bursts['duration_buckets'], baseline_phase_bursts['duration_buckets']), baseline_phase_bursts['duration_buckets'])}",
+        f"- Phase-window burst length-fingerprint overlap: {format_overlap(common_phase_window_fingerprints, baseline_phase_bursts['length_fingerprints'])}",
+        f"- Phase-window exact phase hits: {format_phase_window_hits(windows_bursts['length_fingerprints'], baseline_phase_fingerprints_by_phase)}",
         f"- Framing first-byte overlap: {format_overlap(overlap_counter(windows_framing['first_byte_classes'], baseline_framing['first_byte_classes']), baseline_framing['first_byte_classes'])}",
         f"- Framing entropy overlap: {format_overlap(overlap_counter(windows_framing['entropy_buckets'], baseline_framing['entropy_buckets']), baseline_framing['entropy_buckets'])}",
         f"- Framing byte-diversity overlap: {format_overlap(overlap_counter(windows_framing['byte_diversity_buckets'], baseline_framing['byte_diversity_buckets']), baseline_framing['byte_diversity_buckets'])}",
@@ -348,6 +425,7 @@ def render_report(
         "",
         "- This report compares length and timing shapes only; it does not identify a protocol or prove admission.",
         "- Direction labels in the Apple baseline are arbitrary within each flow and are intentionally ignored here.",
+        "- Phase-window matches are exact burst-shape correlations around redacted Apple session offsets; they are not decoded phase messages.",
         "- A session-like tier should still be paired with macOS native logs and same Apple Account/iCloud evidence before building a richer listener.",
         "- Do not commit raw peer addresses, hostnames, TXT values, TCP payload bytes, Apple Account identifiers, or credential material.",
         "",
@@ -362,6 +440,7 @@ def evidence_tier(
     common_gaps: Counter[str],
     common_burst_bytes: Counter[str],
     common_burst_duration: Counter[str],
+    common_phase_window_fingerprints: Counter[str],
 ) -> str:
     tcp_attempt = yes_value(windows.get("Interpretation / macOS attempted advertised TCP port"))
     accepted = parse_int(windows.get("TCP Observer / Accepted connection lines")) or 0
@@ -372,6 +451,8 @@ def evidence_tier(
 
     small = family_overlap_count(common_lengths, APPLE_AWDL_SMALL_LENGTHS)
     large = family_overlap_count(common_lengths, APPLE_AWDL_LARGE_LENGTHS)
+    if small and large and common_gaps and common_phase_window_fingerprints:
+        return "session_like_phase_window_burst_overlap"
     if small and large and common_gaps and common_burst_bytes and common_burst_duration:
         return "session_like_length_gap_and_burst_overlap"
     if small and large and common_gaps:
@@ -416,6 +497,36 @@ def combined_bursts(flows: list[AwdlFlow]) -> dict[str, Counter[str]]:
         combined["idle_gap_buckets"].update(flow.payload_burst_idle_gap_buckets)
         combined["length_fingerprints"].update(flow.payload_burst_length_fingerprints)
     return combined
+
+
+def combined_phase_window_bursts(flows: list[AwdlFlow]) -> dict[str, Counter[str]]:
+    combined = {
+        "phases": Counter(),
+        "packet_buckets": Counter(),
+        "byte_buckets": Counter(),
+        "duration_buckets": Counter(),
+        "length_fingerprints": Counter(),
+    }
+    for flow in flows:
+        for burst in flow.phase_window_bursts:
+            combined["phases"][burst.phase] += 1
+            combined["packet_buckets"][burst.packet_bucket] += 1
+            combined["byte_buckets"][burst.byte_bucket] += 1
+            combined["duration_buckets"][burst.duration_bucket] += 1
+            combined["length_fingerprints"][burst.length_fingerprint] += 1
+    for counter in combined.values():
+        counter.pop("unknown", None)
+    return combined
+
+
+def combined_phase_window_fingerprints_by_phase(
+    flows: list[AwdlFlow],
+) -> dict[str, Counter[str]]:
+    by_phase: dict[str, Counter[str]] = {}
+    for flow in flows:
+        for burst in flow.phase_window_bursts:
+            by_phase.setdefault(burst.phase, Counter())[burst.length_fingerprint] += 1
+    return by_phase
 
 
 def combined_framing(flows: list[AwdlFlow]) -> dict[str, Counter[str]]:
@@ -475,6 +586,50 @@ def family_overlap_count(counter: Counter[str], family: set[str]) -> int:
     return sum(counter[length] for length in family)
 
 
+def count_bucket(value: int | None) -> str:
+    if value is None:
+        return "unknown"
+    if value <= 1:
+        return "1"
+    if value == 2:
+        return "2"
+    if value <= 5:
+        return "3-5"
+    if value <= 20:
+        return "6-20"
+    if value <= 100:
+        return "21-100"
+    return ">100"
+
+
+def byte_bucket(value: int | None) -> str:
+    if value is None:
+        return "unknown"
+    if value <= 128:
+        return "1-128"
+    if value <= 512:
+        return "129-512"
+    if value <= 2048:
+        return "513-2048"
+    if value <= 16384:
+        return "2049-16384"
+    return ">16384"
+
+
+def duration_bucket(seconds: float | None) -> str:
+    if seconds is None:
+        return "unknown"
+    if seconds < 0.010:
+        return "<10ms"
+    if seconds < 0.100:
+        return "10-100ms"
+    if seconds < 1.000:
+        return "100ms-1s"
+    if seconds < 5.000:
+        return "1-5s"
+    return ">=5s"
+
+
 def format_counter(counter: Counter[str]) -> str:
     if not counter:
         return "none"
@@ -499,6 +654,20 @@ def format_overlap(overlap: Counter[str], baseline: Counter[str]) -> str:
         f"`{key}` windows={overlap[key]} baseline={baseline[key]}"
         for key in sorted(overlap, key=sort_key)
     )
+
+
+def format_phase_window_hits(
+    windows_fingerprints: Counter[str],
+    baseline_by_phase: dict[str, Counter[str]],
+) -> str:
+    if not windows_fingerprints or not baseline_by_phase:
+        return "none"
+    parts: list[str] = []
+    for phase in sorted(baseline_by_phase):
+        overlap = overlap_counter(windows_fingerprints, baseline_by_phase[phase])
+        if overlap:
+            parts.append(f"`{phase}` {format_overlap(overlap, baseline_by_phase[phase])}")
+    return "; ".join(parts) if parts else "none"
 
 
 def sort_key(value: str) -> tuple[int, int | str]:

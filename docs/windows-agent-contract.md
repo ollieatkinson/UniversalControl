@@ -268,7 +268,8 @@ python scripts/compare-native-admission-pair.py `
   --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
 ```
 
-Then compare the Windows TCP read shape with the Apple-to-Apple AWDL baseline:
+Then compare the Windows TCP read shape with the Apple-to-Apple AWDL baseline,
+including phase-window burst correlations from the reconnect session:
 
 ```powershell
 python scripts/compare-native-admission-awdl-baseline.py `

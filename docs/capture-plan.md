@@ -454,7 +454,7 @@ Expected evidence:
   ```
 
 - Compare the Windows read/framing shape with the Apple-to-Apple AWDL
-  length/gap/burst and framing-bucket baseline:
+  length/gap/burst, phase-window burst, and framing-bucket baseline:
 
   ```sh
   ./scripts/compare-native-admission-awdl-baseline.py \

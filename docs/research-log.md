@@ -931,6 +931,13 @@ within +/-2s of those phases. In the reconnect baseline this makes the
 small-message AWDL 48x2 burst and larger 1428/621-family reconnect-adjacent
 bursts visible without requiring manual offset matching or raw pcap inspection.
 
+Extended the AWDL baseline comparator to consume those phase-window burst
+fingerprints. A Windows native-admission summary can now report exact overlap
+with reconnect, disconnect, or TargetConnect-adjacent Apple burst shapes and
+gets a `session_like_phase_window_burst_overlap` tier when length, gap, and
+phase-window burst evidence align. This remains a correlation signal only, not
+decoded Universal Control phase identification.
+
 ### Shared Replay Mapping Validation
 
 Responded to the Windows unknown-input-mapping note by moving replay dry-run

@@ -674,3 +674,18 @@ before matching signal keywords. This prevents `UniversalControl` process names
 from inflating generic `control` counters and makes the specific stream,
 target/input, sync/layout, proximity, and Wi-Fi P2P counters the stronger
 evidence to compare against Windows native-admission attempts.
+
+### Native Admission Gate Hardening
+
+Updated the Mac mDNS watcher summarizer to remove native process names before
+matching candidate, proximity, and Wi-Fi P2P keywords. This keeps
+`nearbyd`/`wifip2pd` process presence from being counted as side-channel
+protocol evidence by itself, aligning Windows-admission watcher summaries with
+the stricter Apple session and historical-log summaries.
+
+Updated `scripts/compare-native-admission-pair.py` to surface the focused Mac
+watcher counters in the paired report and to classify a resolved service with
+stream, target/input, sync/layout, candidate, or rejection log signal as
+`resolved_with_native_log_signal` when no TCP observer connection is seen. If
+both a TCP attempt and focused native-log signal appear, the pair report now
+uses `resolved_with_tcp_attempt_and_native_log_signal`.

@@ -144,9 +144,9 @@ Expected evidence:
   `P2PStream`, `TargetBegin`, `TargetConnect`, `TargetReply`, `Initial Sync`,
   or `Remote Display Layout` are stronger than generic browse/resolve.
 - The same summary reports `nearbyd` and `wifip2pd` activity plus
-  proximity/ranging and AWDL/Wi-Fi P2P keyword counts. Those counts help
-  distinguish an eligibility/transport side-channel reaction from plain
-  DNS-SD visibility.
+  proximity/ranging and AWDL/Wi-Fi P2P keyword counts after removing native
+  process names from the matched text. Those counts help distinguish an
+  eligibility/transport side-channel reaction from plain DNS-SD visibility.
 - The Windows TCP observer records whether anything connects to the advertised
   port and, if data is sent immediately, bounded read counts, byte counts, and
   hex lengths without raw payload bytes.
@@ -238,6 +238,12 @@ material, hostnames, or real `rp*` values from an Apple device. With
 connection attempts and bounded read-shape metadata. It does not speak Rapport.
 Use any accepted connection as evidence to build a real framing probe next, not
 as Universal Control admission.
+
+If the paired report says `resolved_with_native_log_signal`, inspect the local
+raw Mac watcher artifact before changing the Windows candidate shape. That tier
+means the redacted Mac summary saw focused stream, target/input, sync/layout, or
+candidate/rejection signal; it does not mean the Windows peer joined native
+Universal Control.
 
 After the minimal and shape-only summaries are committed or staged locally,
 compare their redacted Mac-side effects:

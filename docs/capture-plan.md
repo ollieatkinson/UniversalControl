@@ -321,9 +321,10 @@ Windows-owned `_companion-link._tcp` service at all. `--observe-tcp` records
 whether macOS attempts the advertised port; it is not a Rapport implementation.
 Preserve raw artifacts under `artifacts/`, then commit only redacted summaries.
 The redacted Mac summary also reports `nearbyd` and `wifip2pd` line counts plus
-proximity/ranging and AWDL/Wi-Fi peer-to-peer keyword counts. Treat those as
-side-channel evidence that a Windows candidate affected native eligibility or
-transport selection, not as admission by themselves.
+proximity/ranging and AWDL/Wi-Fi peer-to-peer keyword counts after removing
+native process names from the matched text. Treat those as side-channel evidence
+that a Windows candidate affected native eligibility or transport selection,
+not as admission by themselves.
 
 ## Shape-Only CompanionLink Candidate Check
 
@@ -395,6 +396,9 @@ Expected evidence:
 
 - Treat any connection attempt as a signal to inspect the bounded read summary
   and build a real listener next, not as Universal Control admission.
+- If the paired report says `resolved_with_native_log_signal`, inspect the raw
+  local Mac artifact before changing the Windows candidate shape; DNS-SD
+  visibility alone is still not native admission.
 
 ## First Experiments
 

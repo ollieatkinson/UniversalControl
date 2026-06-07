@@ -10,6 +10,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+NATIVE_PROCESSES = ("UniversalControl", "rapportd", "mDNSResponder", "nearbyd", "wifip2pd")
+
+
 @dataclass
 class BrowseEvent:
     action: str
@@ -278,38 +281,40 @@ def summarize_logs(text: str) -> Counter[str]:
         is_native_process = "UniversalControl" in line or "rapportd" in line
         is_proximity_process = is_native_process or "nearbyd" in line
         is_p2p_transport_process = is_native_process or "wifip2pd" in line
-        for process in (
-            "UniversalControl",
-            "rapportd",
-            "mDNSResponder",
-            "nearbyd",
-            "wifip2pd",
-        ):
+        for process in NATIVE_PROCESSES:
             if process in line:
                 counts[process] += 1
-        if candidate_pattern.search(line):
+        signal_text = log_signal_text(line)
+        if candidate_pattern.search(signal_text):
             counts["candidate_keywords"] += 1
             if is_native_process:
                 counts["native_candidate_keywords"] += 1
-        if error_pattern.search(line):
+        if error_pattern.search(signal_text):
             counts["error_keywords"] += 1
             if is_native_process:
                 counts["native_error_keywords"] += 1
-        if stream_pattern.search(line) and is_native_process:
+        if stream_pattern.search(signal_text) and is_native_process:
             counts["native_stream_keywords"] += 1
-        if target_pattern.search(line) and is_native_process:
+        if target_pattern.search(signal_text) and is_native_process:
             counts["native_target_keywords"] += 1
-        if sync_layout_pattern.search(line) and is_native_process:
+        if sync_layout_pattern.search(signal_text) and is_native_process:
             counts["native_sync_layout_keywords"] += 1
-        if proximity_pattern.search(line):
+        if proximity_pattern.search(signal_text):
             counts["proximity_keywords"] += 1
             if is_proximity_process:
                 counts["native_proximity_keywords"] += 1
-        if p2p_transport_pattern.search(line):
+        if p2p_transport_pattern.search(signal_text):
             counts["p2p_transport_keywords"] += 1
             if is_p2p_transport_process:
                 counts["native_p2p_transport_keywords"] += 1
     return counts
+
+
+def log_signal_text(line: str) -> str:
+    text = line
+    for process in NATIVE_PROCESSES:
+        text = text.replace(process, "")
+    return text
 
 
 def parse_launchctl(text: str) -> dict[str, str]:

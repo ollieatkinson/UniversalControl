@@ -17,9 +17,15 @@ MAC_HIGHLIGHTS = [
     "DNS-SD Resolve / TXT value classes",
     "Unified Log / UniversalControl/rapportd candidate keyword lines",
     "Unified Log / UniversalControl/rapportd error/rejection keyword lines",
+    "Unified Log / Native stream keyword lines",
+    "Unified Log / Native target/input keyword lines",
+    "Unified Log / Native sync/layout keyword lines",
+    "Unified Log / Native/proximity-process proximity keyword lines",
+    "Unified Log / Native/transport-process Wi-Fi P2P keyword lines",
     "Interpretation / macOS browse saw expected Windows service",
     "Interpretation / macOS resolve succeeded",
     "Interpretation / Native Universal Control candidate reaction",
+    "Interpretation / Proximity or Wi-Fi P2P side-channel signal",
 ]
 
 WINDOWS_HIGHLIGHTS = [
@@ -99,6 +105,7 @@ def render_report(
     mac_resolved = yes_value(mac.get("Interpretation / macOS resolve succeeded"))
     tcp_attempt = yes_value(windows.get("Interpretation / macOS attempted advertised TCP port"))
     native_signal = mac.get("Interpretation / Native Universal Control candidate reaction", "unknown")
+    side_channel_signal = mac.get("Interpretation / Proximity or Wi-Fi P2P side-channel signal", "unknown")
 
     lines = [
         "# Redacted Native Admission Pair Report",
@@ -116,6 +123,7 @@ def render_report(
         f"- macOS resolved service: {format_bool(mac_resolved)}",
         f"- Windows observed TCP attempt: {format_bool(tcp_attempt)}",
         f"- Native candidate/log signal: {native_signal}",
+        f"- Proximity or Wi-Fi P2P side-channel signal: {side_channel_signal}",
         f"- Admission evidence tier: {admission_tier(mac_seen, mac_resolved, tcp_attempt, native_signal)}",
         "",
         "## macOS Highlights",
@@ -156,11 +164,22 @@ def admission_tier(
         return "not_visible"
     if not mac_resolved:
         return "browse_only"
+    if tcp_attempt and native_log_signal(native_signal):
+        return "resolved_with_tcp_attempt_and_native_log_signal"
     if tcp_attempt:
         return "resolved_with_tcp_attempt"
-    if "possible signal" in native_signal.lower():
+    if native_log_signal(native_signal):
         return "resolved_with_native_log_signal"
     return "resolved_no_tcp_attempt"
+
+
+def native_log_signal(value: str) -> bool:
+    normalized = value.lower()
+    return (
+        "possible signal" in normalized
+        or "stream, target, or sync/layout signal" in normalized
+        or "stream or sync/layout signal" in normalized
+    )
 
 
 def yes_value(value: str | None) -> bool:

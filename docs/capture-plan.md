@@ -400,6 +400,19 @@ python scripts/windows/summarize-native-admission-output.py `
   --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md
 ```
 
+If an earlier run accepted a TCP connection, rerun the same coordinated capture
+with the opt-in framing probe:
+
+```powershell
+python scripts/windows/capture-native-admission.py --mode shape --framing-probe
+```
+
+Manual equivalent:
+
+```powershell
+cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --observe-framing --seconds 60
+```
+
 Expected evidence:
 
 - macOS browse/resolve sees `AnyKBFlow Native Shape Probe`.
@@ -418,6 +431,10 @@ Expected evidence:
   peer-close-after-data status without raw peer addresses or payload bytes. Old
   transcripts may also summarize hex-string lengths, but new observer output
   does not print payload hex.
+- With `--framing-probe`, the Windows summary also includes first-byte class
+  buckets, length-prefix candidate counts, TLS-record-like counts, and compact
+  framing samples. These are hypotheses over byte classes and lengths only, not
+  payload dumps.
 - Compare any Windows TCP observer length/timing behavior with the Apple
   session AWDL payload-length fingerprints before assuming the first accepted
   connection is the Universal Control data path.

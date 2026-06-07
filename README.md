@@ -100,6 +100,13 @@ python scripts/windows/capture-native-admission.py --mode companion-link
 python scripts/windows/capture-native-admission.py --mode shape
 ```
 
+If a prior native-admission run accepted a TCP connection, rerun the same mode
+with the opt-in non-payload framing probe:
+
+```sh
+python scripts/windows/capture-native-admission.py --mode shape --framing-probe
+```
+
 The advertiser refuses Apple-owned service types such as `_companion-link._tcp` unless `--allow-apple-service` is supplied for a controlled native-compatibility experiment.
 
 After a benign visibility check and a minimal `_companion-link._tcp` candidate
@@ -164,8 +171,8 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/windows/compare-companion-link-discovery-summaries.py](scripts/windows/compare-companion-link-discovery-summaries.py): compares two redacted CompanionLink discovery summaries.
 - [scripts/windows/capture-display-probe.py](scripts/windows/capture-display-probe.py): captures native Windows display geometry and writes a redacted bridge-calibration summary.
 - [scripts/windows/summarize-display-probe-output.py](scripts/windows/summarize-display-probe-output.py): redacts display probe names while preserving bounds, scale, and virtual layout.
-- [scripts/windows/capture-native-admission.py](scripts/windows/capture-native-admission.py): coordinated Windows advertiser plus redacted summary wrapper for native-admission probes.
-- [scripts/windows/summarize-native-admission-output.py](scripts/windows/summarize-native-admission-output.py): redacts Windows native-admission command output into commit-safe Markdown, including safe peer classes and TCP read length/timing shapes.
+- [scripts/windows/capture-native-admission.py](scripts/windows/capture-native-admission.py): coordinated Windows advertiser plus redacted summary wrapper for native-admission probes, with opt-in `--framing-probe`.
+- [scripts/windows/summarize-native-admission-output.py](scripts/windows/summarize-native-admission-output.py): redacts Windows native-admission command output into commit-safe Markdown, including safe peer classes, TCP read length/timing shapes, and non-payload framing buckets when enabled.
 - [scripts/windows/compare-native-admission-summaries.py](scripts/windows/compare-native-admission-summaries.py): compares two redacted Windows native-admission summaries.
 
 ## Running The macOS Probe

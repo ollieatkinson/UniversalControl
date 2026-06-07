@@ -78,6 +78,9 @@ enum Command {
         /// Open a bounded TCP listener on the advertised port and log connection attempts.
         #[arg(long)]
         observe_tcp: bool,
+        /// With --observe-tcp, summarize non-payload frame-shape hypotheses.
+        #[arg(long)]
+        observe_framing: bool,
     },
     /// Advertise a shape-only CompanionLink candidate with placeholder TXT values.
     AdvertiseCompanionLinkShape {
@@ -102,6 +105,9 @@ enum Command {
         /// Open a bounded TCP listener on the advertised port and log connection attempts.
         #[arg(long)]
         observe_tcp: bool,
+        /// With --observe-tcp, summarize non-payload frame-shape hypotheses.
+        #[arg(long)]
+        observe_framing: bool,
         /// Required guard for the native-compatibility shape experiment.
         #[arg(long)]
         acknowledge_shape_experiment: bool,
@@ -160,6 +166,9 @@ enum DiscoveryCommand {
         /// Open a bounded TCP listener on the advertised port and log connection attempts.
         #[arg(long)]
         observe_tcp: bool,
+        /// With --observe-tcp, summarize non-payload frame-shape hypotheses.
+        #[arg(long)]
+        observe_framing: bool,
     },
 }
 
@@ -299,6 +308,7 @@ async fn main() -> Result<()> {
             allow_apple_service,
             include_apple_p2p,
             observe_tcp,
+            observe_framing,
         } => discovery::advertise_mdns(discovery::AdvertiseOptions {
             seconds,
             service_type,
@@ -310,6 +320,7 @@ async fn main() -> Result<()> {
             allow_apple_service,
             include_apple_p2p,
             observe_tcp,
+            observe_framing,
         }),
         Command::AdvertiseCompanionLinkShape {
             seconds,
@@ -319,6 +330,7 @@ async fn main() -> Result<()> {
             port,
             include_apple_p2p,
             observe_tcp,
+            observe_framing,
             acknowledge_shape_experiment,
         } => {
             if !acknowledge_shape_experiment {
@@ -338,6 +350,7 @@ async fn main() -> Result<()> {
                 allow_apple_service: true,
                 include_apple_p2p,
                 observe_tcp,
+                observe_framing,
             })
         }
         Command::Discovery { command } => match command {
@@ -358,6 +371,7 @@ async fn main() -> Result<()> {
                 allow_apple_service,
                 include_apple_p2p,
                 observe_tcp,
+                observe_framing,
             } => discovery::advertise_mdns(discovery::AdvertiseOptions {
                 seconds,
                 service_type: service,
@@ -369,6 +383,7 @@ async fn main() -> Result<()> {
                 allow_apple_service,
                 include_apple_p2p,
                 observe_tcp,
+                observe_framing,
             }),
         },
         Command::Probe { command } => match command {

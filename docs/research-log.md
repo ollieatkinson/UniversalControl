@@ -872,3 +872,17 @@ The Windows native-admission summarizer now also preserves safe redacted peer
 classes such as link-local versus private address class and dynamic versus
 registered port class. It still omits raw peer addresses, hostnames, payload
 bytes, account identifiers, credential material, and TXT values.
+
+### Opt-In Native Admission Framing Probe
+
+Added `--observe-framing` to the Rust TCP observer and
+`--framing-probe` to `scripts/windows/capture-native-admission.py`. This is the
+next step after a normal native-admission run accepts a TCP connection: rerun
+the coordinated capture and collect byte-class buckets, length-prefix candidate
+matches, TLS-record-like counts, and compact framing samples for each bounded
+read.
+
+The probe still does not log raw payload bytes, hex prefixes, peer addresses, or
+decoded message values. Its output is only a frame-shape hypothesis layer above
+the existing read length/timing observer, intended to decide whether to build a
+real parser/listener and what framing family to try first.

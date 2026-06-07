@@ -260,6 +260,23 @@ python scripts/windows/summarize-native-admission-output.py `
   --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md
 ```
 
+After a run accepts a TCP connection, rerun the same coordinated shape capture
+with non-payload framing hypotheses enabled:
+
+```powershell
+python scripts/windows/capture-native-admission.py --mode shape --framing-probe
+```
+
+Manual equivalent:
+
+```powershell
+cargo run -- advertise-companion-link-shape `
+  --acknowledge-shape-experiment `
+  --observe-tcp `
+  --observe-framing `
+  --seconds 60
+```
+
 Pair the redacted Mac and Windows summaries:
 
 ```sh
@@ -302,12 +319,17 @@ committing raw peer addresses or payload bytes. It may also summarize
 hex-string lengths from older transcripts, but current observer output is
 length/timing only.
 
+With `--framing-probe`, the Windows summary additionally preserves
+first-byte-class buckets, length-prefix candidate counts, TLS-record-like
+counts, and compact framing samples. These are byte-class and length
+hypotheses, not payload decoding.
+
 This command intentionally does not copy identifiers, certificates, account
 material, hostnames, or real `rp*` values from an Apple device. With
 `--observe-tcp`, it opens a bounded listener on the advertised port only to log
 connection attempts and bounded read-shape metadata. It does not speak Rapport.
-Use any accepted connection as evidence to build a real framing probe next, not
-as Universal Control admission.
+Use any accepted connection as evidence to rerun with `--framing-probe`, not as
+Universal Control admission.
 
 If the paired report says `resolved_with_native_log_signal`, inspect the local
 raw Mac watcher artifact before changing the Windows candidate shape. That tier

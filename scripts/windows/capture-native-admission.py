@@ -50,6 +50,11 @@ def main() -> int:
     parser.add_argument("--port", type=positive_int, help="TCP port to advertise.")
     parser.add_argument("--transcript", type=Path, help="Raw transcript path under artifacts/.")
     parser.add_argument(
+        "--framing-probe",
+        action="store_true",
+        help="Pass --observe-framing with --observe-tcp for non-payload frame-shape hypotheses.",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         help="Redacted summary path under docs/windows-inbox/.",
@@ -70,6 +75,8 @@ def main() -> int:
         help="Print the Windows advertisement command and exit.",
     )
     args = parser.parse_args()
+    if args.framing_probe and args.mode == "benign":
+        parser.error("--framing-probe requires companion-link or shape mode")
 
     repo_root = Path(__file__).resolve().parents[2]
     defaults = MODE_DEFAULTS[args.mode]
@@ -104,6 +111,7 @@ def main() -> int:
         hostname,
         args.addr,
         port,
+        args.framing_probe,
     )
     mac_command = f"./scripts/mac/capture-native-admission.sh --mode {args.mode}"
 
@@ -170,6 +178,7 @@ def build_windows_command(
     hostname: str | None,
     addr: str | None,
     port: int,
+    framing_probe: bool,
 ) -> list[str]:
     if mode == "benign":
         command = [
@@ -217,6 +226,8 @@ def build_windows_command(
         ]
         if addr:
             command.extend(["--addr", addr])
+        if framing_probe:
+            command.append("--observe-framing")
         return command
 
     command = [
@@ -237,6 +248,8 @@ def build_windows_command(
     ]
     if addr:
         command.extend(["--addr", addr])
+    if framing_probe:
+        command.append("--observe-framing")
     return command
 
 

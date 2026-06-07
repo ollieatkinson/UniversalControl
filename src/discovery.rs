@@ -49,6 +49,7 @@ pub struct AdvertiseOptions {
     pub allow_apple_service: bool,
     pub include_apple_p2p: bool,
     pub observe_tcp: bool,
+    pub observe_framing: bool,
 }
 
 pub fn companion_link_shape_txt() -> Vec<String> {
@@ -136,6 +137,9 @@ pub fn advertise_mdns(options: AdvertiseOptions) -> Result<()> {
             "refusing to advertise Apple service type {service_type}; rerun with --allow-apple-service for a controlled native-compatibility experiment"
         );
     }
+    if options.observe_framing && !options.observe_tcp {
+        bail!("--observe-framing requires --observe-tcp");
+    }
 
     let observe_addr = if options.observe_tcp {
         Some(observe_tcp_addr(
@@ -147,7 +151,7 @@ pub fn advertise_mdns(options: AdvertiseOptions) -> Result<()> {
         None
     };
     let tcp_observer = observe_addr
-        .map(|addr| spawn_tcp_observer(addr, Duration::from_secs(seconds)))
+        .map(|addr| spawn_tcp_observer(addr, Duration::from_secs(seconds), options.observe_framing))
         .transpose()?;
     let txt = parse_txt_properties(&options.txt)?;
     let mdns = ServiceDaemon::new().context("failed to create mDNS daemon")?;
@@ -230,7 +234,11 @@ fn observe_tcp_addr(addr: Option<&str>, port: u16, hostname: &str) -> Result<Soc
     Ok(SocketAddr::new(ip, port))
 }
 
-fn spawn_tcp_observer(addr: SocketAddr, duration: Duration) -> Result<TcpObserver> {
+fn spawn_tcp_observer(
+    addr: SocketAddr,
+    duration: Duration,
+    observe_framing: bool,
+) -> Result<TcpObserver> {
     let listener = TcpListener::bind(addr)
         .with_context(|| format!("failed to bind TCP observer on advertised address {addr}"))?;
     listener
@@ -242,7 +250,14 @@ fn spawn_tcp_observer(addr: SocketAddr, duration: Duration) -> Result<TcpObserve
     let thread_stop = Arc::clone(&stop);
     let thread_accepted = Arc::clone(&accepted);
     let handle = thread::spawn(move || {
-        run_tcp_observer(listener, addr, duration, thread_stop, thread_accepted)
+        run_tcp_observer(
+            listener,
+            addr,
+            duration,
+            observe_framing,
+            thread_stop,
+            thread_accepted,
+        )
     });
 
     Ok(TcpObserver {
@@ -256,6 +271,7 @@ fn run_tcp_observer(
     listener: TcpListener,
     addr: SocketAddr,
     duration: Duration,
+    observe_framing: bool,
     stop: Arc<AtomicBool>,
     accepted: Arc<AtomicUsize>,
 ) {
@@ -263,6 +279,9 @@ fn run_tcp_observer(
         "TCP observer listening on {addr} for {}s",
         duration.as_secs().max(1)
     );
+    if observe_framing {
+        println!("TCP observer framing probe enabled: yes");
+    }
     let deadline = Instant::now() + duration;
     while !stop.load(Ordering::SeqCst) && Instant::now() < deadline {
         match listener.accept() {
@@ -274,7 +293,7 @@ fn run_tcp_observer(
                     continue;
                 }
 
-                observe_tcp_connection(&mut stream, index);
+                observe_tcp_connection(&mut stream, index, observe_framing);
             }
             Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
                 thread::sleep(Duration::from_millis(50));
@@ -287,7 +306,7 @@ fn run_tcp_observer(
     }
 }
 
-fn observe_tcp_connection(stream: &mut impl Read, index: usize) {
+fn observe_tcp_connection(stream: &mut impl Read, index: usize, observe_framing: bool) {
     let started = Instant::now();
     let mut buffer = [0u8; TCP_OBSERVER_READ_CHUNK_BYTES];
     let mut reads = 0usize;
@@ -318,6 +337,12 @@ fn observe_tcp_connection(stream: &mut impl Read, index: usize) {
                         started.elapsed().as_millis()
                     );
                 }
+                if observe_framing {
+                    println!(
+                        "TCP observer connection #{index} read #{read_index} framing {}",
+                        frame_shape_summary(&buffer[..bytes])
+                    );
+                }
             }
             Err(error)
                 if matches!(
@@ -344,6 +369,136 @@ fn observe_tcp_connection(stream: &mut impl Read, index: usize) {
             reads >= TCP_OBSERVER_READ_LIMIT
         );
     }
+}
+
+fn frame_shape_summary(bytes: &[u8]) -> String {
+    let byte_classes = byte_class_counts(bytes);
+    let length_prefix_candidates = length_prefix_candidates(bytes);
+    let (tls_record_like, tls_record_len_match) = tls_record_shape(bytes);
+
+    format!(
+        "first_byte_class={} ascii_ratio={} high_ratio={} zero_ratio={} control_ratio={} length_prefix_candidates={} tls_record_like={} tls_record_len_match={}",
+        first_byte_class(bytes),
+        ratio_bucket(byte_classes.ascii, bytes.len()),
+        ratio_bucket(byte_classes.high, bytes.len()),
+        ratio_bucket(byte_classes.zero, bytes.len()),
+        ratio_bucket(byte_classes.control, bytes.len()),
+        format_candidates(&length_prefix_candidates),
+        format_bool(tls_record_like),
+        format_bool(tls_record_len_match),
+    )
+}
+
+#[derive(Default)]
+struct ByteClassCounts {
+    ascii: usize,
+    control: usize,
+    high: usize,
+    zero: usize,
+}
+
+fn byte_class_counts(bytes: &[u8]) -> ByteClassCounts {
+    let mut counts = ByteClassCounts::default();
+    for byte in bytes {
+        match *byte {
+            0 => counts.zero += 1,
+            0x20..=0x7e | b'\n' | b'\r' | b'\t' => counts.ascii += 1,
+            0x01..=0x1f | 0x7f => counts.control += 1,
+            _ => counts.high += 1,
+        }
+    }
+    counts
+}
+
+fn first_byte_class(bytes: &[u8]) -> &'static str {
+    match bytes.first().copied() {
+        None => "none",
+        Some(0) => "zero",
+        Some(0x20..=0x7e) => "ascii",
+        Some(b'\n' | b'\r' | b'\t') => "ascii-whitespace",
+        Some(0x01..=0x1f | 0x7f) => "control",
+        Some(_) => "high",
+    }
+}
+
+fn ratio_bucket(count: usize, total: usize) -> &'static str {
+    if total == 0 || count == 0 {
+        return "0pct";
+    }
+    if count == total {
+        return "100pct";
+    }
+
+    let percent = count * 100 / total;
+    match percent {
+        0..=9 => "1-9pct",
+        10..=49 => "10-49pct",
+        50..=89 => "50-89pct",
+        _ => "90-99pct",
+    }
+}
+
+fn length_prefix_candidates(bytes: &[u8]) -> Vec<&'static str> {
+    let mut candidates = Vec::new();
+    if bytes.len() >= 2 {
+        let be16 = u16::from_be_bytes([bytes[0], bytes[1]]) as usize;
+        let le16 = u16::from_le_bytes([bytes[0], bytes[1]]) as usize;
+        push_length_matches(&mut candidates, "be16", be16, 2, bytes.len());
+        push_length_matches(&mut candidates, "le16", le16, 2, bytes.len());
+    }
+    if bytes.len() >= 4 {
+        let be32 = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
+        let le32 = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
+        push_length_matches(&mut candidates, "be32", be32, 4, bytes.len());
+        push_length_matches(&mut candidates, "le32", le32, 4, bytes.len());
+    }
+    candidates
+}
+
+fn push_length_matches(
+    candidates: &mut Vec<&'static str>,
+    endian: &'static str,
+    value: usize,
+    prefix_bytes: usize,
+    total_bytes: usize,
+) {
+    let payload_match = value
+        .checked_add(prefix_bytes)
+        .is_some_and(|total| total == total_bytes);
+    match (endian, value == total_bytes, payload_match) {
+        ("be16", true, _) => candidates.push("be16_total"),
+        ("be16", _, true) => candidates.push("be16_payload"),
+        ("le16", true, _) => candidates.push("le16_total"),
+        ("le16", _, true) => candidates.push("le16_payload"),
+        ("be32", true, _) => candidates.push("be32_total"),
+        ("be32", _, true) => candidates.push("be32_payload"),
+        ("le32", true, _) => candidates.push("le32_total"),
+        ("le32", _, true) => candidates.push("le32_payload"),
+        _ => {}
+    }
+}
+
+fn tls_record_shape(bytes: &[u8]) -> (bool, bool) {
+    if bytes.len() < 5 {
+        return (false, false);
+    }
+
+    let content_type = matches!(bytes[0], 0x14..=0x18);
+    let version = bytes[1] == 0x03 && bytes[2] <= 0x04;
+    let payload_len = u16::from_be_bytes([bytes[3], bytes[4]]) as usize;
+    let record_like = content_type && version;
+    (record_like, record_like && payload_len + 5 == bytes.len())
+}
+
+fn format_candidates(candidates: &[&str]) -> String {
+    if candidates.is_empty() {
+        return "none".to_string();
+    }
+    candidates.join("|")
+}
+
+fn format_bool(value: bool) -> &'static str {
+    if value { "yes" } else { "no" }
 }
 
 pub fn spawn_bridge_advertisement(node_name: &str, listen_addr: SocketAddr) -> Result<()> {
@@ -928,6 +1083,28 @@ mod tests {
     #[test]
     fn tcp_observer_rejects_multicast_advertise_address() {
         assert!(observe_tcp_addr(Some("224.0.0.251"), 5353, "probe.local.").is_err());
+    }
+
+    #[test]
+    fn frame_shape_detects_length_prefixes_without_payload_values() {
+        let bytes = [0x00, 0x05, 0xaa, 0xbb, 0xcc, 0xdd, 0xee];
+
+        let summary = frame_shape_summary(&bytes);
+
+        assert!(summary.contains("first_byte_class=zero"));
+        assert!(summary.contains("length_prefix_candidates=be16_payload"));
+        assert!(summary.contains("tls_record_like=no"));
+    }
+
+    #[test]
+    fn frame_shape_detects_tls_record_shape() {
+        let bytes = [0x16, 0x03, 0x03, 0x00, 0x02, 0xaa, 0xbb];
+
+        let summary = frame_shape_summary(&bytes);
+
+        assert!(summary.contains("first_byte_class=control"));
+        assert!(summary.contains("tls_record_like=yes"));
+        assert!(summary.contains("tls_record_len_match=yes"));
     }
 
     #[test]

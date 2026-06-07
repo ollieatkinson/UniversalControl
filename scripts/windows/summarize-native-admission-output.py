@@ -29,6 +29,7 @@ class ObserverConnection:
     closed_by_peer: bool | None = None
     read_hex_lens: list[int] | None = None
     read_events: list[tuple[int, int, int]] = field(default_factory=list)
+    framing_events: list[tuple[int, dict[str, str]]] = field(default_factory=list)
 
 
 def main() -> int:
@@ -90,6 +91,7 @@ def render_summary(path: Path, text: str) -> str:
         f"- Observer bind address class: {observer['bind_class']}",
         f"- Observer port: {observer['port']}",
         f"- Observer duration: {observer['duration']}",
+        f"- Framing probe enabled: {format_bool(observer['framing_probe'])}",
         f"- Accepted connection summary: {observer['accepted_summary']}",
         f"- Accepted connection lines: {len(connections)}",
         f"- Unique redacted peer count: {len({connection.peer for connection in connections})}",
@@ -106,6 +108,11 @@ def render_summary(path: Path, text: str) -> str:
         f"- Read byte counts: {format_counter(Counter(str(length) for length in read_lengths))}",
         f"- Read byte sequences: {format_read_sequences(connections)}",
         f"- Inter-read gap buckets: {format_counter(read_gap_buckets)}",
+        f"- Framing first-byte classes: {format_counter(framing_counter(connections, 'first_byte_class'))}",
+        f"- Framing length-prefix candidates: {format_counter(framing_length_prefix_counter(connections))}",
+        f"- Framing TLS record-like reads: {format_counter(framing_counter(connections, 'tls_record_like'))}",
+        f"- Framing TLS record length matches: {format_counter(framing_counter(connections, 'tls_record_len_match'))}",
+        f"- Framing shape samples: {format_framing_samples(connections)}",
         f"- Apple AWDL small-flow length hits: {awdl_hits['small']}",
         f"- Apple AWDL large-flow length hits: {awdl_hits['large']}",
         "",
@@ -116,6 +123,7 @@ def render_summary(path: Path, text: str) -> str:
         "- Notes:",
         "  - Inspect the raw transcript locally before deleting it.",
         "  - New observer output records read lengths and timing only, not payload bytes.",
+        "  - Framing probe output, when enabled, records byte-class buckets and length-prefix/TLS hypotheses only.",
         "  - Older transcripts may include local-only hex prefixes; this summary preserves only their hex-string lengths.",
         "  - Compare read byte sequences and gap buckets with the Apple-to-Apple AWDL payload-length fingerprints before treating a TCP attempt as native Universal Control data-path progress.",
         "  - Do not commit raw peer addresses, hostnames, or TCP payload bytes.",
@@ -155,6 +163,7 @@ def parse_observer(text: str) -> dict[str, str | bool]:
         "bind_class": "none",
         "port": "unknown",
         "duration": "unknown",
+        "framing_probe": False,
         "accepted_summary": "missing",
     }
     listen_pattern = re.compile(
@@ -169,6 +178,9 @@ def parse_observer(text: str) -> dict[str, str | bool]:
             result["bind_class"] = classify_bind_addr(listen.group("addr"))
             result["port"] = listen.group("port")
             result["duration"] = f"{listen.group('duration')}s"
+            continue
+        if stripped == "TCP observer framing probe enabled: yes":
+            result["framing_probe"] = True
             continue
         summary = summary_pattern.match(stripped)
         if summary:
@@ -192,6 +204,9 @@ def parse_connections(text: str) -> list[ObserverConnection]:
     )
     read_length_pattern = re.compile(
         r"^TCP observer connection #(?P<index>\d+) read #(?P<read_index>\d+) elapsed_ms=(?P<elapsed>\d+) bytes=(?P<bytes>\d+)$"
+    )
+    framing_pattern = re.compile(
+        r"^TCP observer connection #(?P<index>\d+) read #(?P<read_index>\d+) framing (?P<shape>.+)$"
     )
     summary_pattern = re.compile(
         r"^TCP observer connection #(?P<index>\d+) summary reads=(?P<reads>\d+) total_bytes=(?P<total_bytes>\d+) duration_ms=(?P<duration_ms>\d+) read_limit_reached=(?P<read_limit_reached>true|false) closed_by_peer=(?P<closed_by_peer>true|false)$"
@@ -275,6 +290,20 @@ def parse_connections(text: str) -> list[ObserverConnection]:
             )
             continue
 
+        framing = framing_pattern.match(stripped)
+        if framing:
+            connection = connections.setdefault(
+                framing.group("index"),
+                ObserverConnection(index=framing.group("index"), peer="<unknown>"),
+            )
+            connection.framing_events.append(
+                (
+                    int(framing.group("read_index")),
+                    parse_shape_fields(framing.group("shape")),
+                )
+            )
+            continue
+
         summary = summary_pattern.match(stripped)
         if summary:
             connection = connections.setdefault(
@@ -322,6 +351,38 @@ def all_read_gap_buckets(connections: list[ObserverConnection]) -> Counter[str]:
                 buckets[gap_bucket(max(0, elapsed - previous_elapsed))] += 1
             previous_elapsed = elapsed
     return buckets
+
+
+def parse_shape_fields(value: str) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for part in value.split():
+        if "=" not in part:
+            continue
+        key, field_value = part.split("=", 1)
+        fields[key] = field_value
+    return fields
+
+
+def framing_counter(connections: list[ObserverConnection], key: str) -> Counter[str]:
+    counter: Counter[str] = Counter()
+    for connection in connections:
+        for _, fields in connection.framing_events:
+            value = fields.get(key)
+            if value:
+                counter[value] += 1
+    return counter
+
+
+def framing_length_prefix_counter(connections: list[ObserverConnection]) -> Counter[str]:
+    counter: Counter[str] = Counter()
+    for connection in connections:
+        for _, fields in connection.framing_events:
+            value = fields.get("length_prefix_candidates")
+            if not value:
+                continue
+            for candidate in value.split("|"):
+                counter[candidate] += 1
+    return counter
 
 
 def gap_bucket(milliseconds: int) -> str:
@@ -468,6 +529,24 @@ def format_read_sequences(connections: list[ObserverConnection]) -> str:
         lengths = [str(bytes_read) for _, _, bytes_read in sorted(connection.read_events)]
         if lengths:
             rendered.append(f"`#{connection.index}:{','.join(lengths[:16])}`")
+    return ", ".join(rendered) if rendered else "none"
+
+
+def format_framing_samples(connections: list[ObserverConnection]) -> str:
+    rendered: list[str] = []
+    for connection in connections:
+        for read_index, fields in sorted(connection.framing_events, key=lambda event: event[0])[:8]:
+            rendered.append(
+                "`#{}/{}:first={},len_prefix={},tls={},ascii={},high={}`".format(
+                    connection.index,
+                    read_index,
+                    fields.get("first_byte_class", "missing"),
+                    fields.get("length_prefix_candidates", "missing"),
+                    fields.get("tls_record_like", "missing"),
+                    fields.get("ascii_ratio", "missing"),
+                    fields.get("high_ratio", "missing"),
+                )
+            )
     return ", ".join(rendered) if rendered else "none"
 
 

@@ -183,10 +183,12 @@ python scripts/windows/capture-display-probe.py
 python scripts/windows/capture-native-admission.py --mode benign
 python scripts/windows/capture-native-admission.py --mode companion-link
 python scripts/windows/capture-native-admission.py --mode shape
+python scripts/windows/capture-native-admission.py --mode shape --framing-probe
 cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
 cargo run -- discovery advertise --service _anykbflow-probe._tcp.local. --instance "AnyKBFlow Probe" --addr <redacted-lan-ip> --port 49152 --txt phase=visibility --txt role=windows-probe --seconds 60
 cargo run -- advertise-mdns --service-type _companion-link._tcp --instance "AnyKBFlow Native Probe" --hostname anykbflow-native-probe --port 49152 --txt probe=visibility --txt role=windows-native-candidate --allow-apple-service --observe-tcp --seconds 60
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60
+cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --observe-framing --seconds 60
 ```
 
 For passive CompanionLink discovery, prefer
@@ -197,6 +199,11 @@ compares it against the local macOS Rust mDNS baseline in one step.
 Use `capture-native-admission.py --mode shape` only while
 `capture-native-admission.sh --mode shape` is running on the Mac. Commit the
 redacted Windows summary, not the raw TCP observer transcript.
+
+Use `capture-native-admission.py --mode shape --framing-probe` only after a
+normal native-admission run accepted a TCP connection. The framing probe records
+byte-class buckets and length-prefix/TLS hypotheses only; it must not be treated
+as protocol decoding or admission proof.
 
 For passive CompanionLink discovery, prefer
 `scripts/windows/capture-companion-link-discovery.py`; it captures the redacted
@@ -218,6 +225,12 @@ cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --obs
 python scripts/windows/summarize-native-admission-output.py `
   artifacts/windows-native-admission-shape.txt `
   --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md
+```
+
+Framing follow-up equivalent after an accepted TCP connection:
+
+```powershell
+python scripts/windows/capture-native-admission.py --mode shape --framing-probe
 ```
 
 When both minimal and shape-only Windows summaries exist, compare them:

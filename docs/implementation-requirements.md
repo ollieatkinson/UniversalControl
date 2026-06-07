@@ -201,8 +201,9 @@ The immediate implementation blockers are evidence blockers, not code volume:
    captures on the real LAN.
 4. Run the minimal and shape-only CompanionLink candidate captures with Mac logs
    active.
-5. If macOS connects to the Windows candidate, build the smallest TCP framing
-   probe that records frame shapes without logging raw payloads.
+5. If macOS connects to the Windows candidate, rerun with the opt-in
+   `--framing-probe` TCP observer so Windows records byte-class and
+   length-prefix frame-shape hypotheses without logging raw payloads.
 6. Compare any Windows reaction against the Apple-to-Apple session baseline.
 7. Decide whether to continue native session work or promote the bridge into the
    primary implementation track.

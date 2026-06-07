@@ -216,6 +216,18 @@ enum ProbeCommand {
         /// Print full routed peer JSON, including key text. Redacted summaries are printed by default.
         #[arg(long)]
         raw: bool,
+
+        /// Fail unless at least one captured event activates the remote side.
+        #[arg(long)]
+        expect_activation: bool,
+
+        /// Fail unless at least one captured event returns focus to the local side.
+        #[arg(long)]
+        expect_deactivation: bool,
+
+        /// Fail unless at least this many input messages would be forwarded.
+        #[arg(long, default_value_t = 0)]
+        min_forwarded_inputs: usize,
     },
     /// Inject a single key press/release.
     Inject {
@@ -379,9 +391,24 @@ async fn main() -> Result<()> {
                 delay_ms,
                 dry_run,
             } => platform::probe_replay_events(&path, delay_ms, dry_run),
-            ProbeCommand::RouteEvents { path, raw } => {
+            ProbeCommand::RouteEvents {
+                path,
+                raw,
+                expect_activation,
+                expect_deactivation,
+                min_forwarded_inputs,
+            } => {
                 let config = config::Config::load(&cli.config)?;
-                bridge_smoke::run_route_events(config, &path, raw)
+                bridge_smoke::run_route_events(
+                    config,
+                    &path,
+                    bridge_smoke::RouteEventOptions {
+                        raw,
+                        expect_activation,
+                        expect_deactivation,
+                        min_forwarded_inputs,
+                    },
+                )
             }
             ProbeCommand::Inject { key } => platform::probe_inject_key(&key),
             ProbeCommand::InjectMouse { x, y } => platform::probe_inject_mouse(x, y),

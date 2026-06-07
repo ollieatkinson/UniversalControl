@@ -116,7 +116,10 @@ Preferred capture command:
 ```powershell
 python scripts/capture-input-events.py --mode listen --count 20
 python scripts/capture-input-events.py --mode grab --count 20
-cargo run -- --config configs/input-owner.example.toml probe route-events --path artifacts/<captured-input-events>.jsonl
+cargo run -- --config configs/input-owner.example.toml probe route-events `
+  --path artifacts/<captured-input-events>.jsonl `
+  --expect-activation `
+  --min-forwarded-inputs 1
 ```
 
 Use `--mode grab-suppress` only after the non-suppressing capture has the
@@ -124,7 +127,9 @@ expected event shape. The wrapper writes replayable JSONL under `artifacts/` and
 a redacted summary under `docs/windows-inbox/` without typed text values.
 `route-events` is also redacted by default and proves whether the captured
 pointer path would switch to the receiver, suppress local events, and forward
-Keychron/mouse input before running the full daemon.
+Keychron/mouse input before running the full daemon. The expectation flags make
+the route check fail if the capture never crosses the configured edge or forwards
+no input.
 
 Mac-side normalized event replay from
 `docs/windows-inbox/2026-06-06-oliver-pc-wsl-input-event-replay.md` is also

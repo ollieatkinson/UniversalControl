@@ -19,6 +19,23 @@ use crate::{
     router::InputRouter,
 };
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RouteEventOptions {
+    pub raw: bool,
+    pub expect_activation: bool,
+    pub expect_deactivation: bool,
+    pub min_forwarded_inputs: usize,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct RouteEventSummary {
+    suppressed_events: usize,
+    unsuppressed_events: usize,
+    remote_activations: usize,
+    remote_deactivations: usize,
+    forwarded_inputs: usize,
+}
+
 pub fn run(config: Config) -> Result<()> {
     if config.role != Role::InputOwner {
         bail!("bridge smoke requires an input_owner config");
@@ -98,7 +115,7 @@ pub fn run(config: Config) -> Result<()> {
     Ok(())
 }
 
-pub fn run_route_events(config: Config, path: &Path, raw: bool) -> Result<()> {
+pub fn run_route_events(config: Config, path: &Path, options: RouteEventOptions) -> Result<()> {
     if config.role != Role::InputOwner {
         bail!("route-events requires an input_owner config");
     }
@@ -119,15 +136,11 @@ pub fn run_route_events(config: Config, path: &Path, raw: bool) -> Result<()> {
     router.set_local_display(local_display.width, local_display.height);
     router.set_remote_display(remote_display.width, remote_display.height);
 
-    let mut suppressed = 0usize;
-    let mut unsuppressed = 0usize;
-    let mut active_true = 0usize;
-    let mut active_false = 0usize;
-    let mut forwarded_inputs = 0usize;
+    let mut summary = RouteEventSummary::default();
 
     println!("route_events: input_owner={}", config.node_name);
     println!("source={}", path.display());
-    println!("raw_output={raw}");
+    println!("raw_output={}", options.raw);
     println!(
         "local_display={}x{} remote_display={}x{} remote_edge={:?}",
         local_display.width,
@@ -150,9 +163,9 @@ pub fn run_route_events(config: Config, path: &Path, raw: bool) -> Result<()> {
         let event_summary = describe_event(&event);
         let decision = router.handle_captured(event);
         if decision.suppress_local {
-            suppressed += 1;
+            summary.suppressed_events += 1;
         } else {
-            unsuppressed += 1;
+            summary.unsuppressed_events += 1;
         }
 
         println!(
@@ -163,15 +176,15 @@ pub fn run_route_events(config: Config, path: &Path, raw: bool) -> Result<()> {
             match &message {
                 PeerMessage::Active {
                     remote_active: true,
-                } => active_true += 1,
+                } => summary.remote_activations += 1,
                 PeerMessage::Active {
                     remote_active: false,
-                } => active_false += 1,
-                PeerMessage::Input { .. } => forwarded_inputs += 1,
+                } => summary.remote_deactivations += 1,
+                PeerMessage::Input { .. } => summary.forwarded_inputs += 1,
                 PeerMessage::Hello { .. } | PeerMessage::Heartbeat => {}
             }
 
-            if raw {
+            if options.raw {
                 print_peer_message("owner->receiver", &message)?;
                 print_receiver_effect(&message);
             } else {
@@ -182,11 +195,13 @@ pub fn run_route_events(config: Config, path: &Path, raw: bool) -> Result<()> {
     }
 
     println!("summary:");
-    println!("  suppressed_events={suppressed}");
-    println!("  unsuppressed_events={unsuppressed}");
-    println!("  remote_activations={active_true}");
-    println!("  remote_deactivations={active_false}");
-    println!("  forwarded_inputs={forwarded_inputs}");
+    println!("  suppressed_events={}", summary.suppressed_events);
+    println!("  unsuppressed_events={}", summary.unsuppressed_events);
+    println!("  remote_activations={}", summary.remote_activations);
+    println!("  remote_deactivations={}", summary.remote_deactivations);
+    println!("  forwarded_inputs={}", summary.forwarded_inputs);
+
+    validate_route_expectations(summary, options)?;
 
     Ok(())
 }
@@ -448,6 +463,29 @@ fn text_class(value: Option<&str>) -> String {
     }
 }
 
+fn validate_route_expectations(
+    summary: RouteEventSummary,
+    options: RouteEventOptions,
+) -> Result<()> {
+    if options.expect_activation && summary.remote_activations == 0 {
+        bail!("route-events expectation failed: no remote activation was produced");
+    }
+
+    if options.expect_deactivation && summary.remote_deactivations == 0 {
+        bail!("route-events expectation failed: no remote deactivation was produced");
+    }
+
+    if summary.forwarded_inputs < options.min_forwarded_inputs {
+        bail!(
+            "route-events expectation failed: forwarded_inputs={} below min_forwarded_inputs={}",
+            summary.forwarded_inputs,
+            options.min_forwarded_inputs
+        );
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -501,5 +539,69 @@ mod tests {
             describe_event(&event),
             "key_press key=KeyA text_class=printable_len_1"
         );
+    }
+
+    #[test]
+    fn route_expectations_require_activation_when_requested() {
+        let summary = RouteEventSummary {
+            forwarded_inputs: 1,
+            ..RouteEventSummary::default()
+        };
+
+        let error = validate_route_expectations(
+            summary,
+            RouteEventOptions {
+                expect_activation: true,
+                min_forwarded_inputs: 1,
+                ..RouteEventOptions::default()
+            },
+        )
+        .unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("no remote activation was produced")
+        );
+    }
+
+    #[test]
+    fn route_expectations_accept_activation_and_forwarded_inputs() {
+        let summary = RouteEventSummary {
+            remote_activations: 1,
+            forwarded_inputs: 3,
+            ..RouteEventSummary::default()
+        };
+
+        validate_route_expectations(
+            summary,
+            RouteEventOptions {
+                expect_activation: true,
+                min_forwarded_inputs: 3,
+                ..RouteEventOptions::default()
+            },
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn route_expectations_reject_low_forward_count() {
+        let summary = RouteEventSummary {
+            remote_activations: 1,
+            forwarded_inputs: 1,
+            ..RouteEventSummary::default()
+        };
+
+        let error = validate_route_expectations(
+            summary,
+            RouteEventOptions {
+                expect_activation: true,
+                min_forwarded_inputs: 2,
+                ..RouteEventOptions::default()
+            },
+        )
+        .unwrap_err();
+
+        assert!(error.to_string().contains("below min_forwarded_inputs=2"));
     }
 }

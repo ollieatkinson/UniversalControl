@@ -128,7 +128,10 @@ Replay normalized events into the local injector:
 ```sh
 mkdir -p artifacts
 python scripts/capture-input-events.py --mode listen --count 20 --jsonl artifacts/input-events.jsonl
-cargo run -- --config configs/input-owner.example.toml probe route-events --path artifacts/input-events.jsonl
+cargo run -- --config configs/input-owner.example.toml probe route-events \
+  --path artifacts/input-events.jsonl \
+  --expect-activation \
+  --min-forwarded-inputs 1
 cargo run -- probe replay-events --path artifacts/input-events.jsonl --dry-run
 cargo run -- probe replay-events --path artifacts/input-events.jsonl --delay-ms 50
 ```
@@ -140,7 +143,9 @@ The capture wrapper writes a JSONL artifact under `artifacts/` and a redacted
 summary that omits typed text values. Run `route-events` with the input-owner
 config to feed the captured events through the real edge router without native
 hooks or network; default output redacts key text and reports local suppression,
-remote activation/deactivation, and forwarded input counts. Run
+remote activation/deactivation, and forwarded input counts. Use
+`--expect-activation` and `--min-forwarded-inputs` to fail fast when the capture
+does not actually cross the configured edge or forward input. Run
 `replay-events --dry-run` first to parse the JSONL file and validate native
 key/button mapping without injecting synthetic input. The full replay then
 validates the capture-to-injection path before a two-machine daemon run.

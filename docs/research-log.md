@@ -603,3 +603,9 @@ admission captures count native stream, target/input, and sync/layout keyword
 lines in addition to generic candidate/rejection counts. That makes a
 controlled Windows advertisement more informative if it reaches deeper than
 DNS-SD browse/resolve.
+
+Extended `probe route-events` with `--expect-activation`,
+`--expect-deactivation`, and `--min-forwarded-inputs`. The capture/replay handoff
+can now fail fast when a native Keychron/mouse capture does not cross the
+configured edge, does not return local when expected, or would forward too few
+events to be useful for the two-machine bridge run.

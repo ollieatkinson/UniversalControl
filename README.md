@@ -61,13 +61,23 @@ dns-sd -B _anykbflow-probe._tcp local
 dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local
 ```
 
-For the coordinated native-admission run, prefer the wrapper that prints the
-matching Windows command and writes a redacted summary after capture:
+For the coordinated native-admission run, prefer the Mac wrapper that prints the
+matching Windows command and writes a redacted Mac summary after capture:
 
 ```sh
 ./scripts/mac/capture-native-admission.sh --mode benign
 ./scripts/mac/capture-native-admission.sh --mode companion-link
 ./scripts/mac/capture-native-admission.sh --mode shape
+```
+
+On Windows, use the matching wrapper to print the Mac command, capture the raw
+Windows transcript under ignored `artifacts/`, and write a redacted Windows
+summary:
+
+```sh
+python scripts/windows/capture-native-admission.py --mode benign
+python scripts/windows/capture-native-admission.py --mode companion-link
+python scripts/windows/capture-native-admission.py --mode shape
 ```
 
 The advertiser refuses Apple-owned service types such as `_companion-link._tcp` unless `--allow-apple-service` is supplied for a controlled native-compatibility experiment.
@@ -122,6 +132,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/mac/summarize-uc-session-artifact.py](scripts/mac/summarize-uc-session-artifact.py): redacts paired-session artifacts into commit-safe Markdown summaries.
 - [scripts/compare-native-admission-pair.py](scripts/compare-native-admission-pair.py): pairs redacted Mac watcher and Windows TCP-observer summaries into one admission report.
 - [scripts/windows/summarize-companion-link-discovery-output.py](scripts/windows/summarize-companion-link-discovery-output.py): redacts `discover-companion-link --redact` output into commit-safe Markdown.
+- [scripts/windows/capture-native-admission.py](scripts/windows/capture-native-admission.py): coordinated Windows advertiser plus redacted summary wrapper for native-admission probes.
 - [scripts/windows/summarize-native-admission-output.py](scripts/windows/summarize-native-admission-output.py): redacts Windows native-admission command output into commit-safe Markdown.
 - [scripts/windows/compare-native-admission-summaries.py](scripts/windows/compare-native-admission-summaries.py): compares two redacted Windows native-admission summaries.
 

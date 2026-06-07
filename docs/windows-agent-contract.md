@@ -144,18 +144,23 @@ python scripts/windows/summarize-companion-link-discovery-output.py `
   --output docs/windows-inbox/YYYY-MM-DD-redacted-companion-link-discovery.md
 cargo run -- discover-companion-link --backend system --seconds 30
 cargo run -- probe displays
+python scripts/windows/capture-native-admission.py --mode benign
+python scripts/windows/capture-native-admission.py --mode companion-link
+python scripts/windows/capture-native-admission.py --mode shape
 cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
 cargo run -- discovery advertise --service _anykbflow-probe._tcp.local. --instance "AnyKBFlow Probe" --addr <redacted-lan-ip> --port 49152 --txt phase=visibility --txt role=windows-probe --seconds 60
 cargo run -- advertise-mdns --service-type _companion-link._tcp --instance "AnyKBFlow Native Probe" --hostname anykbflow-native-probe --port 49152 --txt probe=visibility --txt role=windows-native-candidate --allow-apple-service --observe-tcp --seconds 60
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60
 ```
 
-Use `advertise-companion-link-shape` only while
-`capture-native-admission.sh --mode shape` is running on the Mac. Capture the
-Windows `TCP observer summary` line in the Windows note.
+Use `capture-native-admission.py --mode shape` only while
+`capture-native-admission.sh --mode shape` is running on the Mac. Commit the
+redacted Windows summary, not the raw TCP observer transcript.
 
-For any command using `--observe-tcp`, redirect the full Windows output to an
-ignored file under `artifacts/`, then commit only the redacted summary:
+For native-admission runs, prefer `scripts/windows/capture-native-admission.py`
+because it captures the full Windows output to an ignored file under
+`artifacts/`, then writes only the redacted summary. Manual equivalent for any
+command using `--observe-tcp`:
 
 ```powershell
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60 *> artifacts/windows-native-admission-shape.txt

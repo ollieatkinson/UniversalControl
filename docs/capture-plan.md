@@ -280,10 +280,17 @@ On macOS first:
 On Windows while the macOS watcher is running:
 
 ```powershell
+python scripts/windows/capture-native-admission.py --mode shape
+```
+
+Manual equivalent:
+
+```powershell
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60
 ```
 
-Capture and summarize the Windows output:
+The wrapper captures and summarizes the Windows output. Manual capture plus
+summary:
 
 ```powershell
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60 *> artifacts/windows-native-admission-shape.txt

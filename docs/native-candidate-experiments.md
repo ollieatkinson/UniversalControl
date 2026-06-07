@@ -46,6 +46,12 @@ value length/class, and address count.
 On Windows:
 
 ```powershell
+python scripts/windows/capture-native-admission.py --mode benign
+```
+
+Manual equivalent:
+
+```powershell
 cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
 ```
 
@@ -90,6 +96,12 @@ Manual equivalent:
 ```
 
 On Windows while the macOS watcher is running:
+
+```powershell
+python scripts/windows/capture-native-admission.py --mode companion-link
+```
+
+Manual equivalent:
 
 ```powershell
 cargo run -- advertise-mdns `
@@ -155,13 +167,20 @@ Manual equivalent:
 On Windows while the macOS watcher is running:
 
 ```powershell
+python scripts/windows/capture-native-admission.py --mode shape
+```
+
+Manual equivalent:
+
+```powershell
 cargo run -- advertise-companion-link-shape `
   --acknowledge-shape-experiment `
   --observe-tcp `
   --seconds 60
 ```
 
-Summarize the Windows transcript before committing:
+The wrapper writes a raw transcript under ignored `artifacts/` and a redacted
+summary under `docs/windows-inbox/`. Manual capture plus summary:
 
 ```powershell
 cargo run -- advertise-companion-link-shape `
@@ -191,9 +210,9 @@ addresses or payload bytes.
 This command intentionally does not copy identifiers, certificates, account
 material, hostnames, or real `rp*` values from an Apple device. With
 `--observe-tcp`, it opens a bounded listener on the advertised port only to log
-connection attempts and a short first-read hex prefix. It does not speak
-Rapport. Use any accepted connection as evidence to build a real framing probe
-next, not as Universal Control admission.
+connection attempts and bounded read-shape metadata. It does not speak Rapport.
+Use any accepted connection as evidence to build a real framing probe next, not
+as Universal Control admission.
 
 After the minimal and shape-only summaries are committed or staged locally,
 compare their redacted Mac-side effects:

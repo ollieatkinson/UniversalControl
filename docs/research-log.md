@@ -461,6 +461,13 @@ counts, read durations, hex-string lengths, read-limit status, and peer-close
 status. This is the next useful evidence if macOS resolves a Windows
 `_companion-link._tcp` candidate and attempts the advertised port.
 
+Added `scripts/windows/capture-native-admission.py` to mirror the Mac-side
+native-admission wrapper. It prints the matching macOS watcher command, runs
+the selected Windows advertisement mode, stores the raw transcript under ignored
+`artifacts/`, and writes a redacted Windows summary under `docs/windows-inbox/`.
+This removes manual shell redirection from the coordinated benign, minimal
+CompanionLink, and shape-only admission runs.
+
 ### Local macOS Bridge Preflight
 
 Recorded `docs/observations/2026-06-07-local-macos-bridge-preflight.md` after

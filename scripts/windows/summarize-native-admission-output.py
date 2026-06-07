@@ -99,7 +99,7 @@ def render_summary(path: Path, text: str) -> str:
         f"- macOS attempted advertised TCP port: {format_bool(bool(connections))}",
         "- Notes:",
         "  - Inspect the raw transcript locally before deleting it.",
-        "  - Do not commit raw peer addresses, hostnames, or first-read hex payloads.",
+        "  - Do not commit raw peer addresses, hostnames, or TCP payload bytes.",
         "",
     ]
     return "\n".join(lines)

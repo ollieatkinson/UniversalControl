@@ -155,9 +155,11 @@ classes, port classes, packet counts, payload byte counts, flag classes, and
 relative timing. For the top flows, they also preserve direction-neutral
 payload-length fingerprints: per-direction payload packet/byte counts, top
 payload lengths, an initial nonzero payload-length sequence, and inter-payload
-gap buckets. Direction labels are arbitrary within each flow and are only useful
-for shape comparison. Summaries do not include raw packet lines, endpoints,
-dynamic ports, or payload bytes.
+gap buckets. They also segment payload bursts separated by at least 250 ms of
+flow idle time, preserving burst count, packet/byte/duration/idle-gap buckets,
+length fingerprints, and initial burst offsets. Direction labels are arbitrary
+within each flow and are only useful for shape comparison. Summaries do not
+include raw packet lines, endpoints, dynamic ports, or payload bytes.
 
 Active-session baselines may include intentional pointer, scroll, and short
 benign text-entry actions. Summaries should describe this as input activity
@@ -427,15 +429,16 @@ Expected evidence:
 - Windows summary includes whether the TCP observer accepted any connections,
   per-connection read counts, total byte counts, first-read byte counts,
   redacted peer classes, read byte counts, read byte sequences, inter-read gap
-  buckets, Apple AWDL small/large length-family hits, read-limit status, and
-  peer-close-after-data status without raw peer addresses or payload bytes. Old
+  buckets, 250 ms read-burst fingerprints, Apple AWDL small/large length-family
+  hits, read-limit status, and peer-close-after-data status without raw peer
+  addresses or payload bytes. Old
   transcripts may also summarize hex-string lengths, but new observer output
   does not print payload hex.
 - With `--framing-probe`, the Windows summary also includes first-byte class,
   entropy, byte-diversity, length-prefix candidate, and TLS-record-like buckets
   plus compact framing samples. These are hypotheses over byte classes and
   lengths only, not payload dumps.
-- Compare any Windows TCP observer length/timing behavior with the Apple
+- Compare any Windows TCP observer length/timing/burst behavior with the Apple
   session AWDL payload-length fingerprints before assuming the first accepted
   connection is the Universal Control data path.
 - The paired report combines the Mac and Windows summaries:
@@ -448,8 +451,8 @@ Expected evidence:
     --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
   ```
 
-- Compare the Windows read/framing shape with the Apple-to-Apple AWDL packet
-  baseline:
+- Compare the Windows read/framing shape with the Apple-to-Apple AWDL
+  length/gap/burst and framing-bucket baseline:
 
   ```sh
   ./scripts/compare-native-admission-awdl-baseline.py \

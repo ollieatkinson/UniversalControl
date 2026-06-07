@@ -21,6 +21,11 @@ class AwdlFlow:
     payload_lengths: Counter[str] = field(default_factory=Counter)
     initial_sequence: list[str] = field(default_factory=list)
     gap_buckets: Counter[str] = field(default_factory=Counter)
+    payload_burst_packet_buckets: Counter[str] = field(default_factory=Counter)
+    payload_burst_byte_buckets: Counter[str] = field(default_factory=Counter)
+    payload_burst_duration_buckets: Counter[str] = field(default_factory=Counter)
+    payload_burst_idle_gap_buckets: Counter[str] = field(default_factory=Counter)
+    payload_burst_length_fingerprints: Counter[str] = field(default_factory=Counter)
     framing_first_byte_classes: Counter[str] = field(default_factory=Counter)
     framing_entropy_buckets: Counter[str] = field(default_factory=Counter)
     framing_byte_diversity_buckets: Counter[str] = field(default_factory=Counter)
@@ -104,6 +109,21 @@ def parse_awdl_flows(path: Path) -> list[AwdlFlow]:
         if stripped.startswith("- inter-payload gap buckets:"):
             current.gap_buckets.update(parse_backtick_counter(stripped))
             continue
+        if stripped.startswith("- payload burst packet buckets:"):
+            current.payload_burst_packet_buckets.update(parse_backtick_counter(stripped))
+            continue
+        if stripped.startswith("- payload burst byte buckets:"):
+            current.payload_burst_byte_buckets.update(parse_backtick_counter(stripped))
+            continue
+        if stripped.startswith("- payload burst duration buckets:"):
+            current.payload_burst_duration_buckets.update(parse_backtick_counter(stripped))
+            continue
+        if stripped.startswith("- payload burst idle gap buckets:"):
+            current.payload_burst_idle_gap_buckets.update(parse_backtick_counter(stripped))
+            continue
+        if stripped.startswith("- payload burst length fingerprints:"):
+            current.payload_burst_length_fingerprints.update(parse_backtick_counter(stripped))
+            continue
         if stripped.startswith("- framing first-byte classes:"):
             current.framing_first_byte_classes.update(parse_backtick_counter(stripped))
             continue
@@ -176,6 +196,7 @@ def render_report(
 ) -> str:
     baseline_lengths = combined_lengths(baseline_flows)
     baseline_gaps = combined_gaps(baseline_flows)
+    baseline_bursts = combined_bursts(baseline_flows)
     baseline_framing = combined_framing(baseline_flows)
     windows_lengths = parse_backtick_counter(
         windows.get("TCP Observer / Read byte counts", "none")
@@ -183,6 +204,23 @@ def render_report(
     windows_gaps = parse_backtick_counter(
         windows.get("TCP Observer / Inter-read gap buckets", "none")
     )
+    windows_bursts = {
+        "read_count_buckets": parse_backtick_counter(
+            windows.get("TCP Observer / Read burst read-count buckets", "none")
+        ),
+        "byte_buckets": parse_backtick_counter(
+            windows.get("TCP Observer / Read burst byte buckets", "none")
+        ),
+        "duration_buckets": parse_backtick_counter(
+            windows.get("TCP Observer / Read burst duration buckets", "none")
+        ),
+        "idle_gap_buckets": parse_backtick_counter(
+            windows.get("TCP Observer / Read burst idle gap buckets", "none")
+        ),
+        "length_fingerprints": parse_backtick_counter(
+            windows.get("TCP Observer / Read burst length fingerprints", "none")
+        ),
+    }
     common_lengths = Counter(
         {
             length: windows_lengths[length]
@@ -215,7 +253,20 @@ def render_report(
             windows.get("TCP Observer / Framing TLS record length matches", "none")
         ),
     }
-    tier = evidence_tier(windows, windows_lengths, common_lengths, common_gaps)
+    common_burst_bytes = overlap_counter(
+        windows_bursts["byte_buckets"], baseline_bursts["byte_buckets"]
+    )
+    common_burst_duration = overlap_counter(
+        windows_bursts["duration_buckets"], baseline_bursts["duration_buckets"]
+    )
+    tier = evidence_tier(
+        windows,
+        windows_lengths,
+        common_lengths,
+        common_gaps,
+        common_burst_bytes,
+        common_burst_duration,
+    )
 
     lines = [
         "# Redacted Windows Native Admission AWDL Baseline Comparison",
@@ -235,6 +286,11 @@ def render_report(
         f"- Baseline small-family lengths: {format_family(baseline_lengths, APPLE_AWDL_SMALL_LENGTHS)}",
         f"- Baseline large-family lengths: {format_family(baseline_lengths, APPLE_AWDL_LARGE_LENGTHS)}",
         f"- Baseline inter-payload gap buckets: {format_counter(baseline_gaps)}",
+        f"- Baseline payload burst packet buckets: {format_counter(baseline_bursts['packet_buckets'])}",
+        f"- Baseline payload burst byte buckets: {format_counter(baseline_bursts['byte_buckets'])}",
+        f"- Baseline payload burst duration buckets: {format_counter(baseline_bursts['duration_buckets'])}",
+        f"- Baseline payload burst idle gap buckets: {format_counter(baseline_bursts['idle_gap_buckets'])}",
+        f"- Baseline payload burst length fingerprints: {format_counter_top(baseline_bursts['length_fingerprints'], 12)}",
         f"- Baseline framing first-byte classes: {format_counter(baseline_framing['first_byte_classes'])}",
         f"- Baseline framing entropy buckets: {format_counter(baseline_framing['entropy_buckets'])}",
         f"- Baseline framing byte-diversity buckets: {format_counter(baseline_framing['byte_diversity_buckets'])}",
@@ -252,6 +308,13 @@ def render_report(
         f"- Read byte counts: {format_counter(windows_lengths)}",
         f"- Read byte sequences: {windows.get('TCP Observer / Read byte sequences', 'missing')}",
         f"- Inter-read gap buckets: {format_counter(windows_gaps)}",
+        f"- Read burst count: {windows.get('TCP Observer / Read burst count', 'missing')}",
+        f"- Read burst read-count buckets: {windows.get('TCP Observer / Read burst read-count buckets', 'missing')}",
+        f"- Read burst byte buckets: {windows.get('TCP Observer / Read burst byte buckets', 'missing')}",
+        f"- Read burst duration buckets: {windows.get('TCP Observer / Read burst duration buckets', 'missing')}",
+        f"- Read burst idle gap buckets: {windows.get('TCP Observer / Read burst idle gap buckets', 'missing')}",
+        f"- Read burst length fingerprints: {windows.get('TCP Observer / Read burst length fingerprints', 'missing')}",
+        f"- Initial read bursts: {windows.get('TCP Observer / Initial read bursts', 'missing')}",
         f"- Framing probe enabled: {windows.get('TCP Observer / Framing probe enabled', 'missing')}",
         f"- Framing first-byte classes: {windows.get('TCP Observer / Framing first-byte classes', 'missing')}",
         f"- Framing entropy buckets: {windows.get('TCP Observer / Framing entropy buckets', 'missing')}",
@@ -268,6 +331,11 @@ def render_report(
         f"- Gap bucket overlap: {format_overlap(common_gaps, baseline_gaps)}",
         f"- Small-family overlap count: {family_overlap_count(common_lengths, APPLE_AWDL_SMALL_LENGTHS)}",
         f"- Large-family overlap count: {family_overlap_count(common_lengths, APPLE_AWDL_LARGE_LENGTHS)}",
+        f"- Burst read-count bucket overlap: {format_overlap(overlap_counter(windows_bursts['read_count_buckets'], baseline_bursts['packet_buckets']), baseline_bursts['packet_buckets'])}",
+        f"- Burst byte bucket overlap: {format_overlap(common_burst_bytes, baseline_bursts['byte_buckets'])}",
+        f"- Burst duration bucket overlap: {format_overlap(common_burst_duration, baseline_bursts['duration_buckets'])}",
+        f"- Burst idle-gap bucket overlap: {format_overlap(overlap_counter(windows_bursts['idle_gap_buckets'], baseline_bursts['idle_gap_buckets']), baseline_bursts['idle_gap_buckets'])}",
+        f"- Burst length-fingerprint overlap: {format_overlap(overlap_counter(windows_bursts['length_fingerprints'], baseline_bursts['length_fingerprints']), baseline_bursts['length_fingerprints'])}",
         f"- Framing first-byte overlap: {format_overlap(overlap_counter(windows_framing['first_byte_classes'], baseline_framing['first_byte_classes']), baseline_framing['first_byte_classes'])}",
         f"- Framing entropy overlap: {format_overlap(overlap_counter(windows_framing['entropy_buckets'], baseline_framing['entropy_buckets']), baseline_framing['entropy_buckets'])}",
         f"- Framing byte-diversity overlap: {format_overlap(overlap_counter(windows_framing['byte_diversity_buckets'], baseline_framing['byte_diversity_buckets']), baseline_framing['byte_diversity_buckets'])}",
@@ -292,6 +360,8 @@ def evidence_tier(
     windows_lengths: Counter[str],
     common_lengths: Counter[str],
     common_gaps: Counter[str],
+    common_burst_bytes: Counter[str],
+    common_burst_duration: Counter[str],
 ) -> str:
     tcp_attempt = yes_value(windows.get("Interpretation / macOS attempted advertised TCP port"))
     accepted = parse_int(windows.get("TCP Observer / Accepted connection lines")) or 0
@@ -302,6 +372,8 @@ def evidence_tier(
 
     small = family_overlap_count(common_lengths, APPLE_AWDL_SMALL_LENGTHS)
     large = family_overlap_count(common_lengths, APPLE_AWDL_LARGE_LENGTHS)
+    if small and large and common_gaps and common_burst_bytes and common_burst_duration:
+        return "session_like_length_gap_and_burst_overlap"
     if small and large and common_gaps:
         return "session_like_length_and_gap_overlap"
     if small and large:
@@ -326,6 +398,23 @@ def combined_gaps(flows: list[AwdlFlow]) -> Counter[str]:
     combined: Counter[str] = Counter()
     for flow in flows:
         combined.update(flow.gap_buckets)
+    return combined
+
+
+def combined_bursts(flows: list[AwdlFlow]) -> dict[str, Counter[str]]:
+    combined = {
+        "packet_buckets": Counter(),
+        "byte_buckets": Counter(),
+        "duration_buckets": Counter(),
+        "idle_gap_buckets": Counter(),
+        "length_fingerprints": Counter(),
+    }
+    for flow in flows:
+        combined["packet_buckets"].update(flow.payload_burst_packet_buckets)
+        combined["byte_buckets"].update(flow.payload_burst_byte_buckets)
+        combined["duration_buckets"].update(flow.payload_burst_duration_buckets)
+        combined["idle_gap_buckets"].update(flow.payload_burst_idle_gap_buckets)
+        combined["length_fingerprints"].update(flow.payload_burst_length_fingerprints)
     return combined
 
 

@@ -19,6 +19,8 @@ NATIVE_PROCESSES = ("UniversalControl", "rapportd", "mDNSResponder", "nearbyd", 
 KNOWN_PACKET_PORTS = ("3722", "5353")
 TCPDUMP_TIMEOUT_SECONDS = 30
 PCAP_LINKTYPE_ETHERNET = 1
+PAYLOAD_BURST_GAP_SECONDS = 0.250
+INITIAL_PAYLOAD_BURST_LIMIT = 12
 
 
 @dataclass
@@ -567,6 +569,7 @@ def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
             tcp_payload_shape_packets_by_capture[capture_class] += len(payload_records)
             for payload_record in payload_records:
                 update_tcp_flow_framing(tcp_flows, capture_class, payload_record)
+    finalize_tcp_flow_bursts(tcp_flows)
     decode_status = "not attempted"
     if pcaps and tcpdump is None:
         decode_status = "tcpdump unavailable"
@@ -883,6 +886,15 @@ def update_tcp_flow(
             "payload_gap_buckets": Counter(),
             "initial_payload_sequence": [],
             "last_payload_time": None,
+            "payload_burst_count": 0,
+            "payload_burst_packet_buckets": Counter(),
+            "payload_burst_byte_buckets": Counter(),
+            "payload_burst_duration_buckets": Counter(),
+            "payload_burst_idle_gap_buckets": Counter(),
+            "payload_burst_direction_patterns": Counter(),
+            "payload_burst_length_fingerprints": Counter(),
+            "initial_payload_bursts": [],
+            "current_payload_burst": None,
             "framing_first_byte_classes": Counter(),
             "framing_length_prefix_candidates": Counter(),
             "framing_tls_record_like": Counter(),
@@ -998,6 +1010,186 @@ def update_flow_payload_sequence(
                 "length": payload_length,
             }
         )
+    update_flow_payload_burst(flow, direction, payload_length, record.timestamp)
+
+
+def update_flow_payload_burst(
+    flow: dict[str, object],
+    direction: str,
+    payload_length: int,
+    timestamp: datetime,
+) -> None:
+    current = flow.get("current_payload_burst")
+    if not isinstance(current, dict):
+        flow["current_payload_burst"] = new_payload_burst(direction, payload_length, timestamp)
+        return
+
+    end_time = current.get("end_time")
+    gap = seconds_between(end_time if isinstance(end_time, datetime) else None, timestamp)
+    if gap is not None and gap >= PAYLOAD_BURST_GAP_SECONDS:
+        idle_gaps = flow["payload_burst_idle_gap_buckets"]
+        assert isinstance(idle_gaps, Counter)
+        idle_gaps[payload_burst_idle_gap_bucket(gap)] += 1
+        finalize_payload_burst(flow, current)
+        flow["current_payload_burst"] = new_payload_burst(direction, payload_length, timestamp)
+        return
+
+    current["end_time"] = timestamp
+    current["packets"] = int(current["packets"]) + 1
+    current["bytes"] = int(current["bytes"]) + payload_length
+    directions = current["directions"]
+    assert isinstance(directions, Counter)
+    directions[direction] += 1
+    lengths = current["lengths"]
+    assert isinstance(lengths, Counter)
+    lengths[str(payload_length)] += 1
+
+
+def new_payload_burst(
+    direction: str,
+    payload_length: int,
+    timestamp: datetime,
+) -> dict[str, object]:
+    return {
+        "start_time": timestamp,
+        "end_time": timestamp,
+        "packets": 1,
+        "bytes": payload_length,
+        "directions": Counter({direction: 1}),
+        "lengths": Counter({str(payload_length): 1}),
+    }
+
+
+def finalize_tcp_flow_bursts(
+    tcp_flows: dict[tuple[str, tuple[tuple[str, str], tuple[str, str]]], dict[str, object]],
+) -> None:
+    for flow in tcp_flows.values():
+        current = flow.get("current_payload_burst")
+        if isinstance(current, dict):
+            finalize_payload_burst(flow, current)
+            flow["current_payload_burst"] = None
+
+
+def finalize_payload_burst(flow: dict[str, object], burst: dict[str, object]) -> None:
+    packets = int(burst.get("packets", 0) or 0)
+    bytes_total = int(burst.get("bytes", 0) or 0)
+    start_time = burst.get("start_time")
+    end_time = burst.get("end_time")
+    duration = seconds_between(
+        start_time if isinstance(start_time, datetime) else None,
+        end_time if isinstance(end_time, datetime) else None,
+    )
+    directions = burst.get("directions")
+    lengths = burst.get("lengths")
+    if not isinstance(directions, Counter):
+        directions = Counter()
+    if not isinstance(lengths, Counter):
+        lengths = Counter()
+
+    flow["payload_burst_count"] = int(flow["payload_burst_count"]) + 1
+    packet_buckets = flow["payload_burst_packet_buckets"]
+    assert isinstance(packet_buckets, Counter)
+    packet_buckets[payload_burst_packet_bucket(packets)] += 1
+
+    byte_buckets = flow["payload_burst_byte_buckets"]
+    assert isinstance(byte_buckets, Counter)
+    byte_buckets[payload_burst_byte_bucket(bytes_total)] += 1
+
+    duration_buckets = flow["payload_burst_duration_buckets"]
+    assert isinstance(duration_buckets, Counter)
+    duration_buckets[payload_burst_duration_bucket(duration)] += 1
+
+    pattern = payload_burst_direction_pattern(directions)
+    direction_patterns = flow["payload_burst_direction_patterns"]
+    assert isinstance(direction_patterns, Counter)
+    direction_patterns[pattern] += 1
+
+    fingerprints = flow["payload_burst_length_fingerprints"]
+    assert isinstance(fingerprints, Counter)
+    fingerprints[payload_burst_length_fingerprint(lengths)] += 1
+
+    initial_bursts = flow["initial_payload_bursts"]
+    assert isinstance(initial_bursts, list)
+    if len(initial_bursts) < INITIAL_PAYLOAD_BURST_LIMIT:
+        initial_bursts.append(
+            {
+                "start_time": start_time,
+                "end_time": end_time,
+                "packets": packets,
+                "bytes": bytes_total,
+                "direction_pattern": pattern,
+                "lengths": lengths,
+            }
+        )
+
+
+def payload_burst_packet_bucket(packets: int) -> str:
+    if packets <= 1:
+        return "1"
+    if packets == 2:
+        return "2"
+    if packets <= 5:
+        return "3-5"
+    if packets <= 20:
+        return "6-20"
+    if packets <= 100:
+        return "21-100"
+    return ">100"
+
+
+def payload_burst_byte_bucket(bytes_total: int) -> str:
+    if bytes_total <= 128:
+        return "1-128"
+    if bytes_total <= 512:
+        return "129-512"
+    if bytes_total <= 2048:
+        return "513-2048"
+    if bytes_total <= 16384:
+        return "2049-16384"
+    return ">16384"
+
+
+def payload_burst_duration_bucket(seconds: float | None) -> str:
+    if seconds is None:
+        return "unknown"
+    if seconds < 0.010:
+        return "<10ms"
+    if seconds < 0.100:
+        return "10-100ms"
+    if seconds < 1.000:
+        return "100ms-1s"
+    if seconds < 5.000:
+        return "1-5s"
+    return ">=5s"
+
+
+def payload_burst_idle_gap_bucket(seconds: float) -> str:
+    if seconds < 1.000:
+        return "250ms-1s"
+    if seconds < 5.000:
+        return "1-5s"
+    if seconds < 15.000:
+        return "5-15s"
+    return ">=15s"
+
+
+def payload_burst_direction_pattern(directions: Counter[str]) -> str:
+    has_a_to_b = directions["a_to_b"] > 0
+    has_b_to_a = directions["b_to_a"] > 0
+    if has_a_to_b and has_b_to_a:
+        return "bidirectional"
+    if has_a_to_b:
+        return "a_to_b_only"
+    if has_b_to_a:
+        return "b_to_a_only"
+    return "unknown"
+
+
+def payload_burst_length_fingerprint(lengths: Counter[str]) -> str:
+    if not lengths:
+        return "none"
+    parts = [f"{length}x{count}" for length, count in sorted(lengths.items(), key=lambda item: (-item[1], sort_key(item[0])))[:4]]
+    return "+".join(parts)
 
 
 def payload_gap_bucket(seconds: float) -> str:
@@ -1250,6 +1442,16 @@ def top_tcp_flow_shapes(
                 "payload_lengths_by_direction": flow["payload_lengths_by_direction"],
                 "payload_gap_buckets": flow["payload_gap_buckets"],
                 "initial_payload_sequence": flow["initial_payload_sequence"],
+                "payload_burst_count": flow["payload_burst_count"],
+                "payload_burst_packet_buckets": flow["payload_burst_packet_buckets"],
+                "payload_burst_byte_buckets": flow["payload_burst_byte_buckets"],
+                "payload_burst_duration_buckets": flow["payload_burst_duration_buckets"],
+                "payload_burst_idle_gap_buckets": flow["payload_burst_idle_gap_buckets"],
+                "payload_burst_direction_patterns": flow["payload_burst_direction_patterns"],
+                "payload_burst_length_fingerprints": flow["payload_burst_length_fingerprints"],
+                "initial_payload_bursts": initial_payload_bursts(
+                    flow["initial_payload_bursts"], first_packet_time
+                ),
                 "framing_first_byte_classes": flow["framing_first_byte_classes"],
                 "framing_length_prefix_candidates": flow["framing_length_prefix_candidates"],
                 "framing_tls_record_like": flow["framing_tls_record_like"],
@@ -1311,6 +1513,35 @@ def render_tcp_flow_shapes(flows: list[dict[str, object]]) -> list[str]:
         lines.append(
             "  - inter-payload gap buckets: "
             + format_counter(flow["payload_gap_buckets"])
+        )
+        lines.append(f"  - payload burst count: {flow['payload_burst_count']}")
+        lines.append(
+            "  - payload burst packet buckets: "
+            + format_counter(flow["payload_burst_packet_buckets"])
+        )
+        lines.append(
+            "  - payload burst byte buckets: "
+            + format_counter(flow["payload_burst_byte_buckets"])
+        )
+        lines.append(
+            "  - payload burst duration buckets: "
+            + format_counter(flow["payload_burst_duration_buckets"])
+        )
+        lines.append(
+            "  - payload burst idle gap buckets: "
+            + format_counter(flow["payload_burst_idle_gap_buckets"])
+        )
+        lines.append(
+            "  - payload burst direction patterns: "
+            + format_counter(flow["payload_burst_direction_patterns"])
+        )
+        lines.append(
+            "  - payload burst length fingerprints: "
+            + format_top_counter(flow["payload_burst_length_fingerprints"], limit=8)
+        )
+        lines.append(
+            "  - initial payload bursts: "
+            + format_initial_payload_bursts(flow["initial_payload_bursts"])
         )
         lines.append(
             "  - framing first-byte classes: "
@@ -1385,6 +1616,56 @@ def format_payload_sequence(value: object) -> str:
         direction = item.get("direction", "unknown")
         length = item.get("length", "unknown")
         rendered.append(f"`{direction}:{length}`")
+    return ", ".join(rendered) if rendered else "none"
+
+
+def initial_payload_bursts(value: object, first_packet_time: datetime | None) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        return []
+    bursts: list[dict[str, object]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        start_time = item.get("start_time")
+        end_time = item.get("end_time")
+        lengths = item.get("lengths")
+        bursts.append(
+            {
+                "start_offset": seconds_between(
+                    first_packet_time,
+                    start_time if isinstance(start_time, datetime) else None,
+                ),
+                "end_offset": seconds_between(
+                    first_packet_time,
+                    end_time if isinstance(end_time, datetime) else None,
+                ),
+                "packets": item.get("packets", "unknown"),
+                "bytes": item.get("bytes", "unknown"),
+                "direction_pattern": item.get("direction_pattern", "unknown"),
+                "length_fingerprint": payload_burst_length_fingerprint(lengths if isinstance(lengths, Counter) else Counter()),
+            }
+        )
+    return bursts
+
+
+def format_initial_payload_bursts(value: object) -> str:
+    if not isinstance(value, list) or not value:
+        return "none"
+    rendered: list[str] = []
+    for index, item in enumerate(value, start=1):
+        if not isinstance(item, dict):
+            continue
+        rendered.append(
+            "`#{}:start={},end={},packets={},bytes={},pattern={},lengths={}`".format(
+                index,
+                format_seconds(item.get("start_offset")),
+                format_seconds(item.get("end_offset")),
+                item.get("packets", "unknown"),
+                item.get("bytes", "unknown"),
+                item.get("direction_pattern", "unknown"),
+                item.get("length_fingerprint", "unknown"),
+            )
+        )
     return ", ".join(rendered) if rendered else "none"
 
 
@@ -1547,6 +1828,12 @@ def format_top_counter(counter: Counter[str], *, limit: int) -> str:
     if not counter:
         return "none"
     return ", ".join(f"`{key}`={value}" for key, value in counter.most_common(limit))
+
+
+def sort_key(value: str) -> tuple[int, int | str]:
+    if value.isdigit():
+        return (0, int(value))
+    return (1, value)
 
 
 def format_pair(values: object) -> str:

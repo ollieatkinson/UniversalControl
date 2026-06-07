@@ -288,7 +288,7 @@ Pair the redacted Mac and Windows summaries:
 ```
 
 Compare the Windows TCP read/framing shape with the Apple-to-Apple AWDL payload
-length/gap and framing-bucket baseline:
+length/gap/burst and framing-bucket baseline:
 
 ```sh
 ./scripts/compare-native-admission-awdl-baseline.py \
@@ -422,7 +422,9 @@ goal is to label which logs and network streams change at each action before
 attempting any Windows native handshake. The paired summary reports focused
 native stream, target/input, sync/layout, proximity/ranging, and AWDL/Wi-Fi P2P
 counters so the Windows admission runs can be compared against the signal
-families a real Apple peer produces.
+families a real Apple peer produces. The packet summary also preserves 250 ms
+burst buckets so accepted Windows reads can be compared against Apple reconnect
+and input burst structure without payload bytes.
 
 Historical summaries are count-only and can identify promising native
 `UniversalControl`, `rapportd`, proximity, or Wi-Fi peer-to-peer windows, but

@@ -13,6 +13,8 @@ from pathlib import Path
 
 APPLE_AWDL_SMALL_LENGTHS = {"55", "82", "93", "97", "122", "126", "140", "174"}
 APPLE_AWDL_LARGE_LENGTHS = {"621", "1428"}
+READ_BURST_GAP_MS = 250
+INITIAL_READ_BURST_LIMIT = 12
 
 
 @dataclass
@@ -61,6 +63,7 @@ def render_summary(path: Path, text: str) -> str:
     errors = summarize_errors(text)
     read_lengths = all_read_lengths(connections)
     read_gap_buckets = all_read_gap_buckets(connections)
+    read_bursts = summarize_read_bursts(connections)
     awdl_hits = apple_awdl_length_hits(read_lengths)
 
     lines = [
@@ -108,6 +111,13 @@ def render_summary(path: Path, text: str) -> str:
         f"- Read byte counts: {format_counter(Counter(str(length) for length in read_lengths))}",
         f"- Read byte sequences: {format_read_sequences(connections)}",
         f"- Inter-read gap buckets: {format_counter(read_gap_buckets)}",
+        f"- Read burst count: {read_bursts['count']}",
+        f"- Read burst read-count buckets: {format_counter(read_bursts['read_count_buckets'])}",
+        f"- Read burst byte buckets: {format_counter(read_bursts['byte_buckets'])}",
+        f"- Read burst duration buckets: {format_counter(read_bursts['duration_buckets'])}",
+        f"- Read burst idle gap buckets: {format_counter(read_bursts['idle_gap_buckets'])}",
+        f"- Read burst length fingerprints: {format_counter(read_bursts['length_fingerprints'])}",
+        f"- Initial read bursts: {format_initial_read_bursts(read_bursts['initial_bursts'])}",
         f"- Framing first-byte classes: {format_counter(framing_counter(connections, 'first_byte_class'))}",
         f"- Framing entropy buckets: {format_counter(framing_counter(connections, 'entropy_bucket'))}",
         f"- Framing byte-diversity buckets: {format_counter(framing_counter(connections, 'byte_diversity_bucket'))}",
@@ -355,6 +365,163 @@ def all_read_gap_buckets(connections: list[ObserverConnection]) -> Counter[str]:
     return buckets
 
 
+def summarize_read_bursts(connections: list[ObserverConnection]) -> dict[str, object]:
+    summary: dict[str, object] = {
+        "count": 0,
+        "read_count_buckets": Counter(),
+        "byte_buckets": Counter(),
+        "duration_buckets": Counter(),
+        "idle_gap_buckets": Counter(),
+        "length_fingerprints": Counter(),
+        "initial_bursts": [],
+    }
+    for connection in connections:
+        current: dict[str, object] | None = None
+        previous_elapsed: int | None = None
+        for _, elapsed, bytes_read in sorted(connection.read_events):
+            if current is None:
+                current = new_read_burst(elapsed, bytes_read)
+                previous_elapsed = elapsed
+                continue
+
+            gap = max(0, elapsed - previous_elapsed) if previous_elapsed is not None else 0
+            if gap >= READ_BURST_GAP_MS:
+                idle_gaps = summary["idle_gap_buckets"]
+                assert isinstance(idle_gaps, Counter)
+                idle_gaps[read_burst_idle_gap_bucket(gap)] += 1
+                finalize_read_burst(summary, connection.index, current)
+                current = new_read_burst(elapsed, bytes_read)
+            else:
+                current["end_ms"] = elapsed
+                current["reads"] = int(current["reads"]) + 1
+                current["bytes"] = int(current["bytes"]) + bytes_read
+                lengths = current["lengths"]
+                assert isinstance(lengths, Counter)
+                lengths[str(bytes_read)] += 1
+            previous_elapsed = elapsed
+
+        if current is not None:
+            finalize_read_burst(summary, connection.index, current)
+    return summary
+
+
+def new_read_burst(elapsed_ms: int, bytes_read: int) -> dict[str, object]:
+    return {
+        "start_ms": elapsed_ms,
+        "end_ms": elapsed_ms,
+        "reads": 1,
+        "bytes": bytes_read,
+        "lengths": Counter({str(bytes_read): 1}),
+    }
+
+
+def finalize_read_burst(
+    summary: dict[str, object],
+    connection_index: str,
+    burst: dict[str, object],
+) -> None:
+    reads = int(burst.get("reads", 0) or 0)
+    bytes_total = int(burst.get("bytes", 0) or 0)
+    start_ms = int(burst.get("start_ms", 0) or 0)
+    end_ms = int(burst.get("end_ms", start_ms) or start_ms)
+    duration_ms = max(0, end_ms - start_ms)
+    lengths = burst.get("lengths")
+    if not isinstance(lengths, Counter):
+        lengths = Counter()
+
+    summary["count"] = int(summary["count"]) + 1
+    read_count_buckets = summary["read_count_buckets"]
+    assert isinstance(read_count_buckets, Counter)
+    read_count_buckets[read_burst_read_count_bucket(reads)] += 1
+
+    byte_buckets = summary["byte_buckets"]
+    assert isinstance(byte_buckets, Counter)
+    byte_buckets[read_burst_byte_bucket(bytes_total)] += 1
+
+    duration_buckets = summary["duration_buckets"]
+    assert isinstance(duration_buckets, Counter)
+    duration_buckets[read_burst_duration_bucket(duration_ms)] += 1
+
+    fingerprints = summary["length_fingerprints"]
+    assert isinstance(fingerprints, Counter)
+    fingerprint = read_burst_length_fingerprint(lengths)
+    fingerprints[fingerprint] += 1
+
+    initial_bursts = summary["initial_bursts"]
+    assert isinstance(initial_bursts, list)
+    if len(initial_bursts) < INITIAL_READ_BURST_LIMIT:
+        initial_bursts.append(
+            {
+                "connection": connection_index,
+                "start_ms": start_ms,
+                "end_ms": end_ms,
+                "reads": reads,
+                "bytes": bytes_total,
+                "length_fingerprint": fingerprint,
+            }
+        )
+
+
+def read_burst_read_count_bucket(reads: int) -> str:
+    if reads <= 1:
+        return "1"
+    if reads == 2:
+        return "2"
+    if reads <= 5:
+        return "3-5"
+    if reads <= 20:
+        return "6-20"
+    if reads <= 100:
+        return "21-100"
+    return ">100"
+
+
+def read_burst_byte_bucket(bytes_total: int) -> str:
+    if bytes_total <= 128:
+        return "1-128"
+    if bytes_total <= 512:
+        return "129-512"
+    if bytes_total <= 2048:
+        return "513-2048"
+    if bytes_total <= 16384:
+        return "2049-16384"
+    return ">16384"
+
+
+def read_burst_duration_bucket(milliseconds: int) -> str:
+    if milliseconds < 10:
+        return "<10ms"
+    if milliseconds < 100:
+        return "10-100ms"
+    if milliseconds < 1000:
+        return "100ms-1s"
+    if milliseconds < 5000:
+        return "1-5s"
+    return ">=5s"
+
+
+def read_burst_idle_gap_bucket(milliseconds: int) -> str:
+    if milliseconds < 1000:
+        return "250ms-1s"
+    if milliseconds < 5000:
+        return "1-5s"
+    if milliseconds < 15000:
+        return "5-15s"
+    return ">=15s"
+
+
+def read_burst_length_fingerprint(lengths: Counter[str]) -> str:
+    if not lengths:
+        return "none"
+    parts = [
+        f"{length}x{count}"
+        for length, count in sorted(
+            lengths.items(), key=lambda item: (-item[1], sort_key(item[0]))
+        )[:4]
+    ]
+    return "+".join(parts)
+
+
 def parse_shape_fields(value: str) -> dict[str, str]:
     fields: dict[str, str] = {}
     for part in value.split():
@@ -534,6 +701,27 @@ def format_read_sequences(connections: list[ObserverConnection]) -> str:
     return ", ".join(rendered) if rendered else "none"
 
 
+def format_initial_read_bursts(value: object) -> str:
+    if not isinstance(value, list) or not value:
+        return "none"
+    rendered: list[str] = []
+    for index, item in enumerate(value, start=1):
+        if not isinstance(item, dict):
+            continue
+        rendered.append(
+            "`#{}:connection={},start={}ms,end={}ms,reads={},bytes={},lengths={}`".format(
+                index,
+                item.get("connection", "unknown"),
+                item.get("start_ms", "unknown"),
+                item.get("end_ms", "unknown"),
+                item.get("reads", "unknown"),
+                item.get("bytes", "unknown"),
+                item.get("length_fingerprint", "unknown"),
+            )
+        )
+    return ", ".join(rendered) if rendered else "none"
+
+
 def format_framing_samples(connections: list[ObserverConnection]) -> str:
     rendered: list[str] = []
     for connection in connections:
@@ -564,6 +752,12 @@ def display_path(path: Path) -> str:
 
 def format_bool(value) -> str:
     return "yes" if bool(value) else "no"
+
+
+def sort_key(value: str) -> tuple[int, int | str]:
+    if value.isdigit():
+        return (0, int(value))
+    return (1, value)
 
 
 if __name__ == "__main__":

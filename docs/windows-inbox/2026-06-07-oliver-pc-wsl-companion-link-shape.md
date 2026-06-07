@@ -69,9 +69,10 @@ The TCP observer prints:
 - final `accepted_connections=<n>` summary
 
 The summarizer preserves counts, service type, port, accepted connection
-counts, first-read byte counts, read byte sequences, inter-read gap buckets, and
-Apple AWDL length-family hit counts. It redacts raw peer addresses, hostnames,
-and payload bytes. Older local transcripts may include hex prefixes; current
+counts, first-read byte counts, read byte sequences, inter-read gap buckets,
+250 ms read-burst fingerprints, framing-shape buckets when enabled, and Apple
+AWDL length-family hit counts. It redacts raw peer addresses, hostnames, and
+payload bytes. Older local transcripts may include hex prefixes; current
 observer output no longer prints payload hex.
 
 ## Questions For Mac Side

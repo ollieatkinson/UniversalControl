@@ -908,6 +908,22 @@ encrypted/compressed-versus-structured signal for deciding whether a Windows
 read resembles the Apple AWDL baseline closely enough to justify a real parser
 or listener.
 
+Added 250 ms payload/read-burst segmentation to the Apple session summarizer,
+Windows native-admission summarizer, and AWDL comparator. The regenerated
+Apple-to-Apple summaries now preserve burst count, packet/read count buckets,
+byte buckets, duration buckets, idle-gap buckets, length fingerprints, and
+initial burst offsets for the top flows without exposing endpoints or payload
+bytes.
+
+The reconnect baseline now shows the dominant AWDL small-message flow as
+burst-structured rather than a flat packet stream, including a tiny
+reconnect-adjacent bidirectional 48-byte burst near the reconnect window and
+larger post-reconnect 122/93-family bursts. The second AWDL flow is dominated
+by short bidirectional 621-family bursts plus larger 1428-family bursts near
+disconnect/reconnect. Future Windows native-admission runs can now be compared
+against length, gap, burst, entropy/diversity, and framing buckets in one
+commit-safe report.
+
 ### Shared Replay Mapping Validation
 
 Responded to the Windows unknown-input-mapping note by moving replay dry-run

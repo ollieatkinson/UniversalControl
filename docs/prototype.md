@@ -117,6 +117,9 @@ scrolls the current focus target.
 
 Valid key names are the `rdev::Key` debug names, such as `KeyA`, `MetaLeft`, `ControlLeft`, `Alt`, `Space`, and `Return`.
 Valid button names are `Left`, `Right`, and `Middle`.
+Unsupported key or button names fail explicitly instead of being replayed as an
+`Unknown(0)` input. Treat that failure as a mapping gap to record from native
+macOS or Windows spike data.
 
 The `*-events` probes print normalized `InputEvent` JSON in the same shape sent over the bridge protocol.
 
@@ -191,7 +194,7 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 - Reconnect is basic: the roles re-enter their connection loops, the input owner resets routing state on peer close, and receiver-side common latches plus tracked injected keys/buttons are released. Local and remote display dimensions prefer detected primary display geometry, but native runtime validation is still needed.
 - The native input backend is based on `rdev` and should be treated as a spike layer, not the final platform code.
 - Normalized event replay is a probe, not a security boundary. Do not replay untrusted event files.
-- Key mapping uses physical `rdev` key names. This should be replaced with platform scancode mapping once the Mac and Windows spike data is available.
+- Key mapping uses physical `rdev` key names and rejects unknown names. This should be replaced with platform scancode mapping once the Mac and Windows spike data is available.
 - The Linux backend is intentionally no-op so the shared daemon can be checked in this workspace.
 
 ## Next Engineering Steps

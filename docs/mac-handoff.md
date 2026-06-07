@@ -80,9 +80,10 @@ Please pull this repo and test the native backend on macOS.
 12. Record whether `rdev::simulate` injects key, pointer, click, and wheel events into normal apps.
 13. Record whether replayed normalized JSON produces the same visible input as the one-shot inject probes.
 14. Record whether normalized `InputEvent` JSON has the expected key names, text values, button names, pointer coordinates, and wheel deltas.
-15. Record required macOS permissions and whether logout/restart was needed.
-16. Record modifier behavior for Command, Option, Control, and Fn/function row.
-17. Check whether Secure Input breaks capture in Terminal, password fields, browsers, and IDEs.
+15. Record any `unsupported key name` or `unsupported mouse button name` replay/bridge errors exactly; these are intentional mapping-gap failures.
+16. Record required macOS permissions and whether logout/restart was needed.
+17. Record modifier behavior for Command, Option, Control, and Fn/function row.
+18. Check whether Secure Input breaks capture in Terminal, password fields, browsers, and IDEs.
 
 ## Notes To Push Back
 

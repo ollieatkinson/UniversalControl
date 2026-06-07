@@ -343,7 +343,7 @@ fn virtual_bounds(displays: &[DisplayInfo]) -> Option<(i32, i32, i32, i32)> {
 }
 
 pub fn probe_inject_key(key: &str) -> Result<()> {
-    let key = parse_key(key);
+    let key = parse_key(key)?;
     eprintln!("injecting {key:?} press/release");
     rdev::simulate(&EventType::KeyPress(key)).map_err(|error| anyhow::anyhow!("{error}"))?;
     thread::sleep(Duration::from_millis(50));
@@ -357,7 +357,7 @@ pub fn probe_inject_mouse(x: f64, y: f64) -> Result<()> {
 }
 
 pub fn probe_inject_button(button: &str) -> Result<()> {
-    let button = parse_button(button);
+    let button = parse_button(button)?;
     eprintln!("injecting {button:?} button press/release");
     rdev::simulate(&EventType::ButtonPress(button)).map_err(|error| anyhow::anyhow!("{error}"))?;
     thread::sleep(Duration::from_millis(50));
@@ -406,10 +406,10 @@ pub fn probe_replay_events(path: &Path, delay_ms: u64) -> Result<()> {
 
 fn inject(event: InputEvent) -> Result<()> {
     let event_type = match event {
-        InputEvent::KeyPress { key, .. } => EventType::KeyPress(parse_key(&key)),
-        InputEvent::KeyRelease { key } => EventType::KeyRelease(parse_key(&key)),
-        InputEvent::ButtonPress { button } => EventType::ButtonPress(parse_button(&button)),
-        InputEvent::ButtonRelease { button } => EventType::ButtonRelease(parse_button(&button)),
+        InputEvent::KeyPress { key, .. } => EventType::KeyPress(parse_key(&key)?),
+        InputEvent::KeyRelease { key } => EventType::KeyRelease(parse_key(&key)?),
+        InputEvent::ButtonPress { button } => EventType::ButtonPress(parse_button(&button)?),
+        InputEvent::ButtonRelease { button } => EventType::ButtonRelease(parse_button(&button)?),
         InputEvent::MouseMove { x, y } => EventType::MouseMove { x, y },
         InputEvent::Wheel { delta_x, delta_y } => EventType::Wheel { delta_x, delta_y },
     };
@@ -417,17 +417,17 @@ fn inject(event: InputEvent) -> Result<()> {
     rdev::simulate(&event_type).map_err(|error| anyhow::anyhow!("{error}"))
 }
 
-fn parse_button(value: &str) -> Button {
-    match value {
+fn parse_button(value: &str) -> Result<Button> {
+    Ok(match value {
         "Left" => Button::Left,
         "Right" => Button::Right,
         "Middle" => Button::Middle,
-        _ => Button::Unknown(0),
-    }
+        _ => anyhow::bail!("unsupported mouse button name: {value}"),
+    })
 }
 
-fn parse_key(value: &str) -> Key {
-    match value {
+fn parse_key(value: &str) -> Result<Key> {
+    Ok(match value {
         "Alt" => Key::Alt,
         "AltGr" => Key::AltGr,
         "Backspace" => Key::Backspace,
@@ -533,6 +533,6 @@ fn parse_key(value: &str) -> Key {
         "Kp9" => Key::Kp9,
         "KpDelete" => Key::KpDelete,
         "Function" => Key::Function,
-        _ => Key::Unknown(0),
-    }
+        _ => anyhow::bail!("unsupported key name: {value}"),
+    })
 }

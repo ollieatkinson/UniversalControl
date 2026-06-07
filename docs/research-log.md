@@ -468,3 +468,12 @@ such as `not_visible`, `browse_only`, `resolved_no_tcp_attempt`, or
 
 This is intended to be the final committed artifact for each Windows admission
 attempt, alongside the individual Mac and Windows redacted summaries.
+
+### Unknown Input Mapping Guard
+
+Changed native replay and injection mapping so unsupported normalized key or
+mouse button names fail with explicit errors instead of silently mapping to
+`rdev::Key::Unknown(0)` or `rdev::Button::Unknown(0)`. This keeps bridge and
+replay tests from hiding layout or platform-specific key gaps. If native macOS
+or Windows captures produce an unsupported name, commit the exact redacted
+failure context and add the intended mapping deliberately.

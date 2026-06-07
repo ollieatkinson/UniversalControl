@@ -609,3 +609,10 @@ Extended `probe route-events` with `--expect-activation`,
 can now fail fast when a native Keychron/mouse capture does not cross the
 configured edge, does not return local when expected, or would forward too few
 events to be useful for the two-machine bridge run.
+
+Extended the Mac mDNS watcher to capture `nearbyd` and `wifip2pd` alongside
+`UniversalControl`, `rapportd`, and `mDNSResponder`. The redacted watcher
+summary now preserves process counts plus proximity/ranging and AWDL/Wi-Fi P2P
+keyword counts. These are side-channel signals only, but they matter because
+Apple's public requirements and the UniversalControl string surface both point
+at NearbyInteraction and peer-to-peer Wi-Fi as likely native admission gates.

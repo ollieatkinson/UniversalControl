@@ -143,6 +143,10 @@ Expected evidence:
   or sync/layout keyword counters changed. Nonzero counts for `RPStreamServer`,
   `P2PStream`, `TargetBegin`, `TargetConnect`, `TargetReply`, `Initial Sync`,
   or `Remote Display Layout` are stronger than generic browse/resolve.
+- The same summary reports `nearbyd` and `wifip2pd` activity plus
+  proximity/ranging and AWDL/Wi-Fi P2P keyword counts. Those counts help
+  distinguish an eligibility/transport side-channel reaction from plain
+  DNS-SD visibility.
 - The Windows TCP observer records whether anything connects to the advertised
   port and, if data is sent immediately, bounded read counts, byte counts, and
   hex lengths without raw payload bytes.

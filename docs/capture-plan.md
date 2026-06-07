@@ -228,7 +228,9 @@ Expected evidence:
 
 - macOS browse sees `AnyKBFlow Probe`.
 - macOS resolve shows the Windows hostname, published port, and TXT values.
-- The watcher writes a timestamped ignored artifact folder under `artifacts/` containing browse, resolve, and filtered unified logs.
+- The watcher writes a timestamped ignored artifact folder under `artifacts/`
+  containing browse, resolve, and filtered unified logs for
+  `UniversalControl`, `rapportd`, `mDNSResponder`, `nearbyd`, and `wifip2pd`.
 - `scripts/mac/summarize-mdns-watch-artifact.py` creates the commit-safe Markdown summary from the ignored artifact folder.
 - If browse succeeds but resolve fails, record the redacted interface count and local firewall state.
 - If neither succeeds, record Windows network profile, firewall state, and whether UDP 5353 multicast is allowed.
@@ -289,6 +291,10 @@ only meant to answer whether `rapportd` or `UniversalControl` reacts to a
 Windows-owned `_companion-link._tcp` service at all. `--observe-tcp` records
 whether macOS attempts the advertised port; it is not a Rapport implementation.
 Preserve raw artifacts under `artifacts/`, then commit only redacted summaries.
+The redacted Mac summary also reports `nearbyd` and `wifip2pd` line counts plus
+proximity/ranging and AWDL/Wi-Fi peer-to-peer keyword counts. Treat those as
+side-channel evidence that a Windows candidate affected native eligibility or
+transport selection, not as admission by themselves.
 
 ## Shape-Only CompanionLink Candidate Check
 

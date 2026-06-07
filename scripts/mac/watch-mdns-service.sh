@@ -20,7 +20,8 @@ Options:
   --no-resolve          Skip dns-sd -L.
   -h, --help            Show this help.
 
-The script writes to artifacts/mac-mdns-watch-<timestamp>/.
+The script writes to artifacts/mac-mdns-watch-<timestamp>/ and captures
+UniversalControl, rapportd, mDNSResponder, nearbyd, and wifip2pd log lines.
 Review and redact output before sharing.
 EOF
 }
@@ -105,9 +106,14 @@ if [[ "${include_resolve}" -eq 1 ]]; then
   run_capture "dns-sd-resolve" dns-sd -L "${instance}" "${service}" local
 fi
 
+log_predicate='process == "UniversalControl"'
+log_predicate+=' || process == "rapportd"'
+log_predicate+=' || process == "mDNSResponder"'
+log_predicate+=' || process == "nearbyd"'
+log_predicate+=' || process == "wifip2pd"'
 {
-  printf '$ log stream --style compact --predicate ...\n\n'
-  log stream --style compact --predicate 'process == "UniversalControl" || process == "rapportd" || process == "mDNSResponder"'
+  printf '$ log stream --style compact --predicate %q\n\n' "${log_predicate}"
+  log stream --style compact --predicate "${log_predicate}"
 } >"${out_dir}/unified-log.txt" 2>&1 &
 pids+=("$!")
 

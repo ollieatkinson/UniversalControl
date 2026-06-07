@@ -132,6 +132,8 @@ def render_summary(artifact_dir: Path, expected_instance: str | None) -> str:
             f"- UniversalControl lines: {log_counts['UniversalControl']}",
             f"- rapportd lines: {log_counts['rapportd']}",
             f"- mDNSResponder lines: {log_counts['mDNSResponder']}",
+            f"- nearbyd lines: {log_counts['nearbyd']}",
+            f"- wifip2pd lines: {log_counts['wifip2pd']}",
             f"- Candidate/matching keyword lines: {log_counts['candidate_keywords']}",
             f"- Error/rejection keyword lines: {log_counts['error_keywords']}",
             f"- UniversalControl/rapportd candidate keyword lines: {log_counts['native_candidate_keywords']}",
@@ -139,6 +141,10 @@ def render_summary(artifact_dir: Path, expected_instance: str | None) -> str:
             f"- Native stream keyword lines: {log_counts['native_stream_keywords']}",
             f"- Native target/input keyword lines: {log_counts['native_target_keywords']}",
             f"- Native sync/layout keyword lines: {log_counts['native_sync_layout_keywords']}",
+            f"- Proximity/ranging keyword lines: {log_counts['proximity_keywords']}",
+            f"- Native/proximity-process proximity keyword lines: {log_counts['native_proximity_keywords']}",
+            f"- Wi-Fi peer-to-peer/AWDL keyword lines: {log_counts['p2p_transport_keywords']}",
+            f"- Native/transport-process Wi-Fi P2P keyword lines: {log_counts['native_p2p_transport_keywords']}",
             "- Raw log lines: not included",
         ]
     )
@@ -161,6 +167,7 @@ def render_summary(artifact_dir: Path, expected_instance: str | None) -> str:
             f"- macOS browse saw expected Windows service: {browse_interpretation(seen_instances, expected_instance)}",
             f"- macOS resolve succeeded: {format_bool(bool(resolve_events))}",
             f"- Native Universal Control candidate reaction: {candidate_reaction(log_counts)}",
+            f"- Proximity or Wi-Fi P2P side-channel signal: {side_channel_reaction(log_counts)}",
             "- Notes:",
             "  - Fill this section manually from the redacted counts and local raw artifacts.",
             "  - Do not paste raw hostnames, addresses, TXT values, interface identifiers, or log lines.",
@@ -245,6 +252,14 @@ def summarize_logs(text: str) -> Counter[str]:
     candidate_pattern = re.compile(r"candidate|matching|companion|_companion-link|clink|p2p", re.I)
     error_pattern = re.compile(r"reject|den(?:y|ied)|fail(?:ed|ure)?|(?<!no)error|invalid|refus", re.I)
     stream_pattern = re.compile(r"RPStreamServer|P2PStream|P2PDirectLink|Accept Stream|Prepare Stream", re.I)
+    proximity_pattern = re.compile(
+        r"nearby|proximity|ranging|NISession|NINearby|Bluetooth|\bBLE\b|\bUWB\b",
+        re.I,
+    )
+    p2p_transport_pattern = re.compile(
+        r"AWDL|WiFiP2P|wifip2p|peer[- ]to[- ]peer|P2PDirectLink|P2PStream",
+        re.I,
+    )
     target_pattern = re.compile(
         r"FocusMove|FocusReset|TargetBegin|TargetConnect|TargetReady|TargetEvent|"
         r"TargetReply|Target Reply|Keyboard Reports|Pointing Reports|HID accumulation",
@@ -261,7 +276,15 @@ def summarize_logs(text: str) -> Counter[str]:
             continue
         counts["total"] += 1
         is_native_process = "UniversalControl" in line or "rapportd" in line
-        for process in ("UniversalControl", "rapportd", "mDNSResponder"):
+        is_proximity_process = is_native_process or "nearbyd" in line
+        is_p2p_transport_process = is_native_process or "wifip2pd" in line
+        for process in (
+            "UniversalControl",
+            "rapportd",
+            "mDNSResponder",
+            "nearbyd",
+            "wifip2pd",
+        ):
             if process in line:
                 counts[process] += 1
         if candidate_pattern.search(line):
@@ -278,6 +301,14 @@ def summarize_logs(text: str) -> Counter[str]:
             counts["native_target_keywords"] += 1
         if sync_layout_pattern.search(line) and is_native_process:
             counts["native_sync_layout_keywords"] += 1
+        if proximity_pattern.search(line):
+            counts["proximity_keywords"] += 1
+            if is_proximity_process:
+                counts["native_proximity_keywords"] += 1
+        if p2p_transport_pattern.search(line):
+            counts["p2p_transport_keywords"] += 1
+            if is_p2p_transport_process:
+                counts["native_p2p_transport_keywords"] += 1
     return counts
 
 
@@ -313,6 +344,16 @@ def candidate_reaction(log_counts: Counter[str]) -> str:
     if log_counts["UniversalControl"] or log_counts["rapportd"]:
         return "process logs present, no candidate/rejection keywords counted"
     return "no UniversalControl or rapportd lines counted"
+
+
+def side_channel_reaction(log_counts: Counter[str]) -> str:
+    if log_counts["native_proximity_keywords"] or log_counts["native_p2p_transport_keywords"]:
+        return "possible proximity or Wi-Fi peer-to-peer signal in redacted counts"
+    if log_counts["proximity_keywords"] or log_counts["p2p_transport_keywords"]:
+        return "only generic proximity or Wi-Fi peer-to-peer keywords counted"
+    if log_counts["nearbyd"] or log_counts["wifip2pd"]:
+        return "nearbyd or wifip2pd logs present without counted protocol keywords"
+    return "no nearbyd or wifip2pd lines counted"
 
 
 def format_launchd(value: dict[str, str]) -> str:

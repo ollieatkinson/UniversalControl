@@ -562,3 +562,9 @@ geometry capture. The summary redacts display names while preserving primary and
 built-in flags, logical bounds, scale, rotation, refresh rate, physical size,
 negative origins, and virtual bounds so bridge configs can be calibrated without
 committing monitor names.
+
+Added `scripts/windows/capture-companion-link-discovery.py` to make the passive
+Windows browse gate one command. It runs
+`discover-companion-link --backend rust-mdns --redact`, stores the raw transcript
+under ignored `artifacts/`, writes a redacted discovery summary, and compares it
+against the local macOS Rust mDNS baseline.

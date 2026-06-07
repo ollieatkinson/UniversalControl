@@ -160,6 +160,11 @@ cargo run -- advertise-mdns --service-type _companion-link._tcp --instance "AnyK
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60
 ```
 
+For passive CompanionLink discovery, prefer
+`scripts/windows/capture-companion-link-discovery.py` because it captures the
+raw browse output to an ignored transcript, writes the redacted summary, and
+compares it against the local macOS Rust mDNS baseline in one step.
+
 Use `capture-native-admission.py --mode shape` only while
 `capture-native-admission.sh --mode shape` is running on the Mac. Commit the
 redacted Windows summary, not the raw TCP observer transcript.

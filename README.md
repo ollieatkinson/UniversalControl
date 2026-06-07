@@ -46,7 +46,7 @@ cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact >
 scripts/windows/summarize-companion-link-discovery-output.py artifacts/windows-companion-link-discovery.txt
 ```
 
-`auto` uses the system `dns-sd` command when available, otherwise it uses the pure Rust mDNS backend. With `--redact`, `auto` uses the Rust backend because system `dns-sd` output is pass-through and cannot be sanitized. Review unredacted output before sharing because hostnames, addresses, instance names, and TXT values can be stable identifiers.
+`auto` uses the system `dns-sd` command when available, otherwise it uses the pure Rust mDNS backend. With `--redact`, `auto` uses the Rust backend because system `dns-sd` output is pass-through and cannot be sanitized. The Windows capture wrapper uses the redacted Rust backend by default, writes a summary, and compares it with the local macOS baseline. It refuses `--backend system` unless `--allow-unredacted-system` is passed. Review unredacted output before sharing because hostnames, addresses, instance names, and TXT values can be stable identifiers.
 
 Run this on Windows to advertise a benign probe service while the Mac watches with `dns-sd`:
 
@@ -132,7 +132,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/mac/compare-mdns-watch-summaries.py](scripts/mac/compare-mdns-watch-summaries.py): compares two redacted watcher summaries, especially minimal versus shape-only CompanionLink candidates.
 - [scripts/mac/summarize-uc-session-artifact.py](scripts/mac/summarize-uc-session-artifact.py): redacts paired-session artifacts into commit-safe Markdown summaries.
 - [scripts/compare-native-admission-pair.py](scripts/compare-native-admission-pair.py): pairs redacted Mac watcher and Windows TCP-observer summaries into one admission report.
-- [scripts/windows/capture-companion-link-discovery.py](scripts/windows/capture-companion-link-discovery.py): captures Windows passive CompanionLink browse output and writes a redacted summary.
+- [scripts/windows/capture-companion-link-discovery.py](scripts/windows/capture-companion-link-discovery.py): captures Windows passive CompanionLink discovery, writes a redacted summary, and compares it with the local baseline.
 - [scripts/windows/summarize-companion-link-discovery-output.py](scripts/windows/summarize-companion-link-discovery-output.py): redacts `discover-companion-link --redact` output into commit-safe Markdown.
 - [scripts/windows/compare-companion-link-discovery-summaries.py](scripts/windows/compare-companion-link-discovery-summaries.py): compares two redacted CompanionLink discovery summaries.
 - [scripts/windows/capture-display-probe.py](scripts/windows/capture-display-probe.py): captures native Windows display geometry and writes a redacted bridge-calibration summary.

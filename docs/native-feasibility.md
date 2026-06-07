@@ -78,10 +78,10 @@ session behavior.
 Run the next native checks in this order:
 
 1. Windows passive browse:
-   `python scripts/windows/capture-companion-link-discovery.py`, then compare
-   redacted summaries with
-   `scripts/windows/compare-companion-link-discovery-summaries.py` when a
-   baseline or second host summary is available.
+   `scripts/windows/capture-companion-link-discovery.py`, which runs
+   `discover-companion-link --backend rust-mdns --redact`, summarizes it with
+   `scripts/windows/summarize-companion-link-discovery-output.py`, and compares
+   it with `scripts/windows/compare-companion-link-discovery-summaries.py`.
 2. Benign Windows-to-macOS visibility:
    `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe`
    while macOS runs

@@ -6,7 +6,7 @@ The preferred outcome is a Windows peer that works with Apple's native macOS `Un
 
 - Windows can browse `_companion-link._tcp.local`.
 - Windows can resolve the Mac's `_companion-link._tcp` instance and capture all TXT keys.
-- `cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact` produces either a resolved Mac service or a clear failure mode on Windows, summarized with `scripts/windows/summarize-companion-link-discovery-output.py` and compared against the local baseline with `scripts/windows/compare-companion-link-discovery-summaries.py`.
+- `scripts/windows/capture-companion-link-discovery.py` produces either a resolved Mac service or a clear failure mode on Windows, summarized with `scripts/windows/summarize-companion-link-discovery-output.py` and compared against the local baseline with `scripts/windows/compare-companion-link-discovery-summaries.py`.
 - macOS can see a Windows-advertised test service.
 - `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe` on Windows is visible from macOS with `dns-sd -B _anykbflow-probe._tcp local`.
 - macOS can resolve that Windows-advertised service with `dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local`.

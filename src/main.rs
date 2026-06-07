@@ -4,6 +4,7 @@ mod config;
 mod discovery;
 mod network;
 mod platform;
+mod preflight;
 mod protocol;
 mod router;
 
@@ -27,6 +28,8 @@ struct Cli {
 enum Command {
     /// Run the AnyKBFlow software KVM daemon.
     Run,
+    /// Validate config and print runtime assumptions before a bridge run.
+    Preflight,
     /// Browse for Apple's native Rapport/CompanionLink mDNS service.
     DiscoverCompanionLink {
         /// Browse duration in seconds.
@@ -248,6 +251,10 @@ async fn main() -> Result<()> {
         Command::Run => {
             let config = config::Config::load(&cli.config)?;
             app::run(config).await
+        }
+        Command::Preflight => {
+            let config = config::Config::load(&cli.config)?;
+            preflight::run(&config)
         }
         Command::DiscoverCompanionLink {
             seconds,

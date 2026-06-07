@@ -11,6 +11,19 @@ Either macOS or Windows can be the `input_owner`.
 
 ## Run
 
+Before starting the daemon, run preflight on each machine:
+
+```sh
+cargo run -- --config configs/input-owner.example.toml preflight
+cargo run -- --config configs/receiver.example.toml preflight
+```
+
+Preflight validates the config, prints the role, peer mode, configured display
+sizes, detected primary display size when available, effective local display,
+and warnings such as unreachable loopback peer addresses or missing native
+display detection. Fix warnings before a full two-machine run unless they are
+expected for WSL or another stub backend.
+
 On the machine with the keyboard/mouse:
 
 ```sh
@@ -183,12 +196,13 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 
 ## Next Engineering Steps
 
-1. Run `probe bridge-smoke` and `probe bridge-network-smoke` on both machines.
-2. Run `cargo run -- probe displays` on both macOS and Windows and commit redacted geometry summaries.
-3. Capture a short `listen-events` or `grab-events` JSONL file on one machine and replay it on the other with `probe replay-events`.
-4. Run the input-owner role on Windows and receiver role on macOS.
-5. Confirm input-owner edge detection and receiver hello use the same primary display dimensions as `probe displays`.
-6. Reverse the roles and test macOS as input owner.
-7. Replace `rdev` mapping with explicit platform scancodes if modifiers/layouts are wrong.
-8. Validate input-owner route reset and receiver focus/modifier cleanup on native macOS and Windows backends during planned return-to-local and forced disconnect.
-9. Add TLS pairing once basic control is stable.
+1. Run `preflight` on both machines with the intended configs.
+2. Run `probe bridge-smoke` and `probe bridge-network-smoke` on both machines.
+3. Run `cargo run -- probe displays` on both macOS and Windows and commit redacted geometry summaries.
+4. Capture a short `listen-events` or `grab-events` JSONL file on one machine and replay it on the other with `probe replay-events`.
+5. Run the input-owner role on Windows and receiver role on macOS.
+6. Confirm input-owner edge detection and receiver hello use the same primary display dimensions as `probe displays`.
+7. Reverse the roles and test macOS as input owner.
+8. Replace `rdev` mapping with explicit platform scancodes if modifiers/layouts are wrong.
+9. Validate input-owner route reset and receiver focus/modifier cleanup on native macOS and Windows backends during planned return-to-local and forced disconnect.
+10. Add TLS pairing once basic control is stable.

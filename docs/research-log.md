@@ -412,3 +412,15 @@ redacted `docs/observations/` summary through
 `scripts/mac/summarize-mdns-watch-artifact.py`. It does not replace the raw
 watcher scripts; it just removes the manual artifact-directory lookup during
 coordinated LAN runs.
+
+### Bridge Preflight
+
+Added `cargo run -- --config <path> preflight` for the project-owned fallback
+bridge. It validates config and prints the role, capture mode, configured
+display dimensions, detected primary display when available, effective local
+display, peer/listen mode, service name, and warnings before a daemon run.
+
+This does not advance native Universal Control admission, but it improves the
+fallback two-machine prototype path by making stale dimensions, missing native
+display detection, loopback listen addresses, and receiver loopback peer
+addresses visible before starting global input capture.

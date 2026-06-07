@@ -424,3 +424,11 @@ This does not advance native Universal Control admission, but it improves the
 fallback two-machine prototype path by making stale dimensions, missing native
 display detection, loopback listen addresses, and receiver loopback peer
 addresses visible before starting global input capture.
+
+### mDNS Watch Summary Comparer
+
+Added `scripts/mac/compare-mdns-watch-summaries.py` to compare two redacted
+watcher summaries. The intended first use is minimal CompanionLink candidate
+versus shape-only CompanionLink candidate, preserving the Mac-side browse,
+resolve, TXT-shape, native log count, and interpretation differences without
+committing raw DNS-SD or unified-log output.

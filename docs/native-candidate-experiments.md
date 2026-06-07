@@ -162,6 +162,18 @@ connection attempts and a short first-read hex prefix. It does not speak
 Rapport. Use any accepted connection as evidence to build a real framing probe
 next, not as Universal Control admission.
 
+After the minimal and shape-only summaries are committed or staged locally,
+compare their redacted Mac-side effects:
+
+```sh
+./scripts/mac/compare-mdns-watch-summaries.py \
+  docs/observations/YYYY-MM-DD-redacted-companion-link-candidate.md \
+  docs/observations/YYYY-MM-DD-redacted-companion-link-shape-candidate.md \
+  --before-label minimal \
+  --after-label shape \
+  --output docs/observations/YYYY-MM-DD-redacted-companion-link-candidate-compare.md
+```
+
 ## Experiment 5: Apple Peer TXT Shape
 
 Only run this when a real Mac or iPad Universal Control peer is available.

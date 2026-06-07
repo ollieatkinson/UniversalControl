@@ -275,6 +275,8 @@ Expected evidence:
 - macOS browse/resolve sees `AnyKBFlow Native Shape Probe`.
 - The committed watcher summary preserves port, TXT key names, TXT value
   classes, and native-process log counts.
+- Compare the minimal and shape-only watcher summaries with
+  `scripts/mac/compare-mdns-watch-summaries.py`.
 - `rapportd` or `UniversalControl` either ignores the service, attempts a
   connection, or logs a concrete rejection reason.
 - Windows output includes `TCP observer summary: accepted_connections=<n>`.

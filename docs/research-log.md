@@ -616,3 +616,9 @@ summary now preserves process counts plus proximity/ranging and AWDL/Wi-Fi P2P
 keyword counts. These are side-channel signals only, but they matter because
 Apple's public requirements and the UniversalControl string surface both point
 at NearbyInteraction and peer-to-peer Wi-Fi as likely native admission gates.
+
+Extended `scripts/capture-input-events.py` with `--route-config`,
+`--route-transcript`, and the same route expectation flags. Native macOS/Windows
+testers can now capture Keychron/mouse JSONL, write the redacted input summary,
+and fail the route gate in one command before attempting replay or the full
+daemon.

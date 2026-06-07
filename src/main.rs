@@ -208,6 +208,15 @@ enum ProbeCommand {
         #[arg(long)]
         dry_run: bool,
     },
+    /// Route normalized input events through the edge router without native input or network.
+    RouteEvents {
+        #[arg(long)]
+        path: PathBuf,
+
+        /// Print full routed peer JSON, including key text. Redacted summaries are printed by default.
+        #[arg(long)]
+        raw: bool,
+    },
     /// Inject a single key press/release.
     Inject {
         #[arg(long, default_value = "KeyA")]
@@ -370,6 +379,10 @@ async fn main() -> Result<()> {
                 delay_ms,
                 dry_run,
             } => platform::probe_replay_events(&path, delay_ms, dry_run),
+            ProbeCommand::RouteEvents { path, raw } => {
+                let config = config::Config::load(&cli.config)?;
+                bridge_smoke::run_route_events(config, &path, raw)
+            }
             ProbeCommand::Inject { key } => platform::probe_inject_key(&key),
             ProbeCommand::InjectMouse { x, y } => platform::probe_inject_mouse(x, y),
             ProbeCommand::InjectButton { button } => platform::probe_inject_button(&button),

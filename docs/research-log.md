@@ -575,3 +575,10 @@ wrapper writes replayable normalized `InputEvent` JSONL under ignored
 `artifacts/`, while the summary preserves event kinds, key/button names, text
 length classes, pointer bounds, wheel deltas, and key press/release balance
 without committing typed text values.
+
+Added `cargo run -- --config <input-owner.toml> probe route-events --path <jsonl>`
+to dry-run captured normalized input through the real edge router without native
+hooks or network. The default report redacts key text and shows local
+suppression, remote activation/deactivation, and forwarded input counts so the
+macOS and Windows machines can prove a captured pointer path will switch peers
+before running the full bridge daemon.

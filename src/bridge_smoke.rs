@@ -1,4 +1,10 @@
-use std::{net::SocketAddr, time::Duration};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    net::SocketAddr,
+    path::Path,
+    time::Duration,
+};
 
 use anyhow::{Context, Result, bail};
 use tokio::{
@@ -92,6 +98,99 @@ pub fn run(config: Config) -> Result<()> {
     Ok(())
 }
 
+pub fn run_route_events(config: Config, path: &Path, raw: bool) -> Result<()> {
+    if config.role != Role::InputOwner {
+        bail!("route-events requires an input_owner config");
+    }
+
+    let local_display = detected_display_or_config(
+        DisplayGeometry {
+            width: config.layout.local_width,
+            height: config.layout.local_height,
+        },
+        "local input-owner",
+    );
+    let remote_display = DisplayGeometry {
+        width: config.layout.remote_width,
+        height: config.layout.remote_height,
+    };
+    let events = read_input_events_jsonl(path)?;
+    let mut router = InputRouter::new(config.layout.clone());
+    router.set_local_display(local_display.width, local_display.height);
+    router.set_remote_display(remote_display.width, remote_display.height);
+
+    let mut suppressed = 0usize;
+    let mut unsuppressed = 0usize;
+    let mut active_true = 0usize;
+    let mut active_false = 0usize;
+    let mut forwarded_inputs = 0usize;
+
+    println!("route_events: input_owner={}", config.node_name);
+    println!("source={}", path.display());
+    println!("raw_output={raw}");
+    println!(
+        "local_display={}x{} remote_display={}x{} remote_edge={:?}",
+        local_display.width,
+        local_display.height,
+        remote_display.width,
+        remote_display.height,
+        config.layout.remote_edge
+    );
+    print_peer_message("owner->receiver", &network::hello_message(&config))?;
+    print_peer_message(
+        "receiver->owner",
+        &PeerMessage::Hello {
+            node_name: "route-events-receiver".to_string(),
+            role: Role::Receiver,
+            local_display: remote_display,
+        },
+    )?;
+
+    for (line_number, event) in events {
+        let event_summary = describe_event(&event);
+        let decision = router.handle_captured(event);
+        if decision.suppress_local {
+            suppressed += 1;
+        } else {
+            unsuppressed += 1;
+        }
+
+        println!(
+            "input line {line_number}: event={event_summary} suppress_local={}",
+            decision.suppress_local
+        );
+        for message in decision.messages {
+            match &message {
+                PeerMessage::Active {
+                    remote_active: true,
+                } => active_true += 1,
+                PeerMessage::Active {
+                    remote_active: false,
+                } => active_false += 1,
+                PeerMessage::Input { .. } => forwarded_inputs += 1,
+                PeerMessage::Hello { .. } | PeerMessage::Heartbeat => {}
+            }
+
+            if raw {
+                print_peer_message("owner->receiver", &message)?;
+                print_receiver_effect(&message);
+            } else {
+                println!("owner->receiver: {}", describe_peer_message(&message));
+                print_receiver_effect_redacted(&message);
+            }
+        }
+    }
+
+    println!("summary:");
+    println!("  suppressed_events={suppressed}");
+    println!("  unsuppressed_events={unsuppressed}");
+    println!("  remote_activations={active_true}");
+    println!("  remote_deactivations={active_false}");
+    println!("  forwarded_inputs={forwarded_inputs}");
+
+    Ok(())
+}
+
 pub async fn run_network(config: Config) -> Result<()> {
     if config.role != Role::InputOwner {
         bail!("bridge network smoke requires an input_owner config");
@@ -164,6 +263,26 @@ pub async fn run_network(config: Config) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn read_input_events_jsonl(path: &Path) -> Result<Vec<(usize, InputEvent)>> {
+    let file = File::open(path).with_context(|| format!("failed to open {}", path.display()))?;
+    let reader = BufReader::new(file);
+    let mut events = Vec::new();
+
+    for (index, line) in reader.lines().enumerate() {
+        let line = line?;
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+
+        let event: InputEvent = serde_json::from_str(trimmed)
+            .map_err(|error| anyhow::anyhow!("{}:{}: {error}", path.display(), index + 1))?;
+        events.push((index + 1, event));
+    }
+
+    Ok(events)
 }
 
 fn loopback_owner_config(config: &Config, listen_addr: SocketAddr) -> Config {
@@ -271,5 +390,116 @@ fn print_receiver_effect(message: &PeerMessage) {
         PeerMessage::Input { event } => println!("receiver inject: {event:?}"),
         PeerMessage::Active { remote_active } => println!("receiver active: {remote_active}"),
         PeerMessage::Hello { .. } | PeerMessage::Heartbeat => {}
+    }
+}
+
+fn print_receiver_effect_redacted(message: &PeerMessage) {
+    match message {
+        PeerMessage::Input { event } => println!("receiver inject: {}", describe_event(event)),
+        PeerMessage::Active { remote_active } => println!("receiver active: {remote_active}"),
+        PeerMessage::Hello { .. } | PeerMessage::Heartbeat => {}
+    }
+}
+
+fn describe_peer_message(message: &PeerMessage) -> String {
+    match message {
+        PeerMessage::Hello {
+            node_name,
+            role,
+            local_display,
+        } => format!(
+            "hello node={node_name} role={role:?} local_display={}x{}",
+            local_display.width, local_display.height
+        ),
+        PeerMessage::Active { remote_active } => format!("active remote_active={remote_active}"),
+        PeerMessage::Input { event } => format!("input {}", describe_event(event)),
+        PeerMessage::Heartbeat => "heartbeat".to_string(),
+    }
+}
+
+fn describe_event(event: &InputEvent) -> String {
+    match event {
+        InputEvent::KeyPress { key, text } => {
+            format!(
+                "key_press key={key} text_class={}",
+                text_class(text.as_deref())
+            )
+        }
+        InputEvent::KeyRelease { key } => format!("key_release key={key}"),
+        InputEvent::ButtonPress { button } => format!("button_press button={button}"),
+        InputEvent::ButtonRelease { button } => format!("button_release button={button}"),
+        InputEvent::MouseMove { x, y } => format!("mouse_move x={x:.2} y={y:.2}"),
+        InputEvent::Wheel { delta_x, delta_y } => {
+            format!("wheel delta_x={delta_x} delta_y={delta_y}")
+        }
+    }
+}
+
+fn text_class(value: Option<&str>) -> String {
+    match value {
+        None => "none".to_string(),
+        Some("") => "empty".to_string(),
+        Some(value)
+            if value.is_ascii() && value.chars().all(|character| !character.is_control()) =>
+        {
+            format!("printable_len_{}", value.len())
+        }
+        Some(value) => format!("non_ascii_or_control_len_{}", value.chars().count()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{
+        fs,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    #[test]
+    fn reads_input_events_jsonl_comments_and_blank_lines() {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!(
+            "anykbflow-route-events-{}-{nonce}.jsonl",
+            std::process::id()
+        ));
+        fs::write(
+            &path,
+            "\n# comment\n{\"kind\":\"mouse_move\",\"x\":99.0,\"y\":25.0}\n{\"kind\":\"key_press\",\"key\":\"KeyA\",\"text\":\"a\"}\n",
+        )
+        .unwrap();
+
+        let events = read_input_events_jsonl(&path).unwrap();
+        fs::remove_file(&path).unwrap();
+
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0].0, 3);
+        assert!(matches!(
+            events[0].1,
+            InputEvent::MouseMove { x: 99.0, y: 25.0 }
+        ));
+        assert!(matches!(
+            events[1].1,
+            InputEvent::KeyPress {
+                ref key,
+                text: Some(_)
+            } if key == "KeyA"
+        ));
+    }
+
+    #[test]
+    fn redacts_key_press_text_in_event_summary() {
+        let event = InputEvent::KeyPress {
+            key: "KeyA".to_string(),
+            text: Some("a".to_string()),
+        };
+
+        assert_eq!(
+            describe_event(&event),
+            "key_press key=KeyA text_class=printable_len_1"
+        );
     }
 }

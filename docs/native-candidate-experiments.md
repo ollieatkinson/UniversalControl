@@ -139,6 +139,10 @@ Expected evidence:
 - macOS `dns-sd -L` resolves the Windows host, port, and TXT keys.
 - `rapportd` and `UniversalControl` logs either ignore the service or record a
   concrete discovery/rejection reason.
+- The redacted Mac watcher summary reports whether native stream, target/input,
+  or sync/layout keyword counters changed. Nonzero counts for `RPStreamServer`,
+  `P2PStream`, `TargetBegin`, `TargetConnect`, `TargetReply`, `Initial Sync`,
+  or `Remote Display Layout` are stronger than generic browse/resolve.
 - The Windows TCP observer records whether anything connects to the advertised
   port and, if data is sent immediately, bounded read counts, byte counts, and
   hex lengths without raw payload bytes.

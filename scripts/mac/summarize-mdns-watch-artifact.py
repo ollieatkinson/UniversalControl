@@ -136,6 +136,9 @@ def render_summary(artifact_dir: Path, expected_instance: str | None) -> str:
             f"- Error/rejection keyword lines: {log_counts['error_keywords']}",
             f"- UniversalControl/rapportd candidate keyword lines: {log_counts['native_candidate_keywords']}",
             f"- UniversalControl/rapportd error/rejection keyword lines: {log_counts['native_error_keywords']}",
+            f"- Native stream keyword lines: {log_counts['native_stream_keywords']}",
+            f"- Native target/input keyword lines: {log_counts['native_target_keywords']}",
+            f"- Native sync/layout keyword lines: {log_counts['native_sync_layout_keywords']}",
             "- Raw log lines: not included",
         ]
     )
@@ -241,6 +244,18 @@ def summarize_logs(text: str) -> Counter[str]:
     counts: Counter[str] = Counter()
     candidate_pattern = re.compile(r"candidate|matching|companion|_companion-link|clink|p2p", re.I)
     error_pattern = re.compile(r"reject|den(?:y|ied)|fail(?:ed|ure)?|(?<!no)error|invalid|refus", re.I)
+    stream_pattern = re.compile(r"RPStreamServer|P2PStream|P2PDirectLink|Accept Stream|Prepare Stream", re.I)
+    target_pattern = re.compile(
+        r"FocusMove|FocusReset|TargetBegin|TargetConnect|TargetReady|TargetEvent|"
+        r"TargetReply|Target Reply|Keyboard Reports|Pointing Reports|HID accumulation",
+        re.I,
+    )
+    sync_layout_pattern = re.compile(
+        r"Initial Sync|Create Message|Send Message|Receive Message|Received Message|"
+        r"Remote Display Layout|Remote Source Device|Remote Connected Devices|"
+        r"Remote Synced Devices|Reset Remote|Connected Devices Clock",
+        re.I,
+    )
     for line in text.splitlines():
         if not line or line.startswith("$ ") or line.startswith("Filtering ") or line.startswith("Timestamp "):
             continue
@@ -257,6 +272,12 @@ def summarize_logs(text: str) -> Counter[str]:
             counts["error_keywords"] += 1
             if is_native_process:
                 counts["native_error_keywords"] += 1
+        if stream_pattern.search(line) and is_native_process:
+            counts["native_stream_keywords"] += 1
+        if target_pattern.search(line) and is_native_process:
+            counts["native_target_keywords"] += 1
+        if sync_layout_pattern.search(line) and is_native_process:
+            counts["native_sync_layout_keywords"] += 1
     return counts
 
 
@@ -280,6 +301,13 @@ def browse_interpretation(seen_instances: list[str], expected_instance: str | No
 
 
 def candidate_reaction(log_counts: Counter[str]) -> str:
+    deeper_signal = (
+        log_counts["native_stream_keywords"]
+        or log_counts["native_target_keywords"]
+        or log_counts["native_sync_layout_keywords"]
+    )
+    if deeper_signal:
+        return "stream, target, or sync/layout signal in redacted counts; inspect raw local artifacts"
     if log_counts["native_candidate_keywords"] or log_counts["native_error_keywords"]:
         return "possible signal in redacted counts; inspect raw local artifacts"
     if log_counts["UniversalControl"] or log_counts["rapportd"]:

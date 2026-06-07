@@ -127,6 +127,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/mac/watch-mdns-service.sh](scripts/mac/watch-mdns-service.sh): bounded mDNS plus log watcher for Windows advertisement checks.
 - [scripts/mac/watch-companion-link-candidate.sh](scripts/mac/watch-companion-link-candidate.sh): native-focused watcher for controlled `_companion-link._tcp` candidate checks.
 - [scripts/mac/summarize-uc-probe-artifact.py](scripts/mac/summarize-uc-probe-artifact.py): redacts baseline macOS probe artifacts into commit-safe Markdown summaries.
+- [scripts/mac/summarize-universalcontrol-strings.py](scripts/mac/summarize-universalcontrol-strings.py): extracts a commit-safe UniversalControl string-surface summary for native protocol search terms.
 - [scripts/mac/compare-uc-probe-summaries.py](scripts/mac/compare-uc-probe-summaries.py): compares two redacted baseline probe summaries.
 - [scripts/mac/summarize-mdns-watch-artifact.py](scripts/mac/summarize-mdns-watch-artifact.py): redacts watcher artifacts into commit-safe Markdown summaries.
 - [scripts/mac/compare-mdns-watch-summaries.py](scripts/mac/compare-mdns-watch-summaries.py): compares two redacted watcher summaries, especially minimal versus shape-only CompanionLink candidates.

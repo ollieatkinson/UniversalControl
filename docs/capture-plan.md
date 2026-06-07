@@ -21,6 +21,8 @@ Run:
 ./scripts/mac/uc-probe.sh
 ./scripts/mac/summarize-uc-probe-artifact.py artifacts/mac-uc-probe-YYYYMMDDTHHMMSSZ \
   --output docs/observations/YYYY-MM-DD-redacted-macos-uc-probe.md
+./scripts/mac/summarize-universalcontrol-strings.py \
+  --output docs/observations/YYYY-MM-DD-redacted-universalcontrol-string-surface.md
 ```
 
 Compare two redacted baseline states:
@@ -48,6 +50,10 @@ Expected output:
 - short DNS-SD browse for `_universalcontrol._tcp`
 - filtered strings from `UniversalControl`
 - `scripts/mac/summarize-uc-probe-artifact.py` creates the commit-safe Markdown summary from the ignored artifact folder.
+- `scripts/mac/summarize-universalcontrol-strings.py` extracts source-relative
+  module names, stable identifiers, NearbyInteraction selectors, and prioritized
+  log templates from the installed native binary without committing raw strings
+  or Apple build-root paths.
 
 The summary preserves bundle metadata, entitlement key names, launchd trigger
 service types, process counts, DNS-SD browse/resolve counts, `rp*` TXT key names
@@ -55,6 +61,13 @@ and value classes, protocol-relevant ports, socket counts, binary-string hint
 categories, and native log event/message IDs. It omits raw hostnames, addresses,
 hardware addresses, Bluetooth IDs, TXT values, defaults values, and unified-log
 lines.
+
+The string-surface summary provides concrete terms for later unified-log
+searches. Current high-value terms include stream states (`RPStreamServer`,
+`P2PStream`, `P2PDirectLink`), target states (`TargetBegin`,
+`TargetConnect`, `TargetReady`, `TargetEvent`, `TargetReply`), sync/layout
+states (`Initial Sync`, `Remote Display Layout`, `Remote Source Device`), and
+rejection states (`Target Reply: Reject`, `Reset Remote`).
 
 The comparer only reads redacted summaries. Use it to compare Universal Control
 disabled, enabled with no peer, and active Apple-peer states without committing

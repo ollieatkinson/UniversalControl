@@ -65,12 +65,16 @@ Open questions:
 Observed:
 
 - String evidence includes `CompanionLinkClient`, `CompanionLinkServer`, `P2PBrowser`, `P2PDirectLink`, `P2PMessage`, `P2PStream`, and `OPACKCoding`.
+- The redacted string-surface summary at `docs/observations/2026-06-07-redacted-universalcontrol-string-surface.md` exposes source-relative modules including `CompanionLink/RapportStreamServer.swift`, `EnsembleAgent/P2PStream.swift`, `EnsembleAgent/P2PMessage.swift`, `EnsembleAgent/SyncController.swift`, `EnsembleAgent/EventReport.swift`, `EnsembleAgent/EnsembleHIDController.swift`, and `Glue/OPACKCoding.swift`.
+- Stable identifiers include `com.apple.universalcontrol`, `com.apple.universalcontrol.virtual-service`, `com.apple.universalcontrol.p2p-peer-coordinator`, `com.apple.universalcontrol.hid-activity`, `com.apple.universalcontrol.inputstate`, and `com.apple.rapport.matching`.
+- Log templates name stream and sync states such as `RPStreamServer Activated`, `P2PStream Activated (Connection Ready)`, `Initial Sync`, `Send Message`, `Receive Message`, `Remote Display Layout`, and `Remote Source Device`.
 - Launchd registers the Universal Control service under Rapport matching.
 
 Inferred:
 
 - The control plane probably negotiates device capabilities, display layout, focus movement, keyboard availability, drag state, pasteboard state, and direct P2P link selection.
 - OPACK or an OPACK-adjacent encoding is likely used for at least some structured messages.
+- A Windows peer that reaches native admission should create log evidence in the stream, sync/message, or remote display-layout families before any input report is usable.
 
 Open questions:
 
@@ -83,12 +87,14 @@ Open questions:
 Observed:
 
 - Universal Control has private HID entitlements and strings for HID report accumulation, local keyboard report removal, pointer focus movement, and target keyboard readiness.
+- Native log templates name `FocusMove`, `TargetBegin`, `TargetConnect`, `TargetReady`, `TargetEvent`, `TargetReply`, and `Target Reply: Reject`.
 - `rapportd` listens on a dynamic TCP port and UDP 3722 locally.
 
 Inferred:
 
 - Input probably travels as serialized HID reports or higher-level input events after a control-plane focus transfer.
 - macOS injects or dispatches events through private HID and Skylight privileges that third-party apps do not normally have.
+- `TargetReply` status/rejection logs are likely the best redacted indicator that a candidate reached input-target negotiation but failed eligibility, collision handling, keyboard readiness, drag readiness, or HID accumulation.
 
 Open questions:
 

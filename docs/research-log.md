@@ -582,3 +582,24 @@ hooks or network. The default report redacts key text and shows local
 suppression, remote activation/deactivation, and forwarded input counts so the
 macOS and Windows machines can prove a captured pointer path will switch peers
 before running the full bridge daemon.
+
+### UniversalControl String Surface
+
+Added `scripts/mac/summarize-universalcontrol-strings.py` and recorded
+`docs/observations/2026-06-07-redacted-universalcontrol-string-surface.md` from
+the installed native Universal Control binary. The summary strips Apple build
+roots down to source-relative paths and preserves only stable identifiers,
+type/source hints, NearbyInteraction selectors, and prioritized log templates.
+
+The current string surface strengthens the native-first capture plan: it names
+`RapportStreamServer`, `P2PStream`, `P2PMessage`, `SyncController`,
+`EventReport`, `EnsembleHIDController`, and `OPACKCoding`, plus log templates
+for `RPStreamServer`, `P2PStream`, `Initial Sync`, send/receive messages,
+remote display/source devices, `FocusMove`, `TargetBegin`, `TargetConnect`,
+`TargetReady`, `TargetEvent`, `TargetReply`, and rejection/reset paths.
+
+Updated `scripts/mac/summarize-mdns-watch-artifact.py` so future Windows native
+admission captures count native stream, target/input, and sync/layout keyword
+lines in addition to generic candidate/rejection counts. That makes a
+controlled Windows advertisement more informative if it reaches deeper than
+DNS-SD browse/resolve.

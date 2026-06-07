@@ -127,7 +127,7 @@ Replay normalized events into the local injector:
 
 ```sh
 mkdir -p artifacts
-cargo run -- probe listen-events --count 20 > artifacts/input-events.jsonl
+python scripts/capture-input-events.py --mode listen --count 20 --jsonl artifacts/input-events.jsonl
 cargo run -- probe replay-events --path artifacts/input-events.jsonl --dry-run
 cargo run -- probe replay-events --path artifacts/input-events.jsonl --delay-ms 50
 ```
@@ -135,9 +135,11 @@ cargo run -- probe replay-events --path artifacts/input-events.jsonl --delay-ms 
 Use this with a controlled foreground target. The replay file is JSONL: one
 serialized `InputEvent` per line. Blank lines and lines starting with `#` are
 ignored, so short annotations can be added while preserving replayability.
-Run `--dry-run` first to parse the file and validate native key/button mapping
-without injecting synthetic input. The full replay then validates the
-capture-to-injection path before a two-machine daemon run.
+The capture wrapper writes a JSONL artifact under `artifacts/` and a redacted
+summary that omits typed text values. Run `replay-events --dry-run` first to
+parse the JSONL file and validate native key/button mapping without injecting
+synthetic input. The full replay then validates the capture-to-injection path
+before a two-machine daemon run.
 
 ## Discovery Probes
 
@@ -204,7 +206,7 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 1. Run `preflight` on both machines with the intended configs.
 2. Run `probe bridge-smoke` and `probe bridge-network-smoke` on both machines.
 3. Run `cargo run -- probe displays` on macOS and `python scripts/windows/capture-display-probe.py` on Windows, then commit redacted geometry summaries.
-4. Capture a short `listen-events` or `grab-events` JSONL file on one machine and replay it on the other with `probe replay-events`.
+4. Capture a short `listen-events` or `grab-events` JSONL file with `scripts/capture-input-events.py` on one machine and replay it on the other with `probe replay-events`.
 5. Run the input-owner role on Windows and receiver role on macOS.
 6. Confirm input-owner edge detection and receiver hello use the same primary display dimensions as `probe displays`.
 7. Reverse the roles and test macOS as input owner.

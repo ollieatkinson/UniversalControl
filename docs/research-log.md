@@ -568,3 +568,10 @@ Windows browse gate one command. It runs
 `discover-companion-link --backend rust-mdns --redact`, stores the raw transcript
 under ignored `artifacts/`, writes a redacted discovery summary, and compares it
 against the local macOS Rust mDNS baseline.
+
+Added `scripts/capture-input-events.py` and `scripts/summarize-input-events.py`
+for native macOS/Windows Keychron and mouse capture evidence. The capture
+wrapper writes replayable normalized `InputEvent` JSONL under ignored
+`artifacts/`, while the summary preserves event kinds, key/button names, text
+length classes, pointer bounds, wheel deltas, and key press/release balance
+without committing typed text values.

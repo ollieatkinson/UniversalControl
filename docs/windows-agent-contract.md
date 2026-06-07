@@ -111,6 +111,17 @@ down/up, Command/Option/Control/Shift, arrow key, mouse move, button click, and
 wheel scroll. Only use `grab-events --suppress` after the non-suppressing probe
 matches the expected protocol events.
 
+Preferred capture command:
+
+```powershell
+python scripts/capture-input-events.py --mode listen --count 20
+python scripts/capture-input-events.py --mode grab --count 20
+```
+
+Use `--mode grab-suppress` only after the non-suppressing capture has the
+expected event shape. The wrapper writes replayable JSONL under `artifacts/` and
+a redacted summary under `docs/windows-inbox/` without typed text values.
+
 Mac-side normalized event replay from
 `docs/windows-inbox/2026-06-06-oliver-pc-wsl-input-event-replay.md` is also
 pending a controlled foreground target. Replay injects the captured JSONL into

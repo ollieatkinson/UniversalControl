@@ -622,3 +622,8 @@ Extended `scripts/capture-input-events.py` with `--route-config`,
 testers can now capture Keychron/mouse JSONL, write the redacted input summary,
 and fail the route gate in one command before attempting replay or the full
 daemon.
+
+Hardened the fallback bridge session handshake so each role rejects an unexpected
+peer role in the initial `Hello` instead of only logging a warning. This reduces
+the chance that a misconfigured two-machine run suppresses local input or
+injects into the wrong side while still lacking transport authentication.

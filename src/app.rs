@@ -1,6 +1,6 @@
 use std::{collections::HashSet, time::Duration};
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use tokio::time;
 use tracing::{debug, info, warn};
 
@@ -94,7 +94,7 @@ async fn run_input_owner_with_local_display(
                         if role == Role::Receiver {
                             router.set_remote_display(local_display.width, local_display.height);
                         } else {
-                            warn!("expected receiver peer, got {:?}", role);
+                            bail!("expected receiver peer, got {:?}", role);
                         }
                     }
                     PeerMessage::Heartbeat => {}
@@ -171,7 +171,7 @@ async fn run_receiver(
                             node_name, role, local_display.width, local_display.height
                         );
                         if role != Role::InputOwner {
-                            warn!("expected input owner peer, got {:?}", role);
+                            bail!("expected input owner peer, got {:?}", role);
                         }
                     }
                     PeerMessage::Active { remote_active } => {
@@ -464,6 +464,35 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn input_owner_rejects_non_receiver_peer() {
+        let config = input_owner_config();
+        let (_capture_tx, mut captured_rx) = tokio::sync::mpsc::channel(1);
+        let (inbound_tx, mut inbound_rx) = tokio::sync::mpsc::channel(1);
+        let (outbound_tx, _outbound_rx) = tokio::sync::mpsc::channel(1);
+
+        inbound_tx
+            .send(PeerMessage::Hello {
+                node_name: "wrong-owner".to_string(),
+                role: Role::InputOwner,
+                local_display: display(300.0, 200.0),
+            })
+            .await
+            .unwrap();
+
+        let error = run_input_owner_with_local_display(
+            &config,
+            &mut captured_rx,
+            &mut inbound_rx,
+            &outbound_tx,
+            None,
+        )
+        .await
+        .unwrap_err();
+
+        assert!(error.to_string().contains("expected receiver peer"));
+    }
+
+    #[tokio::test]
     async fn input_owner_uses_receiver_display_from_hello() {
         let config = input_owner_config();
         let (capture_tx, mut captured_rx) = tokio::sync::mpsc::channel(2);
@@ -532,5 +561,30 @@ mod tests {
             .await
             .expect("input owner task panicked")
             .expect("input owner should stop cleanly when channels close");
+    }
+
+    #[tokio::test]
+    async fn receiver_rejects_non_input_owner_peer() {
+        let (inbound_tx, mut inbound_rx) = tokio::sync::mpsc::channel(1);
+        let (outbound_tx, _outbound_rx) = tokio::sync::mpsc::channel(1);
+        let (platform_tx, mut platform_rx) = tokio::sync::mpsc::channel(16);
+
+        inbound_tx
+            .send(PeerMessage::Hello {
+                node_name: "wrong-receiver".to_string(),
+                role: Role::Receiver,
+                local_display: display(300.0, 200.0),
+            })
+            .await
+            .unwrap();
+
+        let error = run_receiver(&mut inbound_rx, &outbound_tx, platform_tx)
+            .await
+            .unwrap_err();
+
+        assert!(error.to_string().contains("expected input owner peer"));
+
+        // Session-start latch cleanup is still issued before the bad hello is processed.
+        assert!(platform_rx.recv().await.is_some());
     }
 }

@@ -39,6 +39,8 @@ cargo run -- --config configs/receiver.example.toml
 Edit `local_width`, `local_height`, and `remote_edge` before running. Native macOS/Windows builds detect the primary display with the same display path used by `probe displays`; Linux/WSL and detection failures fall back to configured dimensions. The input owner uses detected local dimensions for edge routing, and the peer `Hello` message includes each side's detected primary display size so the input owner updates remote routing dimensions from the receiver after connection. The configured `remote_width` and `remote_height` remain fallback values until the receiver hello arrives. The input owner advertises `_anykbflow._tcp.local.` and the receiver discovers it automatically when `peer_addr` is omitted. Add `peer_addr = "host:24800"` to the receiver config to bypass discovery.
 
 The peer protocol sends periodic heartbeat messages in both directions. If a peer disconnects, both roles re-enter their connection loop after a short delay: the input owner listens again and the receiver re-discovers or reconnects. The input owner listens for inbound peer closure so a disconnected receiver resets the session and starts the next connection with fresh routing state. The receiver releases common modifier keys and mouse buttons when a session starts, when focus returns local, and when a connection fails; it also releases any keys or buttons it injected and still considers pressed.
+Both roles reject an unexpected peer role during the initial `Hello` exchange so
+a misconfigured run fails before routing or injection continues.
 
 ## Native Probes
 
@@ -205,6 +207,7 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 - No encryption or pairing yet.
 - No clipboard sync yet.
 - Reconnect is basic: the roles re-enter their connection loops, the input owner resets routing state on peer close, and receiver-side common latches plus tracked injected keys/buttons are released. Local and remote display dimensions prefer detected primary display geometry, but native runtime validation is still needed.
+- Peer-role validation is strict, but transport authentication is not implemented yet.
 - The native input backend is based on `rdev` and should be treated as a spike layer, not the final platform code.
 - Normalized event replay is a probe, not a security boundary. Do not replay untrusted event files.
 - Key mapping uses physical `rdev` key names and rejects unknown names. This should be replaced with platform scancode mapping once the Mac and Windows spike data is available.

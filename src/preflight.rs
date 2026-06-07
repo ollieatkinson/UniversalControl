@@ -36,6 +36,10 @@ pub fn run(config: &Config) -> Result<()> {
         "effective_local_display={}x{}",
         effective_display.width, effective_display.height
     );
+    println!(
+        "auth_shared_secret_configured={}",
+        config.auth.normalized_shared_secret().is_some()
+    );
     print_network(config);
     print_warnings(config, detected_display);
     Ok(())
@@ -86,6 +90,12 @@ fn print_warnings(config: &Config, detected_display: Option<DisplayGeometry>) {
         warnings.push(format!(
             "receiver peer_addr {peer_addr} only works when the input owner is on the same machine"
         ));
+    }
+
+    if config.auth.normalized_shared_secret().is_none() {
+        warnings.push(
+            "auth.shared_secret is not configured; bridge transport is unauthenticated".to_string(),
+        );
     }
 
     println!("warnings={}", warnings.len());

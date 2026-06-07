@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import re
 import shutil
 import subprocess
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 
@@ -25,6 +27,18 @@ class BrowseEvent:
     domain: str
     service_type: str
     instance: str
+
+
+@dataclass(frozen=True)
+class PacketRecord:
+    timestamp: datetime
+    ip_version: str
+    transport: str
+    source_host: str
+    source_port: str
+    destination_host: str
+    destination_port: str
+    rest: str
 
 
 def main() -> int:
@@ -54,7 +68,9 @@ def render_summary(artifact_dir: Path) -> str:
     metadata = parse_readme(read_file(artifact_dir / "README.txt"))
     companion_events = parse_browse(read_file(artifact_dir / "companion-link-browse.txt"))
     universalcontrol_events = parse_browse(read_file(artifact_dir / "universalcontrol-browse.txt"))
-    log_counts = summarize_logs(read_file(artifact_dir / "unified-log.txt"))
+    unified_log_text = read_file(artifact_dir / "unified-log.txt")
+    log_counts = summarize_logs(unified_log_text)
+    phase_signals = summarize_session_phase_signals(unified_log_text)
     lsof_before = summarize_lsof(read_file(artifact_dir / "lsof-network-before.txt"))
     lsof_after = summarize_lsof(read_file(artifact_dir / "lsof-network-after.txt"))
     launchd = {
@@ -124,6 +140,8 @@ def render_summary(artifact_dir: Path) -> str:
             "- Raw log lines: not included",
         ]
     )
+    lines.extend(["", "## Session Phase Signals", ""])
+    lines.extend(render_session_phase_signals(phase_signals))
 
     lines.extend(["", "## Network Snapshot", ""])
     lines.extend(["### Before", ""])
@@ -144,11 +162,18 @@ def render_summary(artifact_dir: Path) -> str:
             f"- IP version counts: {format_counter(pcap_summary['ip_versions'])}",
             f"- transport counts: {format_counter(pcap_summary['transports'])}",
             f"- protocol-relevant port hits: {format_counter(pcap_summary['known_ports'])}",
+            f"- TCP flow counts by capture class: {format_counter(pcap_summary['tcp_flow_capture_classes'])}",
+            f"- TCP payload bytes by capture class: {format_counter(pcap_summary['tcp_payload_bytes_by_capture'])}",
+            f"- mDNS service mentions: {format_counter(pcap_summary['mdns_service_mentions'])}",
             f"- pcap decode failures: {pcap_summary['decode_failures']}",
             "- raw packet data: not included",
             "- raw endpoints and dynamic ports: not included",
         ]
     )
+    lines.extend(["", "### AWDL TCP Flow Shapes", ""])
+    lines.extend(render_tcp_flow_shapes(pcap_summary["awdl_tcp_flows"]))
+    lines.extend(["", "### Primary Network TCP Flow Shapes", ""])
+    lines.extend(render_tcp_flow_shapes(pcap_summary["primary_network_tcp_flows"]))
 
     lines.extend(["", "## Launchd", ""])
     lines.extend(
@@ -309,6 +334,118 @@ def log_signal_text(line: str) -> str:
     return text
 
 
+def summarize_session_phase_signals(text: str) -> dict[str, object]:
+    counters: Counter[str] = Counter()
+    offsets: dict[str, list[float]] = {
+        "connected": [],
+        "disconnect": [],
+        "connected_links_empty": [],
+        "connected_links_present": [],
+        "target_connect": [],
+    }
+    first_time: datetime | None = None
+    for line in text.splitlines():
+        timestamp = parse_log_timestamp(line)
+        if timestamp is None:
+            continue
+        first_time = min_timestamp(first_time, timestamp)
+        offset = seconds_between(first_time, timestamp)
+        assert offset is not None
+        signal_text = log_signal_text(line)
+
+        if "UniversalControl" not in line and "rapportd" not in line:
+            continue
+        if (
+            ("Disconnected" not in signal_text)
+            and ("Connected links changed:" not in signal_text)
+            and re.search(r": Connected\b|Accepting \(Connected\)", signal_text)
+        ):
+            counters["connected_events"] += 1
+            offsets["connected"].append(offset)
+        if "Disconnected" in signal_text or "XPC: Disconnect" in signal_text:
+            counters["disconnect_events"] += 1
+            offsets["disconnect"].append(offset)
+        if "Connected links changed:" in signal_text:
+            if " to []" in signal_text:
+                counters["connected_links_empty_transitions"] += 1
+                offsets["connected_links_empty"].append(offset)
+            else:
+                counters["connected_links_present_transitions"] += 1
+                offsets["connected_links_present"].append(offset)
+        if "Sync Connected Devices" in signal_text:
+            counters["sync_connected_devices_updates"] += 1
+        if "TargetBegin" in signal_text or "Target Begin" in signal_text:
+            counters["target_begin_events"] += 1
+        if "TargetReady" in signal_text or "Target Ready" in signal_text:
+            counters["target_ready_events"] += 1
+        if "Target Reply: Accept" in signal_text or "TargetReply status=1" in signal_text:
+            counters["target_accept_events"] += 1
+        if "TargetConnect message" in signal_text:
+            counters["target_connect_messages"] += 1
+            offsets["target_connect"].append(offset)
+        if "FocusMove pointer=true" in signal_text:
+            counters["pointer_focus_moves"] += 1
+        if "FocusMove pointer=false keyFocus=true" in signal_text:
+            counters["keyboard_focus_moves"] += 1
+        if "Reset Remote Pointing Reports" in signal_text:
+            counters["remote_pointing_resets"] += 1
+        if "Reset Remote Keyboard Reports" in signal_text:
+            counters["remote_keyboard_resets"] += 1
+
+    return {
+        "counters": counters,
+        "first_disconnect_offset": first_offset(offsets["disconnect"]),
+        "first_reconnect_after_disconnect_offset": first_reconnect_after_disconnect_offset(offsets),
+    }
+
+
+def parse_log_timestamp(line: str) -> datetime | None:
+    match = re.match(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?)\s", line)
+    if not match:
+        return None
+    return datetime.fromisoformat(match.group(1))
+
+
+def first_offset(values: list[float]) -> float | None:
+    return min(values) if values else None
+
+
+def first_reconnect_after_disconnect_offset(offsets: dict[str, list[float]]) -> float | None:
+    disconnect = first_offset(offsets["disconnect"])
+    if disconnect is None:
+        return None
+    candidates = [
+        *offsets["connected"],
+        *offsets["connected_links_present"],
+        *offsets["target_connect"],
+    ]
+    later = [offset for offset in candidates if offset > disconnect]
+    return min(later) if later else None
+
+
+def render_session_phase_signals(signals: dict[str, object]) -> list[str]:
+    counters = signals["counters"]
+    assert isinstance(counters, Counter)
+    return [
+        f"- Connected event lines: {counters['connected_events']}",
+        f"- Disconnect event lines: {counters['disconnect_events']}",
+        f"- Connected-link empty transitions: {counters['connected_links_empty_transitions']}",
+        f"- Connected-link present transitions: {counters['connected_links_present_transitions']}",
+        f"- Sync connected-devices updates: {counters['sync_connected_devices_updates']}",
+        f"- Target begin events: {counters['target_begin_events']}",
+        f"- Target ready events: {counters['target_ready_events']}",
+        f"- Target accept/reply events: {counters['target_accept_events']}",
+        f"- TargetConnect message lines: {counters['target_connect_messages']}",
+        f"- Pointer focus move lines: {counters['pointer_focus_moves']}",
+        f"- Keyboard focus move lines: {counters['keyboard_focus_moves']}",
+        f"- Remote pointing reset lines: {counters['remote_pointing_resets']}",
+        f"- Remote keyboard reset lines: {counters['remote_keyboard_resets']}",
+        f"- First disconnect offset: {format_seconds(signals['first_disconnect_offset'])}",
+        f"- First reconnect-after-disconnect offset: {format_seconds(signals['first_reconnect_after_disconnect_offset'])}",
+        "- Raw session IDs, device IDs, and log lines: not included",
+    ]
+
+
 def summarize_lsof(text: str) -> Counter[str]:
     counts: Counter[str] = Counter()
     for line in text.splitlines():
@@ -361,9 +498,14 @@ def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
     ip_versions: Counter[str] = Counter()
     transports: Counter[str] = Counter()
     known_ports: Counter[str] = Counter()
+    tcp_flow_capture_classes: Counter[str] = Counter()
+    tcp_payload_bytes_by_capture: Counter[str] = Counter()
+    mdns_service_mentions: Counter[str] = Counter()
+    tcp_flows: dict[tuple[str, tuple[tuple[str, str], tuple[str, str]]], dict[str, object]] = {}
     total_bytes = 0
     decoded_packets = 0
     decode_failures = 0
+    first_packet_time: datetime | None = None
     tcpdump = shutil.which("tcpdump")
     pcaps = sorted(artifact_dir.glob("*.pcap"))
     for pcap in pcaps:
@@ -381,7 +523,20 @@ def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
         decoded_packets += len(result)
         packet_capture_classes[capture_class] += len(result)
         for line in result:
-            count_packet_shape(line, ip_versions, transports, known_ports)
+            record = parse_packet_record(line)
+            if record is None:
+                continue
+            first_packet_time = min_timestamp(first_packet_time, record.timestamp)
+            count_packet_shape(record, ip_versions, transports, known_ports)
+            count_mdns_service_mentions(record.rest, mdns_service_mentions)
+            if record.transport == "tcp":
+                update_tcp_flow(
+                    tcp_flows,
+                    capture_class,
+                    record,
+                    tcp_flow_capture_classes,
+                    tcp_payload_bytes_by_capture,
+                )
     decode_status = "not attempted"
     if pcaps and tcpdump is None:
         decode_status = "tcpdump unavailable"
@@ -398,6 +553,13 @@ def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
         "ip_versions": ip_versions,
         "transports": transports,
         "known_ports": known_ports,
+        "tcp_flow_capture_classes": tcp_flow_capture_classes,
+        "tcp_payload_bytes_by_capture": tcp_payload_bytes_by_capture,
+        "mdns_service_mentions": mdns_service_mentions,
+        "awdl_tcp_flows": top_tcp_flow_shapes(tcp_flows, first_packet_time, capture_class="awdl"),
+        "primary_network_tcp_flows": top_tcp_flow_shapes(
+            tcp_flows, first_packet_time, capture_class="primary-network"
+        ),
         "decode_failures": decode_failures,
     }
 
@@ -426,29 +588,247 @@ def decode_pcap_lines(tcpdump: str, path: Path) -> list[str] | None:
     return [line for line in result.stdout.splitlines() if line.strip()]
 
 
+def parse_packet_record(line: str) -> PacketRecord | None:
+    prefix_match = re.match(
+        r"^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?) (?P<version>IP6|IP) (?P<body>.+)$",
+        line,
+    )
+    if not prefix_match:
+        return None
+    body = prefix_match.group("body")
+    source, separator, remainder = body.partition(" > ")
+    if not separator:
+        return None
+    destination, separator, rest = remainder.partition(": ")
+    if not separator:
+        return None
+    source_host, source_port = split_endpoint(source)
+    destination_host, destination_port = split_endpoint(destination)
+    transport = packet_transport(rest, source_port, destination_port)
+    return PacketRecord(
+        timestamp=datetime.fromisoformat(prefix_match.group("timestamp")),
+        ip_version="ipv6" if prefix_match.group("version") == "IP6" else "ipv4",
+        transport=transport,
+        source_host=source_host,
+        source_port=source_port,
+        destination_host=destination_host,
+        destination_port=destination_port,
+        rest=rest,
+    )
+
+
+def split_endpoint(value: str) -> tuple[str, str]:
+    host, separator, port = value.rpartition(".")
+    if separator and port.isdigit():
+        return host, port
+    return value, ""
+
+
+def packet_transport(rest: str, source_port: str, destination_port: str) -> str:
+    if "Flags [" in rest:
+        return "tcp"
+    if source_port in KNOWN_PACKET_PORTS or destination_port in KNOWN_PACKET_PORTS:
+        return "udp"
+    return "unknown"
+
+
+def min_timestamp(current: datetime | None, candidate: datetime) -> datetime:
+    if current is None or candidate < current:
+        return candidate
+    return current
+
+
 def count_packet_shape(
-    line: str,
+    record: PacketRecord,
     ip_versions: Counter[str],
     transports: Counter[str],
     known_ports: Counter[str],
 ) -> None:
-    if " IP6 " in line:
-        ip_versions["ipv6"] += 1
-    elif " IP " in line:
-        ip_versions["ipv4"] += 1
+    ip_versions[record.ip_version] += 1
 
-    if " UDP," in line or " UDP " in line:
-        transports["udp"] += 1
-    if " Flags [" in line:
-        transports["tcp"] += 1
+    transports[record.transport] += 1
 
     for port in KNOWN_PACKET_PORTS:
-        if packet_line_mentions_port(line, port):
+        if record.source_port == port or record.destination_port == port:
             known_ports[port] += 1
 
 
-def packet_line_mentions_port(line: str, port: str) -> bool:
-    return re.search(rf"\.{re.escape(port)}(?:[ >:,]|$)", line) is not None
+def count_mdns_service_mentions(text: str, mentions: Counter[str]) -> None:
+    for service in re.findall(r"_[A-Za-z0-9-]+\._tcp\.local\.", text):
+        mentions[service] += 1
+
+
+def update_tcp_flow(
+    tcp_flows: dict[tuple[str, tuple[tuple[str, str], tuple[str, str]]], dict[str, object]],
+    capture_class: str,
+    record: PacketRecord,
+    tcp_flow_capture_classes: Counter[str],
+    tcp_payload_bytes_by_capture: Counter[str],
+) -> None:
+    endpoints = tuple(
+        sorted(
+            (
+                (record.source_host, record.source_port),
+                (record.destination_host, record.destination_port),
+            )
+        )
+    )
+    key = (capture_class, endpoints)
+    flow = tcp_flows.setdefault(
+        key,
+        {
+            "capture_class": capture_class,
+            "ip_version": record.ip_version,
+            "endpoint_classes": tuple(sorted((host_class(record.source_host), host_class(record.destination_host)))),
+            "port_classes": tuple(sorted((port_class(record.source_port), port_class(record.destination_port)))),
+            "packets": 0,
+            "payload_bytes": 0,
+            "nonzero_payload_packets": 0,
+            "max_payload_bytes": 0,
+            "first_time": record.timestamp,
+            "last_time": record.timestamp,
+            "flags": Counter(),
+        },
+    )
+    payload_length = packet_payload_length(record.rest)
+    flow["packets"] = int(flow["packets"]) + 1
+    flow["payload_bytes"] = int(flow["payload_bytes"]) + payload_length
+    if payload_length:
+        flow["nonzero_payload_packets"] = int(flow["nonzero_payload_packets"]) + 1
+    flow["max_payload_bytes"] = max(int(flow["max_payload_bytes"]), payload_length)
+    flow["first_time"] = min(flow["first_time"], record.timestamp)
+    flow["last_time"] = max(flow["last_time"], record.timestamp)
+    flow["flags"].update(tcp_flag_classes(record.rest, payload_length))
+    tcp_flow_capture_classes[capture_class] += 1 if int(flow["packets"]) == 1 else 0
+    tcp_payload_bytes_by_capture[capture_class] += payload_length
+
+
+def host_class(host: str) -> str:
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return "name-or-unknown"
+    if address.is_multicast:
+        if str(address) in {"224.0.0.251", "ff02::fb"}:
+            return "mdns-multicast"
+        return "multicast"
+    if address.is_loopback:
+        return "loopback"
+    if address.is_link_local:
+        return "link-local-v6" if address.version == 6 else "link-local-v4"
+    if address.is_private:
+        return "private-v6" if address.version == 6 else "private-v4"
+    return "public-v6" if address.version == 6 else "public-v4"
+
+
+def port_class(port: str) -> str:
+    if not port.isdigit():
+        return "unknown"
+    value = int(port)
+    if value == 5353:
+        return "mdns"
+    if value == 3722:
+        return "companionlink-udp"
+    if value == 7000:
+        return "apple-media-7000"
+    if value == 443:
+        return "https"
+    if value == 80:
+        return "http"
+    if value >= 49152:
+        return "dynamic"
+    if value >= 1024:
+        return "registered"
+    return "well-known"
+
+
+def packet_payload_length(rest: str) -> int:
+    match = re.search(r"length (\d+)", rest)
+    if not match:
+        return 0
+    return int(match.group(1))
+
+
+def tcp_flag_classes(rest: str, payload_length: int) -> Counter[str]:
+    flags = Counter()
+    match = re.search(r"Flags \[([^\]]+)\]", rest)
+    if not match:
+        return flags
+    raw = match.group(1)
+    if "S" in raw:
+        flags["syn"] += 1
+    if "F" in raw:
+        flags["fin"] += 1
+    if "R" in raw:
+        flags["rst"] += 1
+    if "P" in raw:
+        flags["push"] += 1
+    if "W" in raw:
+        flags["ecn-cwr"] += 1
+    if "." in raw and payload_length == 0 and not any(flag in raw for flag in "SFRP"):
+        flags["ack-only"] += 1
+    return flags
+
+
+def top_tcp_flow_shapes(
+    tcp_flows: dict[tuple[str, tuple[tuple[str, str], tuple[str, str]]], dict[str, object]],
+    first_packet_time: datetime | None,
+    *,
+    capture_class: str,
+    limit: int = 5,
+) -> list[dict[str, object]]:
+    flows = [flow for flow in tcp_flows.values() if flow["capture_class"] == capture_class]
+    flows.sort(key=lambda flow: (int(flow["payload_bytes"]), int(flow["packets"])), reverse=True)
+    result: list[dict[str, object]] = []
+    for flow in flows[:limit]:
+        first_time = flow["first_time"]
+        last_time = flow["last_time"]
+        result.append(
+            {
+                "ip_version": flow["ip_version"],
+                "endpoint_classes": flow["endpoint_classes"],
+                "port_classes": flow["port_classes"],
+                "packets": flow["packets"],
+                "payload_bytes": flow["payload_bytes"],
+                "nonzero_payload_packets": flow["nonzero_payload_packets"],
+                "max_payload_bytes": flow["max_payload_bytes"],
+                "flags": flow["flags"],
+                "first_offset": seconds_between(first_packet_time, first_time),
+                "last_offset": seconds_between(first_packet_time, last_time),
+                "span": seconds_between(first_time, last_time),
+            }
+        )
+    return result
+
+
+def seconds_between(start: datetime | None, end: datetime | None) -> float | None:
+    if start is None or end is None:
+        return None
+    return max(0.0, (end - start).total_seconds())
+
+
+def render_tcp_flow_shapes(flows: list[dict[str, object]]) -> list[str]:
+    if not flows:
+        return ["- none observed"]
+    lines: list[str] = []
+    for index, flow in enumerate(flows, start=1):
+        lines.append(
+            "- "
+            + f"#{index}: "
+            + f"ip={flow['ip_version']} "
+            + f"endpoints={format_pair(flow['endpoint_classes'])} "
+            + f"ports={format_pair(flow['port_classes'])} "
+            + f"packets={flow['packets']} "
+            + f"payload_bytes={flow['payload_bytes']} "
+            + f"nonzero_payload_packets={flow['nonzero_payload_packets']} "
+            + f"max_payload_bytes={flow['max_payload_bytes']} "
+            + f"flags={format_counter(flow['flags'])} "
+            + f"first_offset={format_seconds(flow['first_offset'])} "
+            + f"last_offset={format_seconds(flow['last_offset'])} "
+            + f"span={format_seconds(flow['span'])}"
+        )
+    lines.append("- Raw endpoints, dynamic ports, and packet payloads: not included")
+    return lines
 
 
 def parse_launchctl(text: str) -> dict[str, str]:
@@ -512,6 +892,23 @@ def format_counter(counter: Counter[str]) -> str:
     if not counter:
         return "none"
     return ", ".join(f"`{key}`={counter[key]}" for key in sorted(counter))
+
+
+def format_pair(values: object) -> str:
+    if not isinstance(values, tuple) or len(values) != 2:
+        return "unknown"
+    return f"`{values[0]}`<->`{values[1]}`"
+
+
+def format_seconds(value: object) -> str:
+    if value is None:
+        return "unknown"
+    seconds = float(value)
+    if seconds < 1:
+        return f"{seconds:.3f}s"
+    if seconds < 10:
+        return f"{seconds:.2f}s"
+    return f"{seconds:.1f}s"
 
 
 def format_bool(value: bool) -> str:

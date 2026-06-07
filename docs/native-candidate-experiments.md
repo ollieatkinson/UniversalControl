@@ -301,8 +301,10 @@ Only run this when a real Mac or iPad Universal Control peer is available.
    uses a structurally similar non-sensitive TXT shape.
 
 This experiment is about protocol shape, not bypassing account identity or
-private trust. Stop if logs show rejection that depends on Apple Account,
-iCloud Keychain, private certificates, or platform attestation.
+private trust. Stop only if logs show rejection that depends on Apple Account,
+iCloud Keychain, private certificates, or platform attestation that Windows
+cannot satisfy through supported Apple software such as iCloud for Windows or a
+future Apple Account CLI login.
 
 ## Experiment 6: Apple-To-Apple Session Trace
 

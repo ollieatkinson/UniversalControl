@@ -20,9 +20,10 @@ cargo run -- --config configs/receiver.example.toml preflight
 
 Preflight validates the config, prints the role, peer mode, configured display
 sizes, detected primary display size when available, effective local display,
-and warnings such as unreachable loopback peer addresses or missing native
-display detection. Fix warnings before a full two-machine run unless they are
-expected for WSL or another stub backend.
+whether a bridge shared secret is configured, and warnings such as unreachable
+loopback peer addresses, missing native display detection, or unauthenticated
+transport. Fix warnings before a full two-machine run unless they are expected
+for WSL or another stub backend.
 
 On the machine with the keyboard/mouse:
 
@@ -38,9 +39,25 @@ cargo run -- --config configs/receiver.example.toml
 
 Edit `local_width`, `local_height`, and `remote_edge` before running. Native macOS/Windows builds detect the primary display with the same display path used by `probe displays`; Linux/WSL and detection failures fall back to configured dimensions. The input owner uses detected local dimensions for edge routing, and the peer `Hello` message includes each side's detected primary display size so the input owner updates remote routing dimensions from the receiver after connection. The configured `remote_width` and `remote_height` remain fallback values until the receiver hello arrives. The input owner advertises `_anykbflow._tcp.local.` and the receiver discovers it automatically when `peer_addr` is omitted. Add `peer_addr = "host:24800"` to the receiver config to bypass discovery.
 
+For real bridge tests, configure the same local shared secret on both peers:
+
+```toml
+[auth]
+shared_secret = "replace-with-a-random-local-secret"
+```
+
+When `auth.shared_secret` is configured, each peer's `Hello` includes a
+nonce-backed HMAC proof over the hello identity, role, and display geometry.
+The other side verifies that proof before accepting the peer role or injecting
+input. This is authentication only; event traffic is still plaintext until the
+transport is replaced with an encrypted session. Because the proof is carried in
+the same plaintext session, treat it as protection against accidental or
+secret-less peers, not as replay-proof pairing.
+
 The peer protocol sends periodic heartbeat messages in both directions. If a peer disconnects, both roles re-enter their connection loop after a short delay: the input owner listens again and the receiver re-discovers or reconnects. The input owner listens for inbound peer closure so a disconnected receiver resets the session and starts the next connection with fresh routing state. The receiver releases common modifier keys and mouse buttons when a session starts, when focus returns local, and when a connection fails; it also releases any keys or buttons it injected and still considers pressed.
 Both roles reject an unexpected peer role during the initial `Hello` exchange so
-a misconfigured run fails before routing or injection continues.
+a misconfigured or shared-secret-mismatched run fails before routing or
+injection continues.
 
 ## Native Probes
 
@@ -204,10 +221,10 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 ## Current Limitations
 
 - Peer setup is partly manual. The input owner listens; the receiver connects or discovers it with mDNS.
-- No encryption or pairing yet.
+- Optional shared-secret `Hello` authentication is available, but there is no encrypted transport or interactive pairing yet.
 - No clipboard sync yet.
 - Reconnect is basic: the roles re-enter their connection loops, the input owner resets routing state on peer close, and receiver-side common latches plus tracked injected keys/buttons are released. Local and remote display dimensions prefer detected primary display geometry, but native runtime validation is still needed.
-- Peer-role validation is strict, but transport authentication is not implemented yet.
+- Peer-role validation is strict, and configured shared-secret auth rejects mismatched peers before input injection. Without `auth.shared_secret`, the bridge transport is still unauthenticated.
 - The native input backend is based on `rdev` and should be treated as a spike layer, not the final platform code.
 - Normalized event replay is a probe, not a security boundary. Do not replay untrusted event files.
 - Key mapping uses physical `rdev` key names and rejects unknown names. This should be replaced with platform scancode mapping once the Mac and Windows spike data is available.
@@ -224,4 +241,4 @@ The native backend uses global low-level hooks and synthetic input. Injection in
 7. Reverse the roles and test macOS as input owner.
 8. Replace `rdev` mapping with explicit platform scancodes if modifiers/layouts are wrong.
 9. Validate input-owner route reset and receiver focus/modifier cleanup on native macOS and Windows backends during planned return-to-local and forced disconnect.
-10. Add TLS pairing once basic control is stable.
+10. Replace the shared-secret proof with interactive pairing plus encrypted transport once basic control is stable.

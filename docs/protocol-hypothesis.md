@@ -110,7 +110,11 @@ Direct Windows participation in Apple's native Universal Control session has thr
 2. Authenticate in a way accepted by Rapport/CompanionLink and Universal Control.
 3. Emit or consume the correct HID/control messages at session latency.
 
-Requirement 1 is approachable now. Requirement 2 is the main risk because Apple's public requirements imply private account-linked trust. Requirement 3 is approachable only after paired captures reveal the message envelope.
+Requirement 1 is approachable now. Requirement 2 is the main risk because
+Apple's public requirements imply account-linked trust; Windows may need to use
+a legitimate Apple Account identity path such as iCloud for Windows or a future
+CLI login if that material is required. Requirement 3 is approachable only after
+paired captures reveal the message envelope.
 
 The pragmatic architecture is therefore native-first with an explicit fallback:
 
@@ -122,7 +126,9 @@ The pragmatic architecture is therefore native-first with an explicit fallback:
 Native Mac-side compatibility remains viable only if these gates can be passed:
 
 1. Windows can advertise or respond in a way that causes macOS Rapport/Universal Control to consider it a candidate.
-2. The session can progress beyond discovery without Apple Account or iCloud Keychain material.
+2. The session can progress beyond discovery either before account trust is
+   required or using supported Apple Account/iCloud identity material available
+   to Windows.
 3. The Windows peer can negotiate the `com.apple.universalcontrol` service role.
 4. The input/control data plane can be decoded and generated with keys negotiated during that session, not keys only Apple devices possess.
 5. The Mac does not require private local entitlements from the remote peer that can only exist on Apple platforms.

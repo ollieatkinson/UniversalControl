@@ -54,14 +54,18 @@ For native Windows admission, we need one of these to be true:
 
 - the required trust is negotiated during the observed session and Windows can
   honestly participate
-- Windows can reach a Universal Control service route without Apple Account or
-  iCloud Keychain material
+- Windows can use a legitimate Apple Account identity path, such as iCloud for
+  Windows or a future CLI login, if Universal Control requires same-account
+  Continuity trust
+- Windows can reach a Universal Control service route before same-account trust
+  is required
 - the missing fields are ordinary protocol fields, not protected Apple identity
   claims
 
-Native should be considered closed if the remaining path requires Apple Account
-secrets, iCloud Keychain identity, private certificates, private entitlements, or
-misleading platform attestation.
+Native should be considered closed only if the remaining path requires
+extracting protected Apple Account or iCloud Keychain secrets, private
+certificates unavailable through supported Windows Apple software, private
+entitlements, or misleading platform attestation.
 
 ### 3. Rapport/CompanionLink Session
 
@@ -142,7 +146,8 @@ Most of the existing AnyKBFlow prototype work belongs here.
 The bridge protocol should provide:
 
 - project-owned DNS-SD discovery, separate from `_companion-link._tcp`
-- explicit pairing with per-device public keys
+- explicit pairing with per-device public keys; until that exists, use the
+  optional shared-secret `Hello` proof for real bridge tests
 - encrypted transport over TCP or QUIC
 - JSON-lines only for early diagnostics, then a compact framed protocol if
   latency or event rate demands it
@@ -151,6 +156,9 @@ The bridge protocol should provide:
 
 The bridge should not pretend to be an Apple device. It can borrow ideas from
 Universal Control's topology and input model without copying Apple identity.
+The current shared-secret proof is only a bridge hardening step, not the final
+security model, because it authenticates `Hello` but does not encrypt event
+traffic or prevent replay by an observer who can capture the plaintext session.
 
 ## Decision Gates
 
@@ -166,7 +174,8 @@ Stay on native while the evidence keeps advancing:
    during the session.
 
 Switch to the bridge only when evidence shows the next native gate depends on
-Apple-private identity or non-negotiated Apple-only keys.
+Apple-private identity material not available through a legitimate Windows Apple
+Account path, or on non-negotiated Apple-only keys.
 
 ## What We Need Next
 

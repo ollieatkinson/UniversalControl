@@ -90,7 +90,8 @@ admission closed.
 
 Do not switch to a custom Mac agent until at least one of these is proven:
 
-- macOS requires Apple Account/iCloud Keychain identity unavailable to Windows.
+- macOS requires Apple Account/iCloud Keychain identity unavailable through
+  supported Windows Apple software or APIs.
 - macOS requires private Apple signatures or certificates unavailable to Windows.
 - Universal Control messages remain encrypted with non-negotiated Apple-only keys.
 - macOS never admits the Windows peer beyond discovery despite matching observable service records.

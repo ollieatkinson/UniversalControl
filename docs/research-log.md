@@ -20,7 +20,15 @@ Apple's Universal Control support page says the feature requires:
 
 Source: <https://support.apple.com/en-us/102459>
 
-Interpretation for Windows: a Windows peer cannot satisfy the same Apple Account plus iCloud Keychain trust requirement by normal OS participation. That does not prove native Universal Control interop is impossible, but it defines the main feasibility gate: can a Windows peer enter the required Rapport/CompanionLink trust/session path without Apple-private account material?
+Interpretation for Windows: a Windows peer probably cannot satisfy the same
+Apple Account plus iCloud Keychain trust requirement by ordinary mDNS shape
+alone. That does not prove native Universal Control interop is impossible, and
+it does not rule out using a legitimate Windows Apple identity source such as
+iCloud for Windows or a future CLI login. It defines the main feasibility gate:
+can a Windows peer enter the required Rapport/CompanionLink trust/session path
+through supported Apple Account material on Windows, public protocol
+negotiation, or both, without extracting protected secrets or making false
+platform claims?
 
 ### Public Continuity Security Model
 
@@ -326,7 +334,9 @@ Windows once native capture/injection permissions are working.
 The preferred Mac-side architecture is to leave Apple's `UniversalControl.app` in control. The Windows side should first try to become visible to native macOS discovery and session setup. A Mac-side bridge should be treated as a fallback only after captures prove one of these hard blockers:
 
 - macOS rejects the Windows peer before Universal Control-specific messages are exchanged.
-- Authentication requires Apple Account, IDS, iCloud Keychain, or entitlement-protected material unavailable to Windows.
+- Authentication requires Apple Account, IDS, iCloud Keychain, or
+  entitlement-protected material unavailable through supported Windows Apple
+  software or APIs.
 - The accepted peer path requires Apple-private HID or proximity claims that cannot be represented externally.
 - Native Universal Control messages can be observed but not generated without protected keys or signatures.
 
@@ -349,7 +359,8 @@ Later symbol or string inspection of private frameworks should use dyld shared c
 Added `docs/native-feasibility.md` to make the native-first decision explicit.
 The Mac side should stay on Apple's `UniversalControl.app` while Windows can
 advance through observable Rapport/CompanionLink and
-`com.apple.universalcontrol` gates without Apple-private identity material.
+`com.apple.universalcontrol` gates, including a legitimate Windows Apple Account
+identity path if required.
 
 Checked Apple's current Universal Control support page and Handoff security
 guide on 2026-06-07:
@@ -730,3 +741,49 @@ activity but no UniversalControl lines.
 Recovery should therefore start with restarting/toggling Universal Control and,
 if needed, moving only the ByHost `com.apple.universalcontrol.*.plist` aside
 before touching wider display preferences.
+
+### Apple Session Flow Shape
+
+Extended `scripts/mac/summarize-uc-session-artifact.py` to decode local pcap
+files into redacted TCP flow shapes. The summary now preserves endpoint classes,
+port classes, packet counts, payload byte counts, payload-packet counts, max
+payload size, flag classes, relative timing, and mDNS service mentions while
+omitting endpoints, dynamic ports, and payload bytes.
+
+Regenerated
+`docs/observations/2026-06-07-redacted-uc-session.md` from the tcpdump-backed
+Apple-to-Apple session. The strongest implementation clue is a dominant AWDL
+IPv6 link-local dynamic-port TCP flow that starts near the beginning of the
+active window, carries most AWDL payload bytes, and lasts through most of the
+capture. Native Windows admission attempts should be compared against this
+AWDL high-port flow shape before spending effort on generic primary-network
+HTTPS traffic.
+
+### Bridge Hello Authentication
+
+Added optional shared-secret authentication for the AnyKBFlow bridge `Hello`
+message. When `[auth].shared_secret` is configured on both peers, each side
+sends a nonce-backed HMAC-SHA256 proof over its hello identity, role, and display
+geometry. The receiver verifies the proof before accepting the peer role or
+injecting routed input. This does not encrypt event traffic and is not final
+interactive pairing; it rejects peers that cannot produce the configured proof
+but is not replay-proof against an observer who can capture the plaintext
+session.
+
+### Reconnect-Capable Apple Session Baseline
+
+Captured `artifacts/mac-uc-session-20260607T083028Z` after native Universal
+Control was working again. The operator connected, disconnected, reconnected,
+and performed short benign text-entry actions on both machines before and after
+the reconnect. Added
+`docs/observations/2026-06-07-redacted-uc-session-reconnect.md` as the
+commit-safe summary; it intentionally describes the typed action by class rather
+than storing the literal text.
+
+This artifact is now the best Apple-to-Apple baseline for Windows native
+admission comparison because it contains both steady-state input and the
+disconnect/reconnect state-machine path. Redacted phase counters show
+disconnect events, connected-link empty transitions, a later reconnect signal,
+target ready/accept events, pointer focus moves, keyboard focus moves, and
+remote pointing/keyboard report resets. Packet shape again points at AWDL IPv6
+link-local dynamic-port TCP as the native session data path.

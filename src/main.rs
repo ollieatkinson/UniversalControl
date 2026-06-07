@@ -1,4 +1,5 @@
 mod app;
+mod auth;
 mod bridge_smoke;
 mod config;
 mod discovery;

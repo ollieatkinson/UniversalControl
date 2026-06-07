@@ -9,6 +9,8 @@ pub struct Config {
     pub role: Role,
     pub listen_addr: Option<SocketAddr>,
     pub peer_addr: Option<SocketAddr>,
+    #[serde(default)]
+    pub auth: AuthConfig,
     pub layout: Layout,
 }
 
@@ -26,6 +28,20 @@ pub struct Layout {
     pub remote_width: f64,
     pub remote_height: f64,
     pub remote_edge: Edge,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct AuthConfig {
+    pub shared_secret: Option<String>,
+}
+
+impl AuthConfig {
+    pub fn normalized_shared_secret(&self) -> Option<&str> {
+        self.shared_secret
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
@@ -66,6 +82,12 @@ impl Config {
             || self.layout.remote_height <= 0.0
         {
             bail!("layout dimensions must be positive");
+        }
+
+        if let Some(secret) = self.auth.shared_secret.as_deref()
+            && secret.trim().is_empty()
+        {
+            bail!("auth.shared_secret must not be empty when configured");
         }
 
         Ok(())

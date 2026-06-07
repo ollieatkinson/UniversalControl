@@ -2,6 +2,10 @@ node_name = "windows-desk"
 role = "input_owner"
 listen_addr = "0.0.0.0:24800"
 
+# Optional but recommended for real bridge tests. Use the same value on both peers.
+# [auth]
+# shared_secret = "replace-with-a-random-local-secret"
+
 [layout]
 local_width = 2560
 local_height = 1440

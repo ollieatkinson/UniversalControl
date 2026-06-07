@@ -9,6 +9,7 @@ use tokio::{
 use tracing::{debug, info, warn};
 
 use crate::{
+    auth,
     config::{Config, Role},
     discovery, platform,
     protocol::{DisplayGeometry, PeerMessage},
@@ -124,10 +125,20 @@ pub(crate) fn hello_message(config: &Config) -> PeerMessage {
         }
     };
 
+    let local_display = hello_display_geometry(config, detected_display);
+    let auth = match auth::hello_auth(&config.auth, &config.node_name, config.role, local_display) {
+        Ok(auth) => auth,
+        Err(error) => {
+            warn!("failed to generate hello auth proof: {error}");
+            None
+        }
+    };
+
     PeerMessage::Hello {
         node_name: config.node_name.clone(),
         role: config.role,
-        local_display: hello_display_geometry(config, detected_display),
+        local_display,
+        auth,
     }
 }
 
@@ -155,7 +166,7 @@ pub fn ensure_receiver_has_peer(config: &Config) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{Edge, Layout};
+    use crate::config::{AuthConfig, Edge, Layout};
 
     fn config() -> Config {
         Config {
@@ -163,6 +174,7 @@ mod tests {
             role: Role::InputOwner,
             listen_addr: "127.0.0.1:24800".parse().ok(),
             peer_addr: None,
+            auth: AuthConfig::default(),
             layout: Layout {
                 local_width: 100.0,
                 local_height: 50.0,

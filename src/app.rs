@@ -5,10 +5,11 @@ use tokio::time;
 use tracing::{debug, info, warn};
 
 use crate::{
+    auth,
     config::{Config, Role},
     network,
     platform::{self, PlatformCommand},
-    protocol::{DisplayGeometry, InputEvent, PeerMessage},
+    protocol::{DisplayGeometry, HelloAuth, InputEvent, PeerMessage},
     router::InputRouter,
 };
 
@@ -26,7 +27,13 @@ pub async fn run(config: Config) -> Result<()> {
                 run_input_owner(&config, &mut captured_rx, &mut peer.inbound, &peer.outbound).await
             }
             Role::Receiver => {
-                run_receiver(&mut peer.inbound, &peer.outbound, platform_tx.clone()).await
+                run_receiver(
+                    &config,
+                    &mut peer.inbound,
+                    &peer.outbound,
+                    platform_tx.clone(),
+                )
+                .await
             }
         };
 
@@ -86,7 +93,9 @@ async fn run_input_owner_with_local_display(
                         node_name,
                         role,
                         local_display,
+                        auth,
                     } => {
+                        verify_peer_hello_auth(config, &node_name, role, local_display, auth.as_ref())?;
                         info!(
                             "peer identified as {} ({:?}) local_display={}x{}",
                             node_name, role, local_display.width, local_display.height
@@ -140,6 +149,7 @@ fn primary_display_geometry_for_router() -> Option<DisplayGeometry> {
 }
 
 async fn run_receiver(
+    config: &Config,
     inbound: &mut tokio::sync::mpsc::Receiver<PeerMessage>,
     outbound: &tokio::sync::mpsc::Sender<PeerMessage>,
     platform_tx: tokio::sync::mpsc::Sender<PlatformCommand>,
@@ -165,7 +175,9 @@ async fn run_receiver(
                         node_name,
                         role,
                         local_display,
+                        auth,
                     } => {
+                        verify_peer_hello_auth(config, &node_name, role, local_display, auth.as_ref())?;
                         info!(
                             "peer identified as {} ({:?}) local_display={}x{}",
                             node_name, role, local_display.width, local_display.height
@@ -202,6 +214,16 @@ async fn run_receiver(
             }
         }
     }
+}
+
+fn verify_peer_hello_auth(
+    config: &Config,
+    node_name: &str,
+    role: Role,
+    local_display: DisplayGeometry,
+    hello_auth: Option<&HelloAuth>,
+) -> Result<()> {
+    auth::verify_hello_auth(&config.auth, node_name, role, local_display, hello_auth)
 }
 
 async fn release_remote_state(
@@ -306,7 +328,7 @@ async fn release_pressed(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{Edge, Layout};
+    use crate::config::{AuthConfig, Edge, Layout};
     use crate::protocol::DisplayGeometry;
 
     fn display(width: f64, height: f64) -> DisplayGeometry {
@@ -319,6 +341,7 @@ mod tests {
             role: Role::InputOwner,
             listen_addr: None,
             peer_addr: None,
+            auth: AuthConfig::default(),
             layout: Layout {
                 local_width: 100.0,
                 local_height: 50.0,
@@ -475,6 +498,7 @@ mod tests {
                 node_name: "wrong-owner".to_string(),
                 role: Role::InputOwner,
                 local_display: display(300.0, 200.0),
+                auth: None,
             })
             .await
             .unwrap();
@@ -490,6 +514,39 @@ mod tests {
         .unwrap_err();
 
         assert!(error.to_string().contains("expected receiver peer"));
+    }
+
+    #[tokio::test]
+    async fn input_owner_rejects_missing_auth_when_required() {
+        let mut config = input_owner_config();
+        config.auth = AuthConfig {
+            shared_secret: Some("owner-secret".to_string()),
+        };
+        let (_capture_tx, mut captured_rx) = tokio::sync::mpsc::channel(1);
+        let (inbound_tx, mut inbound_rx) = tokio::sync::mpsc::channel(1);
+        let (outbound_tx, _outbound_rx) = tokio::sync::mpsc::channel(1);
+
+        inbound_tx
+            .send(PeerMessage::Hello {
+                node_name: "receiver-test".to_string(),
+                role: Role::Receiver,
+                local_display: display(300.0, 200.0),
+                auth: None,
+            })
+            .await
+            .unwrap();
+
+        let error = run_input_owner_with_local_display(
+            &config,
+            &mut captured_rx,
+            &mut inbound_rx,
+            &outbound_tx,
+            None,
+        )
+        .await
+        .unwrap_err();
+
+        assert!(error.to_string().contains("required auth proof"));
     }
 
     #[tokio::test]
@@ -515,6 +572,7 @@ mod tests {
                 node_name: "receiver-test".to_string(),
                 role: Role::Receiver,
                 local_display: display(300.0, 200.0),
+                auth: None,
             })
             .await
             .unwrap();
@@ -574,15 +632,78 @@ mod tests {
                 node_name: "wrong-receiver".to_string(),
                 role: Role::Receiver,
                 local_display: display(300.0, 200.0),
+                auth: None,
             })
             .await
             .unwrap();
 
-        let error = run_receiver(&mut inbound_rx, &outbound_tx, platform_tx)
+        let config = Config {
+            node_name: "receiver-test".to_string(),
+            role: Role::Receiver,
+            listen_addr: None,
+            peer_addr: None,
+            auth: AuthConfig::default(),
+            layout: Layout {
+                local_width: 80.0,
+                local_height: 40.0,
+                remote_width: 100.0,
+                remote_height: 50.0,
+                remote_edge: Edge::Left,
+            },
+        };
+
+        let error = run_receiver(&config, &mut inbound_rx, &outbound_tx, platform_tx)
             .await
             .unwrap_err();
 
         assert!(error.to_string().contains("expected input owner peer"));
+
+        // Session-start latch cleanup is still issued before the bad hello is processed.
+        assert!(platform_rx.recv().await.is_some());
+    }
+
+    #[tokio::test]
+    async fn receiver_rejects_wrong_auth_when_required() {
+        let (inbound_tx, mut inbound_rx) = tokio::sync::mpsc::channel(1);
+        let (outbound_tx, _outbound_rx) = tokio::sync::mpsc::channel(1);
+        let (platform_tx, mut platform_rx) = tokio::sync::mpsc::channel(16);
+        let owner_display = display(300.0, 200.0);
+        let sender_auth = AuthConfig {
+            shared_secret: Some("wrong-secret".to_string()),
+        };
+        let receiver_config = Config {
+            node_name: "receiver-test".to_string(),
+            role: Role::Receiver,
+            listen_addr: None,
+            peer_addr: None,
+            auth: AuthConfig {
+                shared_secret: Some("expected-secret".to_string()),
+            },
+            layout: Layout {
+                local_width: 80.0,
+                local_height: 40.0,
+                remote_width: 100.0,
+                remote_height: 50.0,
+                remote_edge: Edge::Left,
+            },
+        };
+
+        inbound_tx
+            .send(PeerMessage::Hello {
+                node_name: "owner-test".to_string(),
+                role: Role::InputOwner,
+                local_display: owner_display,
+                auth: auth::hello_auth(&sender_auth, "owner-test", Role::InputOwner, owner_display)
+                    .unwrap(),
+            })
+            .await
+            .unwrap();
+
+        let error = run_receiver(&receiver_config, &mut inbound_rx, &outbound_tx, platform_tx)
+            .await
+            .unwrap_err();
+
+        assert!(error.to_string().contains("auth proof did not match"));
 
         // Session-start latch cleanup is still issued before the bad hello is processed.
         assert!(platform_rx.recv().await.is_some());

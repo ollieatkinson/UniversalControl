@@ -3,6 +3,10 @@ role = "receiver"
 # Optional. If omitted, the receiver discovers an input_owner via _anykbflow._tcp.local.
 # peer_addr = "192.168.1.20:24800"
 
+# Optional but recommended for real bridge tests. Use the same value on both peers.
+# [auth]
+# shared_secret = "replace-with-a-random-local-secret"
+
 [layout]
 local_width = 1728
 local_height = 1117

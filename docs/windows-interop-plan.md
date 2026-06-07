@@ -19,14 +19,19 @@ The project should keep native macOS compatibility as the lead strategy until ev
 The native/fallback decision is tracked in
 [native-feasibility.md](native-feasibility.md). In short, native remains open
 while Windows can advance through observable Rapport/CompanionLink and
-`com.apple.universalcontrol` gates without Apple-private identity material. It
-closes only when captures show the remaining path depends on Apple Account,
-iCloud Keychain, private certificates, protected entitlements, or non-negotiated
-Apple-only keys.
+`com.apple.universalcontrol` gates, including a legitimate Apple Account path on
+Windows if required. It closes only when captures show the remaining path
+depends on protected Apple Account or iCloud Keychain material that iCloud for
+Windows or another supported Windows Apple login cannot provide, private
+certificates, protected entitlements, misleading platform claims, or
+non-negotiated Apple-only keys.
 
 ## Track A: Native Compatibility Investigation
 
-Purpose: learn whether a Windows peer can be accepted by macOS Universal Control without Apple-private secrets or entitlements.
+Purpose: learn whether a Windows peer can be accepted by macOS Universal Control
+using observable protocol behavior and, if required, a legitimate Apple Account
+identity path on Windows, without extracting Apple-private secrets or claiming
+false platform capabilities.
 
 Work items:
 
@@ -41,7 +46,10 @@ Work items:
 6. Observe whether macOS `rapportd` or `UniversalControl` logs react to a Windows advertisement.
 7. Attempt a minimal TCP connection to the advertised `rapportd` listener only after logging what Apple peers do first.
 8. Continue native work while the session advances with observable, reproducible messages.
-9. Stop only if authentication requires Apple Account/iCloud Keychain material, private Apple signatures, or entitlement-protected peer claims that Windows cannot possess.
+9. Stop only if authentication requires Apple Account/iCloud Keychain material,
+   private Apple signatures, or entitlement-protected peer claims that Windows
+   cannot obtain through supported Apple software, supported APIs, or honest
+   platform capabilities.
 
 Success evidence:
 
@@ -77,14 +85,16 @@ Architecture:
 
 Fallback entry criteria:
 
-- Apple-to-Apple captures identify a native handshake that cannot be completed without Apple-private identity material.
+- Apple-to-Apple captures identify a native handshake that cannot be completed
+  by Windows using supported Apple Account/iCloud for Windows identity material.
 - macOS logs show Windows discovery but reject the peer before `com.apple.universalcontrol` negotiation.
 - The accepted data plane is encrypted with keys not negotiated on the wire and not available to Windows.
 - Native Universal Control requires remote attestations or platform claims that would be dishonest or unsafe to spoof.
 
 Why this track remains useful if needed:
 
-- It gets the Windows/Mac user experience working without pretending Windows is an Apple-account device.
+- It gets the Windows/Mac user experience working without pretending Windows has
+  Apple identity or platform capabilities it does not honestly have.
 - It can still use the reverse-engineered discovery, topology, and HID mapping ideas from Universal Control.
 - It creates a test harness for latency, event mapping, and focus transitions.
 

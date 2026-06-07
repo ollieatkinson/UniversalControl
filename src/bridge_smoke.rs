@@ -73,6 +73,7 @@ pub fn run(config: Config) -> Result<()> {
         node_name: "smoke-receiver".to_string(),
         role: Role::Receiver,
         local_display: remote_display,
+        auth: None,
     };
     print_peer_message("receiver->owner", &receiver_hello)?;
 
@@ -156,6 +157,7 @@ pub fn run_route_events(config: Config, path: &Path, options: RouteEventOptions)
             node_name: "route-events-receiver".to_string(),
             role: Role::Receiver,
             local_display: remote_display,
+            auth: None,
         },
     )?;
 
@@ -306,6 +308,7 @@ fn loopback_owner_config(config: &Config, listen_addr: SocketAddr) -> Config {
         role: Role::InputOwner,
         listen_addr: Some(listen_addr),
         peer_addr: None,
+        auth: config.auth.clone(),
         layout: config.layout.clone(),
     }
 }
@@ -316,6 +319,7 @@ fn loopback_receiver_config(config: &Config, peer_addr: SocketAddr) -> Config {
         role: Role::Receiver,
         listen_addr: None,
         peer_addr: Some(peer_addr),
+        auth: config.auth.clone(),
         layout: Layout {
             local_width: config.layout.remote_width,
             local_height: config.layout.remote_height,
@@ -422,9 +426,12 @@ fn describe_peer_message(message: &PeerMessage) -> String {
             node_name,
             role,
             local_display,
+            auth,
         } => format!(
-            "hello node={node_name} role={role:?} local_display={}x{}",
-            local_display.width, local_display.height
+            "hello node={node_name} role={role:?} local_display={}x{} auth={}",
+            local_display.width,
+            local_display.height,
+            if auth.is_some() { "present" } else { "none" }
         ),
         PeerMessage::Active { remote_active } => format!("active remote_active={remote_active}"),
         PeerMessage::Input { event } => format!("input {}", describe_event(event)),

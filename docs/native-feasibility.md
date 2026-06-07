@@ -26,9 +26,10 @@ Sources checked on 2026-06-07:
 
 That evidence does not prove Universal Control itself is closed to Windows, but
 it defines the main question: can a Windows peer reach the native
-Rapport/CompanionLink and `com.apple.universalcontrol` session path without
-Apple Account, iCloud Keychain, private certificates, or entitlement-protected
-platform claims?
+Rapport/CompanionLink and `com.apple.universalcontrol` session path using either
+public protocol negotiation or a legitimate Apple Account identity source on
+Windows, such as iCloud for Windows or a future CLI login, without extracting
+protected secrets or making false platform claims?
 
 ## Keep-Native Pass Gates
 
@@ -57,14 +58,16 @@ clear native blocker:
 
 - macOS rejects the Windows peer before any Universal Control-specific message
   exchange because the peer lacks Apple Account, IDS, iCloud Keychain, private
-  certificate, or private entitlement material.
+  certificate, or private entitlement material, and that material is not exposed
+  through supported Windows Apple software or APIs.
 - The only accepted route requires misleading platform attestation or claiming
   Apple-private identity that Windows does not honestly possess.
 - The input/control data plane remains encrypted with keys that are not
   negotiated on the observed session and are only available to Apple-trusted
   devices.
 - Apple-to-Apple captures show required BLE, AWDL, or Rapport messages that
-  depend on protected Continuity secrets unavailable to Windows.
+  depend on protected Continuity secrets unavailable to Windows through a
+  legitimate Apple Account/iCloud for Windows path.
 - Matching observable DNS-SD/TXT/service shape never causes macOS to admit the
   Windows peer beyond discovery, and logs identify this as an identity or trust
   rejection rather than a malformed-probe bug.

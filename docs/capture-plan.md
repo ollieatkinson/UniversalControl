@@ -141,13 +141,23 @@ The session summary reports broad discovery/session/input counters plus the
 same focused native counters used by Windows admission captures: stream,
 target/input, sync/layout, proximity/ranging, and AWDL/Wi-Fi peer-to-peer. This
 lets a real Apple-peer run define which signal families should appear when a
-candidate advances beyond DNS-SD.
+candidate advances beyond DNS-SD. It also preserves redacted session phase
+counters for reconnect-sensitive runs: disconnect transitions, connected-device
+updates, target begin/ready/accept events, focus moves, remote report resets,
+and relative disconnect/reconnect offsets.
 
 When `.pcap` files are present and `tcpdump` is available locally, the session
 summary also decodes the packet captures offline and keeps only aggregate
 packet-shape metadata: capture class, decoded packet count, IP version counts,
-transport counts, and protocol-relevant port hits. It does not include raw
-packet lines, endpoints, payload bytes, or dynamic ports.
+transport counts, protocol-relevant port hits, mDNS service mentions, and
+redacted TCP flow shapes by capture class. Flow shapes preserve endpoint
+classes, port classes, packet counts, payload byte counts, flag classes, and
+relative timing. They do not include raw packet lines, endpoints, dynamic ports,
+or payload bytes.
+
+Active-session baselines may include intentional pointer, scroll, and short
+benign text-entry actions. Summaries should describe this as input activity
+without committing the typed text.
 
 Notes:
 

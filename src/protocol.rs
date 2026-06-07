@@ -9,6 +9,8 @@ pub enum PeerMessage {
         node_name: String,
         role: Role,
         local_display: DisplayGeometry,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        auth: Option<HelloAuth>,
     },
     Active {
         remote_active: bool,
@@ -17,6 +19,12 @@ pub enum PeerMessage {
         event: InputEvent,
     },
     Heartbeat,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct HelloAuth {
+    pub nonce: String,
+    pub proof: String,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]

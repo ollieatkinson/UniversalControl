@@ -351,7 +351,7 @@ def summarize_network_hardware(text: str) -> dict[str, object]:
 def parse_browse(text: str) -> list[BrowseEvent]:
     events: list[BrowseEvent] = []
     pattern = re.compile(
-        r"^\d{1,2}:\d{2}:\d{2}\.\d+\s+"
+        r"^\s*\d{1,2}:\d{2}:\d{2}\.\d+\s+"
         r"(?P<action>Add|Rmv)\s+"
         r"(?P<flags>\d+)\s+"
         r"(?P<interface>\d+)\s+"
@@ -384,7 +384,7 @@ def parse_resolve(text: str) -> list[ResolveEvent]:
     events: list[ResolveEvent] = []
     current: ResolveEvent | None = None
     reached_pattern = re.compile(
-        r"^\d{1,2}:\d{2}:\d{2}\.\d+\s+"
+        r"^\s*\d{1,2}:\d{2}:\d{2}\.\d+\s+"
         r"(?P<fullname>.+?)\s+can be reached at\s+"
         r"(?P<host>.+?):(?P<port>\d+)\s+"
         r"\(interface\s+(?P<interface>\d+)\)"

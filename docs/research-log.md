@@ -489,3 +489,17 @@ Added `cargo run -- probe replay-events --path <file> --dry-run` so native
 macOS and Windows spike files can be parsed and mapped without sending
 synthetic input. Use this before full replay when validating Keychron captures
 or new platform-specific key names.
+
+### Refreshed macOS Universal Control Probe
+
+Recorded `docs/observations/2026-06-07-redacted-macos-uc-probe.md` and
+`docs/observations/2026-06-07-redacted-macos-uc-probe-compare.md` from a fresh
+read-only `scripts/mac/uc-probe.sh` artifact. The CompanionLink DNS-SD baseline
+stayed stable: `_companion-link._tcp` browse/resolve was observed, the listener
+port remained `61833`, and the redacted TXT key/value classes still matched the
+shape-only Windows advertiser. The comparison against the 2026-06-06 probe only
+changed recent unified-log counters and parsed Rapport event/message IDs.
+
+Fixed `scripts/mac/summarize-uc-probe-artifact.py` to parse normal `dns-sd`
+timestamp lines with leading whitespace. Without that, a valid browse/resolve
+capture could be summarized incorrectly as `Events: none observed`.

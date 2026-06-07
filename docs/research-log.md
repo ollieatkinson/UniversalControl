@@ -387,7 +387,10 @@ values matching the redacted local macOS baseline key/value classes:
 
 This is a controlled DNS-SD shape experiment, not a native Universal Control
 implementation. It does not copy Apple identifiers or account material and does
-not run a Rapport TCP service. The next evidence needed is a Mac-side watcher
+not speak Rapport. `--observe-tcp` can be added to advertise commands to open a
+bounded TCP listener on the advertised port and log connection attempts plus a
+short first-read hex prefix. The next evidence needed is a Mac-side watcher
 summary comparing this shape-only candidate against the minimal
-`probe=visibility` candidate to see whether `rapportd` or `UniversalControl`
-ignores it, attempts a connection, or logs a concrete rejection reason.
+`probe=visibility` candidate, along with the Windows TCP observer summary, to
+see whether `rapportd` or `UniversalControl` ignores it, attempts a connection,
+or logs a concrete rejection reason.

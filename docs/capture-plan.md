@@ -221,13 +221,15 @@ cargo run -- advertise-mdns `
   --txt probe=visibility `
   --txt role=windows-native-candidate `
   --allow-apple-service `
+  --observe-tcp `
   --seconds 60
 ```
 
 This minimal candidate deliberately does not copy Apple `rp*` TXT fields. It is
 only meant to answer whether `rapportd` or `UniversalControl` reacts to a
-Windows-owned `_companion-link._tcp` service at all. Preserve raw artifacts under
-`artifacts/`, then commit only redacted summaries.
+Windows-owned `_companion-link._tcp` service at all. `--observe-tcp` records
+whether macOS attempts the advertised port; it is not a Rapport implementation.
+Preserve raw artifacts under `artifacts/`, then commit only redacted summaries.
 
 ## Shape-Only CompanionLink Candidate Check
 
@@ -247,7 +249,7 @@ On macOS first:
 On Windows while the macOS watcher is running:
 
 ```powershell
-cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --seconds 60
+cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60
 ```
 
 Expected evidence:
@@ -257,6 +259,7 @@ Expected evidence:
   classes, and native-process log counts.
 - `rapportd` or `UniversalControl` either ignores the service, attempts a
   connection, or logs a concrete rejection reason.
+- Windows output includes `TCP observer summary: accepted_connections=<n>`.
 - Treat any connection attempt as a signal to build a real listener next, not as
   Universal Control admission.
 

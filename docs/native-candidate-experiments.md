@@ -85,6 +85,7 @@ cargo run -- advertise-mdns `
   --txt probe=visibility `
   --txt role=windows-native-candidate `
   --allow-apple-service `
+  --observe-tcp `
   --seconds 60
 ```
 
@@ -94,6 +95,8 @@ Expected evidence:
 - macOS `dns-sd -L` resolves the Windows host, port, and TXT keys.
 - `rapportd` and `UniversalControl` logs either ignore the service or record a
   concrete discovery/rejection reason.
+- The Windows TCP observer records whether anything connects to the advertised
+  port and, if data is sent immediately, only a short first-read hex prefix.
 - The committed observation is generated from the watcher artifact summary, not
   from raw `dns-sd` or unified-log output.
 
@@ -130,14 +133,16 @@ On Windows while the macOS watcher is running:
 ```powershell
 cargo run -- advertise-companion-link-shape `
   --acknowledge-shape-experiment `
+  --observe-tcp `
   --seconds 60
 ```
 
 This command intentionally does not copy identifiers, certificates, account
-material, hostnames, or real `rp*` values from an Apple device. It also does not
-open a real Rapport TCP service; it only publishes the DNS-SD shape so logs can
-show whether macOS ignores it, attempts a connection, or rejects it for a
-concrete reason.
+material, hostnames, or real `rp*` values from an Apple device. With
+`--observe-tcp`, it opens a bounded listener on the advertised port only to log
+connection attempts and a short first-read hex prefix. It does not speak
+Rapport. Use any accepted connection as evidence to build a real framing probe
+next, not as Universal Control admission.
 
 ## Experiment 5: Apple Peer TXT Shape
 

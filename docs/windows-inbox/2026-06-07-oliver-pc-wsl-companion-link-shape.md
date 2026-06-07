@@ -16,6 +16,8 @@
 
 - Added a guarded shape-only CompanionLink advertisement:
   - `cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --seconds 60`
+- Added `--observe-tcp` for advertisement probes that need to record whether
+  macOS attempts to connect to the published SRV port.
 - The command publishes `_companion-link._tcp` with placeholder `rp*` TXT values
   matching the redacted macOS baseline key/value classes from
   `docs/observations/2026-06-06-redacted-macos-uc-probe.md`.
@@ -45,7 +47,7 @@ On macOS first:
 On Windows while the watcher is running:
 
 ```powershell
-cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --seconds 60
+cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60
 ```
 
 ## Local Runtime Observation
@@ -54,10 +56,18 @@ This was implemented from WSL and cross-target checked. It still needs to run
 from a native Windows terminal on the real LAN while the Mac watcher captures
 DNS-SD and unified-log output.
 
+The TCP observer prints:
+
+- each accepted peer address
+- whether the peer closed, timed out, or sent immediate bytes
+- a short first-read hex prefix when immediate bytes are sent
+- final `accepted_connections=<n>` summary
+
 ## Questions For Mac Side
 
 - Does `dns-sd -B` see `AnyKBFlow Native Shape Probe`?
 - Does `dns-sd -L` resolve the published port and all eight `rp*` TXT keys?
 - Do `rapportd` or `UniversalControl` logs change compared with the minimal
   `probe=visibility` candidate?
-- Is there any attempted TCP connection to the advertised port?
+- Does the Windows TCP observer record any attempted connection to the
+  advertised port?

@@ -71,6 +71,9 @@ enum Command {
         /// Include Apple peer-to-peer interfaces such as awdl on macOS.
         #[arg(long)]
         include_apple_p2p: bool,
+        /// Open a bounded TCP listener on the advertised port and log connection attempts.
+        #[arg(long)]
+        observe_tcp: bool,
     },
     /// Advertise a shape-only CompanionLink candidate with placeholder TXT values.
     AdvertiseCompanionLinkShape {
@@ -92,6 +95,9 @@ enum Command {
         /// Include Apple peer-to-peer interfaces such as awdl on macOS.
         #[arg(long)]
         include_apple_p2p: bool,
+        /// Open a bounded TCP listener on the advertised port and log connection attempts.
+        #[arg(long)]
+        observe_tcp: bool,
         /// Required guard for the native-compatibility shape experiment.
         #[arg(long)]
         acknowledge_shape_experiment: bool,
@@ -147,6 +153,9 @@ enum DiscoveryCommand {
         /// Include Apple peer-to-peer interfaces such as awdl on macOS.
         #[arg(long)]
         include_apple_p2p: bool,
+        /// Open a bounded TCP listener on the advertised port and log connection attempts.
+        #[arg(long)]
+        observe_tcp: bool,
     },
 }
 
@@ -256,6 +265,7 @@ async fn main() -> Result<()> {
             txt,
             allow_apple_service,
             include_apple_p2p,
+            observe_tcp,
         } => discovery::advertise_mdns(discovery::AdvertiseOptions {
             seconds,
             service_type,
@@ -266,6 +276,7 @@ async fn main() -> Result<()> {
             txt,
             allow_apple_service,
             include_apple_p2p,
+            observe_tcp,
         }),
         Command::AdvertiseCompanionLinkShape {
             seconds,
@@ -274,6 +285,7 @@ async fn main() -> Result<()> {
             addr,
             port,
             include_apple_p2p,
+            observe_tcp,
             acknowledge_shape_experiment,
         } => {
             if !acknowledge_shape_experiment {
@@ -292,6 +304,7 @@ async fn main() -> Result<()> {
                 txt: discovery::companion_link_shape_txt(),
                 allow_apple_service: true,
                 include_apple_p2p,
+                observe_tcp,
             })
         }
         Command::Discovery { command } => match command {
@@ -311,6 +324,7 @@ async fn main() -> Result<()> {
                 seconds,
                 allow_apple_service,
                 include_apple_p2p,
+                observe_tcp,
             } => discovery::advertise_mdns(discovery::AdvertiseOptions {
                 seconds,
                 service_type: service,
@@ -321,6 +335,7 @@ async fn main() -> Result<()> {
                 txt,
                 allow_apple_service,
                 include_apple_p2p,
+                observe_tcp,
             }),
         },
         Command::Probe { command } => match command {

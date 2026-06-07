@@ -1,9 +1,12 @@
 use std::{
     collections::{BTreeSet, HashMap},
-    io,
-    net::{IpAddr, SocketAddr, UdpSocket},
+    io::{self, Read},
+    net::{IpAddr, SocketAddr, TcpListener, UdpSocket},
     process::{Command, Stdio},
-    sync::atomic::{AtomicBool, Ordering},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -43,6 +46,7 @@ pub struct AdvertiseOptions {
     pub txt: Vec<String>,
     pub allow_apple_service: bool,
     pub include_apple_p2p: bool,
+    pub observe_tcp: bool,
 }
 
 pub fn companion_link_shape_txt() -> Vec<String> {
@@ -131,6 +135,18 @@ pub fn advertise_mdns(options: AdvertiseOptions) -> Result<()> {
         );
     }
 
+    let observe_addr = if options.observe_tcp {
+        Some(observe_tcp_addr(
+            options.addr.as_deref(),
+            options.port,
+            &hostname,
+        )?)
+    } else {
+        None
+    };
+    let tcp_observer = observe_addr
+        .map(|addr| spawn_tcp_observer(addr, Duration::from_secs(seconds)))
+        .transpose()?;
     let txt = parse_txt_properties(&options.txt)?;
     let mdns = ServiceDaemon::new().context("failed to create mDNS daemon")?;
 
@@ -167,6 +183,18 @@ pub fn advertise_mdns(options: AdvertiseOptions) -> Result<()> {
         .context("failed to register mDNS service")?;
     thread::sleep(Duration::from_secs(seconds));
 
+    if let Some(observer) = tcp_observer {
+        observer.stop.store(true, Ordering::SeqCst);
+        observer
+            .handle
+            .join()
+            .map_err(|_| anyhow::anyhow!("TCP observer thread panicked"))?;
+        println!(
+            "TCP observer summary: accepted_connections={}",
+            observer.accepted.load(Ordering::SeqCst)
+        );
+    }
+
     if let Ok(unregister_events) = mdns.unregister(&fullname) {
         while unregister_events
             .recv_timeout(Duration::from_millis(250))
@@ -176,6 +204,113 @@ pub fn advertise_mdns(options: AdvertiseOptions) -> Result<()> {
 
     mdns.shutdown().context("failed to shut down mDNS daemon")?;
     Ok(())
+}
+
+struct TcpObserver {
+    stop: Arc<AtomicBool>,
+    accepted: Arc<AtomicUsize>,
+    handle: thread::JoinHandle<()>,
+}
+
+fn observe_tcp_addr(addr: Option<&str>, port: u16, hostname: &str) -> Result<SocketAddr> {
+    let ip = match addr {
+        Some(value) => value.parse::<IpAddr>().with_context(|| {
+            format!("--addr must be an IP address when --observe-tcp is used: {value}")
+        })?,
+        None => IpAddr::from([0, 0, 0, 0]),
+    };
+    if ip.is_multicast() {
+        bail!("cannot observe TCP on multicast address {ip}");
+    }
+    if hostname.eq_ignore_ascii_case("localhost.local.") && addr.is_none() {
+        bail!("pass --addr explicitly when observing TCP with localhost hostname");
+    }
+    Ok(SocketAddr::new(ip, port))
+}
+
+fn spawn_tcp_observer(addr: SocketAddr, duration: Duration) -> Result<TcpObserver> {
+    let listener = TcpListener::bind(addr)
+        .with_context(|| format!("failed to bind TCP observer on advertised address {addr}"))?;
+    listener
+        .set_nonblocking(true)
+        .context("failed to set TCP observer nonblocking mode")?;
+
+    let stop = Arc::new(AtomicBool::new(false));
+    let accepted = Arc::new(AtomicUsize::new(0));
+    let thread_stop = Arc::clone(&stop);
+    let thread_accepted = Arc::clone(&accepted);
+    let handle = thread::spawn(move || {
+        run_tcp_observer(listener, addr, duration, thread_stop, thread_accepted)
+    });
+
+    Ok(TcpObserver {
+        stop,
+        accepted,
+        handle,
+    })
+}
+
+fn run_tcp_observer(
+    listener: TcpListener,
+    addr: SocketAddr,
+    duration: Duration,
+    stop: Arc<AtomicBool>,
+    accepted: Arc<AtomicUsize>,
+) {
+    println!(
+        "TCP observer listening on {addr} for {}s",
+        duration.as_secs().max(1)
+    );
+    let deadline = Instant::now() + duration;
+    while !stop.load(Ordering::SeqCst) && Instant::now() < deadline {
+        match listener.accept() {
+            Ok((mut stream, peer)) => {
+                let index = accepted.fetch_add(1, Ordering::SeqCst) + 1;
+                println!("TCP observer accepted connection #{index} from {peer}");
+                if let Err(error) = stream.set_read_timeout(Some(Duration::from_millis(250))) {
+                    eprintln!("TCP observer failed to set read timeout for {peer}: {error}");
+                    continue;
+                }
+
+                let mut buffer = [0u8; 64];
+                match stream.read(&mut buffer) {
+                    Ok(0) => println!("TCP observer connection #{index} closed without data"),
+                    Ok(bytes) => println!(
+                        "TCP observer connection #{index} first_read_bytes={bytes} first_read_hex={}",
+                        hex_prefix(&buffer[..bytes])
+                    ),
+                    Err(error)
+                        if matches!(
+                            error.kind(),
+                            io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut
+                        ) =>
+                    {
+                        println!(
+                            "TCP observer connection #{index} produced no data before timeout"
+                        );
+                    }
+                    Err(error) => {
+                        eprintln!("TCP observer read error on connection #{index}: {error}");
+                    }
+                }
+            }
+            Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
+                thread::sleep(Duration::from_millis(50));
+            }
+            Err(error) => {
+                eprintln!("TCP observer accept error: {error}");
+                thread::sleep(Duration::from_millis(250));
+            }
+        }
+    }
+}
+
+fn hex_prefix(bytes: &[u8]) -> String {
+    bytes
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<Vec<_>>()
+        .join("")
 }
 
 pub fn spawn_bridge_advertisement(node_name: &str, listen_addr: SocketAddr) -> Result<()> {
@@ -735,6 +870,24 @@ mod tests {
         assert!(properties["rpMac"].chars().all(|ch| ch.is_ascii_hexdigit()));
         assert_eq!(properties["rpMac"].len(), 1);
         assert!(properties["rpVr"].chars().all(|ch| ch.is_ascii_digit()));
+    }
+
+    #[test]
+    fn tcp_observer_defaults_to_unspecified_bind_address() {
+        assert_eq!(
+            observe_tcp_addr(None, 61833, "anykbflow-native-shape-probe.local.").unwrap(),
+            SocketAddr::new(IpAddr::from([0, 0, 0, 0]), 61833)
+        );
+    }
+
+    #[test]
+    fn tcp_observer_rejects_multicast_advertise_address() {
+        assert!(observe_tcp_addr(Some("224.0.0.251"), 5353, "probe.local.").is_err());
+    }
+
+    #[test]
+    fn hex_prefix_formats_probe_bytes_without_separators() {
+        assert_eq!(hex_prefix(&[0, 1, 10, 255]), "00010aff");
     }
 
     #[test]

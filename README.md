@@ -157,6 +157,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/capture-input-events.py](scripts/capture-input-events.py): captures normalized input events from native macOS/Windows probes, writes a redacted summary, and can route-gate the capture against an input-owner config.
 - [scripts/summarize-input-events.py](scripts/summarize-input-events.py): summarizes normalized `InputEvent` JSONL without including typed text values.
 - [scripts/compare-native-admission-pair.py](scripts/compare-native-admission-pair.py): pairs redacted Mac watcher and Windows TCP-observer summaries into one admission report.
+- [scripts/compare-native-admission-awdl-baseline.py](scripts/compare-native-admission-awdl-baseline.py): compares a redacted Windows TCP-observer summary against the Apple-to-Apple AWDL payload length/gap baseline.
 - [scripts/windows/capture-apple-account-environment.py](scripts/windows/capture-apple-account-environment.py): captures a redacted Windows Apple Account/iCloud environment summary without account identifiers or secrets.
 - [scripts/windows/capture-companion-link-discovery.py](scripts/windows/capture-companion-link-discovery.py): captures Windows passive CompanionLink discovery, writes a redacted summary, and compares it with the local baseline.
 - [scripts/windows/summarize-companion-link-discovery-output.py](scripts/windows/summarize-companion-link-discovery-output.py): redacts `discover-companion-link --redact` output into commit-safe Markdown.
@@ -164,7 +165,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/windows/capture-display-probe.py](scripts/windows/capture-display-probe.py): captures native Windows display geometry and writes a redacted bridge-calibration summary.
 - [scripts/windows/summarize-display-probe-output.py](scripts/windows/summarize-display-probe-output.py): redacts display probe names while preserving bounds, scale, and virtual layout.
 - [scripts/windows/capture-native-admission.py](scripts/windows/capture-native-admission.py): coordinated Windows advertiser plus redacted summary wrapper for native-admission probes.
-- [scripts/windows/summarize-native-admission-output.py](scripts/windows/summarize-native-admission-output.py): redacts Windows native-admission command output into commit-safe Markdown.
+- [scripts/windows/summarize-native-admission-output.py](scripts/windows/summarize-native-admission-output.py): redacts Windows native-admission command output into commit-safe Markdown, including safe peer classes and TCP read length/timing shapes.
 - [scripts/windows/compare-native-admission-summaries.py](scripts/windows/compare-native-admission-summaries.py): compares two redacted Windows native-admission summaries.
 
 ## Running The macOS Probe

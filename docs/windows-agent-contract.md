@@ -241,6 +241,17 @@ python scripts/compare-native-admission-pair.py `
   --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
 ```
 
+Then compare the Windows TCP read shape with the Apple-to-Apple AWDL baseline:
+
+```powershell
+python scripts/compare-native-admission-awdl-baseline.py `
+  docs/observations/2026-06-07-redacted-uc-session-reconnect.md `
+  docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md `
+  --baseline-label apple-reconnect-awdl `
+  --windows-label shape `
+  --output docs/observations/YYYY-MM-DD-redacted-native-admission-awdl-compare.md
+```
+
 The redacted Rust mDNS summary should preserve event type, service type, port,
 TXT key names, TXT value length/class, and address count. Do not commit
 unredacted `dns-sd` or `--backend system` output unless it has been manually

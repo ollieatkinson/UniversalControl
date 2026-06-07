@@ -270,6 +270,18 @@ Pair the redacted Mac and Windows summaries:
   --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
 ```
 
+Compare the Windows TCP read shape with the Apple-to-Apple AWDL payload
+length/gap baseline:
+
+```sh
+./scripts/compare-native-admission-awdl-baseline.py \
+  docs/observations/2026-06-07-redacted-uc-session-reconnect.md \
+  docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md \
+  --baseline-label apple-reconnect-awdl \
+  --windows-label shape \
+  --output docs/observations/YYYY-MM-DD-redacted-native-admission-awdl-compare.md
+```
+
 Compare the Mac-side watcher summary against the real Apple-to-Apple session
 signal-family baseline:
 
@@ -284,10 +296,11 @@ signal-family baseline:
 
 The Windows summary preserves accepted connection counts, per-connection read
 counts, total byte counts, first-read byte counts, read byte counts, read byte
-sequences, inter-read gap buckets, Apple AWDL length-family hits,
-read-limit status, and peer-close-after-data status without committing raw peer
-addresses or payload bytes. It may also summarize hex-string lengths from older
-transcripts, but current observer output is length/timing only.
+sequences, inter-read gap buckets, safe redacted peer classes, Apple AWDL
+length-family hits, read-limit status, and peer-close-after-data status without
+committing raw peer addresses or payload bytes. It may also summarize
+hex-string lengths from older transcripts, but current observer output is
+length/timing only.
 
 This command intentionally does not copy identifiers, certificates, account
 material, hostnames, or real `rp*` values from an Apple device. With

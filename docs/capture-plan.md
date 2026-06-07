@@ -413,11 +413,11 @@ Expected evidence:
   connection, or logs a concrete rejection reason.
 - Windows summary includes whether the TCP observer accepted any connections,
   per-connection read counts, total byte counts, first-read byte counts,
-  read byte counts, read byte sequences, inter-read gap buckets, Apple AWDL
-  small/large length-family hits, read-limit status, and peer-close-after-data
-  status without raw peer addresses or payload bytes. Old transcripts may also
-  summarize hex-string lengths, but new observer output does not print payload
-  hex.
+  redacted peer classes, read byte counts, read byte sequences, inter-read gap
+  buckets, Apple AWDL small/large length-family hits, read-limit status, and
+  peer-close-after-data status without raw peer addresses or payload bytes. Old
+  transcripts may also summarize hex-string lengths, but new observer output
+  does not print payload hex.
 - Compare any Windows TCP observer length/timing behavior with the Apple
   session AWDL payload-length fingerprints before assuming the first accepted
   connection is the Universal Control data path.
@@ -429,6 +429,17 @@ Expected evidence:
     docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md \
     --label shape \
     --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
+  ```
+
+- Compare the Windows read shape with the Apple-to-Apple AWDL packet baseline:
+
+  ```sh
+  ./scripts/compare-native-admission-awdl-baseline.py \
+    docs/observations/2026-06-07-redacted-uc-session-reconnect.md \
+    docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md \
+    --baseline-label apple-reconnect-awdl \
+    --windows-label shape \
+    --output docs/observations/YYYY-MM-DD-redacted-native-admission-awdl-compare.md
   ```
 
 - The Mac-side watcher summary is compared with the Apple-to-Apple session

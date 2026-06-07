@@ -34,6 +34,7 @@ WINDOWS_HIGHLIGHTS = [
     "TCP Observer / Observer enabled",
     "TCP Observer / Accepted connection summary",
     "TCP Observer / Accepted connection lines",
+    "TCP Observer / Redacted peer classes",
     "TCP Observer / Connection outcomes",
     "TCP Observer / First-read byte counts",
     "TCP Observer / First-read hex lengths",

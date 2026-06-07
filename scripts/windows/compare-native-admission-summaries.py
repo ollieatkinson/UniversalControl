@@ -27,6 +27,7 @@ HIGHLIGHT_FIELDS = [
     "TCP Observer / Accepted connection summary",
     "TCP Observer / Accepted connection lines",
     "TCP Observer / Unique redacted peer count",
+    "TCP Observer / Redacted peer classes",
     "TCP Observer / Connection outcomes",
     "TCP Observer / First-read byte counts",
     "TCP Observer / First-read hex lengths",

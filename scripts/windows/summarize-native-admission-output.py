@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -92,6 +93,7 @@ def render_summary(path: Path, text: str) -> str:
         f"- Accepted connection summary: {observer['accepted_summary']}",
         f"- Accepted connection lines: {len(connections)}",
         f"- Unique redacted peer count: {len({connection.peer for connection in connections})}",
+        f"- Redacted peer classes: {format_counter(Counter(connection.peer for connection in connections))}",
         f"- Connection outcomes: {format_counter(Counter(connection.outcome for connection in connections))}",
         f"- First-read byte counts: {format_set(str(connection.first_read_bytes) for connection in connections if connection.first_read_bytes is not None)}",
         f"- First-read hex lengths: {format_set(str(connection.first_read_hex_len) for connection in connections if connection.first_read_hex_len is not None)}",
@@ -379,12 +381,23 @@ def summarize_errors(text: str) -> Counter[str]:
 
 
 def redact_peer(value: str) -> str:
-    if value.startswith("["):
-        return "<redacted ipv6 peer>"
-    host, separator, port = value.rpartition(":")
-    if separator and port.isdigit():
+    host, port = split_host_port(value.strip())
+    if port is not None:
         return f"<redacted {classify_host(host)} peer port_class={classify_port(port)}>"
-    return f"<redacted {classify_host(value)} peer>"
+    return f"<redacted {classify_host(host)} peer>"
+
+
+def split_host_port(value: str) -> tuple[str, str | None]:
+    bracketed = re.fullmatch(r"\[(?P<host>.+)\]:(?P<port>\d+)", value)
+    if bracketed:
+        return bracketed.group("host"), bracketed.group("port")
+    if value.startswith("[") and value.endswith("]"):
+        return value[1:-1], None
+
+    host, separator, port = value.rpartition(":")
+    if separator and port.isdigit() and ":" not in host:
+        return host, port
+    return value, None
 
 
 def classify_bind_addr(value: str) -> str:
@@ -392,17 +405,39 @@ def classify_bind_addr(value: str) -> str:
         return "unspecified"
     if value.startswith("127.") or value == "::1" or value == "[::1]":
         return "loopback"
-    if value.startswith("[") or ":" in value:
-        return "ipv6"
-    return "ipv4"
+    return classify_host(value)
 
 
 def classify_host(value: str) -> str:
-    if value.startswith("[") or ":" in value:
-        return "ipv6"
-    if re.fullmatch(r"\d+\.\d+\.\d+\.\d+", value):
-        return "ipv4"
-    return "hostname"
+    normalized = value.strip("[]")
+    host_without_zone = normalized.split("%", 1)[0]
+    try:
+        address = ipaddress.ip_address(host_without_zone)
+    except ValueError:
+        return "hostname"
+
+    if address.version == 6:
+        if address.is_loopback:
+            return "loopback-v6"
+        if address.is_link_local:
+            return "link-local-v6"
+        if address.is_private:
+            return "private-v6"
+        if address.is_multicast:
+            return "multicast-v6"
+        return "public-v6"
+
+    if address.is_loopback:
+        return "loopback-v4"
+    if address.is_link_local:
+        return "link-local-v4"
+    if address.is_private:
+        return "private-v4"
+    if address.is_multicast:
+        return "multicast-v4"
+    if address.is_reserved:
+        return "reserved-v4"
+    return "public-v4"
 
 
 def classify_port(value: str) -> str:

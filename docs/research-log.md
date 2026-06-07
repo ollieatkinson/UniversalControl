@@ -850,3 +850,25 @@ disconnect events, connected-link empty transitions, a later reconnect signal,
 target ready/accept events, pointer focus moves, keyboard focus moves, and
 remote pointing/keyboard report resets. Packet shape again points at AWDL IPv6
 link-local dynamic-port TCP as the native session data path.
+
+### Windows Admission AWDL Read-Shape Comparator
+
+Added `scripts/compare-native-admission-awdl-baseline.py` to compare a redacted
+Windows native-admission TCP observer summary with the Apple-to-Apple AWDL
+payload length/gap baseline. The comparator reads only commit-safe Markdown
+summaries, ignores endpoint direction, and reports overlap tiers such as
+`no_tcp_attempt`, `small_length_overlap`,
+`small_and_large_length_overlap`, or
+`session_like_length_and_gap_overlap`.
+
+This makes the next Windows run stricter. A connection from macOS to the
+advertised Windows port is still only visibility/admission pressure. The result
+becomes interesting only when the Windows read lengths and inter-read gaps start
+to resemble the reconnect AWDL baseline, and even then it must be paired with
+native macOS log signal plus legitimate same Apple Account/iCloud evidence from
+supported Windows Apple software before building a richer listener.
+
+The Windows native-admission summarizer now also preserves safe redacted peer
+classes such as link-local versus private address class and dynamic versus
+registered port class. It still omits raw peer addresses, hostnames, payload
+bytes, account identifiers, credential material, and TXT values.

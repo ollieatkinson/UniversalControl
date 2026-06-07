@@ -128,14 +128,16 @@ Replay normalized events into the local injector:
 ```sh
 mkdir -p artifacts
 cargo run -- probe listen-events --count 20 > artifacts/input-events.jsonl
+cargo run -- probe replay-events --path artifacts/input-events.jsonl --dry-run
 cargo run -- probe replay-events --path artifacts/input-events.jsonl --delay-ms 50
 ```
 
 Use this with a controlled foreground target. The replay file is JSONL: one
 serialized `InputEvent` per line. Blank lines and lines starting with `#` are
 ignored, so short annotations can be added while preserving replayability.
-This probe validates the capture-to-injection mapping before a full two-machine
-daemon run.
+Run `--dry-run` first to parse the file and validate native key/button mapping
+without injecting synthetic input. The full replay then validates the
+capture-to-injection path before a two-machine daemon run.
 
 ## Discovery Probes
 

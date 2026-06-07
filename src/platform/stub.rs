@@ -75,7 +75,7 @@ pub fn probe_grab_events(_count: usize, _suppress: bool) -> Result<()> {
     Ok(())
 }
 
-pub fn probe_replay_events(_path: &Path, _delay_ms: u64) -> Result<()> {
+pub fn probe_replay_events(_path: &Path, _delay_ms: u64, _dry_run: bool) -> Result<()> {
     warn!("probe replay-events is only available on macOS and Windows");
     Ok(())
 }

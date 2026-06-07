@@ -203,6 +203,10 @@ enum ProbeCommand {
 
         #[arg(long, default_value_t = 20)]
         delay_ms: u64,
+
+        /// Parse and map events without injecting them.
+        #[arg(long)]
+        dry_run: bool,
     },
     /// Inject a single key press/release.
     Inject {
@@ -361,9 +365,11 @@ async fn main() -> Result<()> {
             ProbeCommand::GrabEvents { count, suppress } => {
                 platform::probe_grab_events(count, suppress)
             }
-            ProbeCommand::ReplayEvents { path, delay_ms } => {
-                platform::probe_replay_events(&path, delay_ms)
-            }
+            ProbeCommand::ReplayEvents {
+                path,
+                delay_ms,
+                dry_run,
+            } => platform::probe_replay_events(&path, delay_ms, dry_run),
             ProbeCommand::Inject { key } => platform::probe_inject_key(&key),
             ProbeCommand::InjectMouse { x, y } => platform::probe_inject_mouse(x, y),
             ProbeCommand::InjectButton { button } => platform::probe_inject_button(&button),

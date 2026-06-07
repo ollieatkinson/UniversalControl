@@ -372,9 +372,9 @@ pub fn probe_inject_wheel(delta_x: i64, delta_y: i64) -> Result<()> {
         .map_err(|error| anyhow::anyhow!("{error}"))
 }
 
-pub fn probe_replay_events(path: &Path, delay_ms: u64) -> Result<()> {
+pub fn probe_replay_events(path: &Path, delay_ms: u64, dry_run: bool) -> Result<()> {
     eprintln!(
-        "replaying normalized input events from {}; delay_ms={delay_ms}",
+        "replaying normalized input events from {}; delay_ms={delay_ms}; dry_run={dry_run}",
         path.display()
     );
 
@@ -392,28 +392,41 @@ pub fn probe_replay_events(path: &Path, delay_ms: u64) -> Result<()> {
         let event: InputEvent = serde_json::from_str(trimmed)
             .map_err(|error| anyhow::anyhow!("{}:{}: {error}", path.display(), index + 1))?;
         print_input_event(&event);
-        inject(event)?;
+        let event_type = to_rdev_event_type(event)?;
+        if !dry_run {
+            inject_event_type(event_type)?;
+        }
         replayed += 1;
 
-        if delay_ms > 0 {
+        if !dry_run && delay_ms > 0 {
             thread::sleep(Duration::from_millis(delay_ms));
         }
     }
 
-    eprintln!("replayed {replayed} normalized input events");
+    if dry_run {
+        eprintln!("validated {replayed} normalized input events");
+    } else {
+        eprintln!("replayed {replayed} normalized input events");
+    }
     Ok(())
 }
 
 fn inject(event: InputEvent) -> Result<()> {
-    let event_type = match event {
+    inject_event_type(to_rdev_event_type(event)?)
+}
+
+fn to_rdev_event_type(event: InputEvent) -> Result<EventType> {
+    Ok(match event {
         InputEvent::KeyPress { key, .. } => EventType::KeyPress(parse_key(&key)?),
         InputEvent::KeyRelease { key } => EventType::KeyRelease(parse_key(&key)?),
         InputEvent::ButtonPress { button } => EventType::ButtonPress(parse_button(&button)?),
         InputEvent::ButtonRelease { button } => EventType::ButtonRelease(parse_button(&button)?),
         InputEvent::MouseMove { x, y } => EventType::MouseMove { x, y },
         InputEvent::Wheel { delta_x, delta_y } => EventType::Wheel { delta_x, delta_y },
-    };
+    })
+}
 
+fn inject_event_type(event_type: EventType) -> Result<()> {
     rdev::simulate(&event_type).map_err(|error| anyhow::anyhow!("{error}"))
 }
 

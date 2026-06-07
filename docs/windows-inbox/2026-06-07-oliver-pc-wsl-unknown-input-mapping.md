@@ -23,12 +23,21 @@ with explicit errors:
 Previously an unsupported name was converted to `Unknown(0)`, which could hide
 real mapping gaps during bridge or replay tests.
 
+Also added a native-only dry-run replay mode:
+
+```sh
+cargo run -- probe replay-events --path artifacts/input-events.jsonl --dry-run
+```
+
+This parses JSONL and validates key/button mapping without injecting synthetic
+input.
+
 ## Local Runtime Observation
 
 WSL uses the stub backend, so this note records the code-path change rather
-than a native Windows injection result. Native macOS and Windows runs should
-record any unsupported-name error exactly and treat it as input mapping data to
-fix deliberately.
+than a native Windows injection or dry-run result. Native macOS and Windows
+runs should record any unsupported-name error exactly and treat it as input
+mapping data to fix deliberately.
 
 ## Questions For Mac Side
 

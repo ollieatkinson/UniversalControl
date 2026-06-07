@@ -484,3 +484,8 @@ mouse button names fail with explicit errors instead of silently mapping to
 replay tests from hiding layout or platform-specific key gaps. If native macOS
 or Windows captures produce an unsupported name, commit the exact redacted
 failure context and add the intended mapping deliberately.
+
+Added `cargo run -- probe replay-events --path <file> --dry-run` so native
+macOS and Windows spike files can be parsed and mapped without sending
+synthetic input. Use this before full replay when validating Keychron captures
+or new platform-specific key names.

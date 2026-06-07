@@ -237,6 +237,16 @@ cargo run -- advertise-mdns `
   --seconds 60
 ```
 
+Capture the Windows output to an ignored transcript and summarize it before
+committing:
+
+```powershell
+cargo run -- advertise-mdns ... *> artifacts/windows-native-admission-companion-link.txt
+python scripts/windows/summarize-native-admission-output.py `
+  artifacts/windows-native-admission-companion-link.txt `
+  --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-companion-link.md
+```
+
 This minimal candidate deliberately does not copy Apple `rp*` TXT fields. It is
 only meant to answer whether `rapportd` or `UniversalControl` reacts to a
 Windows-owned `_companion-link._tcp` service at all. `--observe-tcp` records
@@ -270,6 +280,15 @@ On Windows while the macOS watcher is running:
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60
 ```
 
+Capture and summarize the Windows output:
+
+```powershell
+cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60 *> artifacts/windows-native-admission-shape.txt
+python scripts/windows/summarize-native-admission-output.py `
+  artifacts/windows-native-admission-shape.txt `
+  --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md
+```
+
 Expected evidence:
 
 - macOS browse/resolve sees `AnyKBFlow Native Shape Probe`.
@@ -279,7 +298,9 @@ Expected evidence:
   `scripts/mac/compare-mdns-watch-summaries.py`.
 - `rapportd` or `UniversalControl` either ignores the service, attempts a
   connection, or logs a concrete rejection reason.
-- Windows output includes `TCP observer summary: accepted_connections=<n>`.
+- Windows summary includes whether the TCP observer accepted any connections,
+  first-read byte counts, and first-read hex lengths without raw peer addresses
+  or payload bytes.
 - Treat any connection attempt as a signal to build a real listener next, not as
   Universal Control admission.
 

@@ -432,3 +432,17 @@ watcher summaries. The intended first use is minimal CompanionLink candidate
 versus shape-only CompanionLink candidate, preserving the Mac-side browse,
 resolve, TXT-shape, native log count, and interpretation differences without
 committing raw DNS-SD or unified-log output.
+
+### Windows Native Admission Output Summary
+
+Added `scripts/windows/summarize-native-admission-output.py` to turn the Windows
+side of coordinated native-admission runs into commit-safe Markdown. It reads
+the ignored transcript from commands such as
+`advertise-companion-link-shape --observe-tcp` and preserves service type, port,
+observer status, accepted connection count, first-read byte counts, and
+first-read hex lengths while redacting peer addresses, hostnames, and payload
+bytes.
+
+This pairs with the Mac-side `capture-native-admission.sh` summary so one
+commit can contain both sides of the same admission attempt without raw network
+identifiers.

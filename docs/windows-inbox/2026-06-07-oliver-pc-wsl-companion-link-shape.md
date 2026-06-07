@@ -18,6 +18,8 @@
   - `cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --seconds 60`
 - Added `--observe-tcp` for advertisement probes that need to record whether
   macOS attempts to connect to the published SRV port.
+- Added a Windows transcript summarizer:
+  - `python scripts/windows/summarize-native-admission-output.py artifacts/windows-native-admission-shape.txt --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md`
 - The command publishes `_companion-link._tcp` with placeholder `rp*` TXT values
   matching the redacted macOS baseline key/value classes from
   `docs/observations/2026-06-06-redacted-macos-uc-probe.md`.
@@ -47,7 +49,10 @@ On macOS first:
 On Windows while the watcher is running:
 
 ```powershell
-cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60
+cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60 *> artifacts/windows-native-admission-shape.txt
+python scripts/windows/summarize-native-admission-output.py `
+  artifacts/windows-native-admission-shape.txt `
+  --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md
 ```
 
 ## Local Runtime Observation
@@ -62,6 +67,10 @@ The TCP observer prints:
 - whether the peer closed, timed out, or sent immediate bytes
 - a short first-read hex prefix when immediate bytes are sent
 - final `accepted_connections=<n>` summary
+
+The summarizer preserves counts, service type, port, accepted connection
+counts, first-read byte counts, and first-read hex lengths. It redacts raw peer
+addresses, hostnames, and payload bytes.
 
 ## Questions For Mac Side
 

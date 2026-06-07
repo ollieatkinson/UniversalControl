@@ -142,4 +142,14 @@ Use `advertise-companion-link-shape` only while
 `capture-native-admission.sh --mode shape` is running on the Mac. Capture the
 Windows `TCP observer summary` line in the Windows note.
 
+For any command using `--observe-tcp`, redirect the full Windows output to an
+ignored file under `artifacts/`, then commit only the redacted summary:
+
+```powershell
+cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60 *> artifacts/windows-native-admission-shape.txt
+python scripts/windows/summarize-native-admission-output.py `
+  artifacts/windows-native-admission-shape.txt `
+  --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md
+```
+
 The redacted Rust mDNS output should preserve event type, service type, port, TXT key names, TXT value length/class, and address count. Do not commit unredacted `dns-sd` or `--backend system` output unless it has been manually reviewed and sanitized.

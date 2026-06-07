@@ -109,6 +109,8 @@ Expected evidence:
   concrete discovery/rejection reason.
 - The Windows TCP observer records whether anything connects to the advertised
   port and, if data is sent immediately, only a short first-read hex prefix.
+- `scripts/windows/summarize-native-admission-output.py` creates the commit-safe
+  Windows summary from the ignored command transcript.
 - The committed observation is generated from the watcher artifact summary, not
   from raw `dns-sd` or unified-log output.
 
@@ -153,6 +155,18 @@ cargo run -- advertise-companion-link-shape `
   --acknowledge-shape-experiment `
   --observe-tcp `
   --seconds 60
+```
+
+Summarize the Windows transcript before committing:
+
+```powershell
+cargo run -- advertise-companion-link-shape `
+  --acknowledge-shape-experiment `
+  --observe-tcp `
+  --seconds 60 *> artifacts/windows-native-admission-shape.txt
+python scripts/windows/summarize-native-admission-output.py `
+  artifacts/windows-native-admission-shape.txt `
+  --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md
 ```
 
 This command intentionally does not copy identifiers, certificates, account

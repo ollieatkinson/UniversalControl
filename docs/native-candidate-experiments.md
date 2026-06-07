@@ -14,14 +14,19 @@ peer `Hello` messages, local edge routing from detected display size, and a
 macOS display probe fallback are in place, but native Universal Control
 discovery is still not proven:
 
-- Windows has not yet reported whether iCloud for Windows, Apple's newer
-  Windows apps, Bonjour, account-state registry surfaces, Credential Manager
-  targets, or Apple-related certificates exist on the native Windows host. That
-  report is needed before treating same-account Continuity trust as impossible.
-- Windows has not yet proven it can resolve the Mac's `_companion-link._tcp`
-  advertisement with the Rust mDNS backend.
+- Windows now reports an Apple Account/iCloud surface worth testing:
+  `docs/windows-inbox/2026-06-07-redacted-apple-account-environment.md` has
+  `apple_account_surface_present`. Manual same-Apple-Account confirmation is
+  still required and must not be written to git as an account identifier.
+- Windows WSL/Rust mDNS did not resolve the Mac's `_companion-link._tcp`
+  advertisement in
+  `docs/windows-inbox/2026-06-07-redacted-companion-link-discovery.md`.
+  Native Windows Bonjour still needs to run from the real Windows network
+  context.
 - macOS has not yet proven it can see a Windows-advertised service on the real
-  LAN path.
+  LAN path. A manual macOS Bonjour watch advertised a project-owned
+  `_companion-link._tcp` probe and saw no Windows `_companion-link` instance;
+  see `docs/observations/2026-06-07-redacted-macos-bonjour-cross-visibility.md`.
 - macOS has not yet been observed reacting to a Windows `_companion-link._tcp`
   candidate in `rapportd` or `UniversalControl` logs.
 - `cargo run -- probe displays` now has a local macOS single-display observation,
@@ -100,6 +105,43 @@ python scripts/windows/compare-companion-link-discovery-summaries.py \
   --after-label windows-passive \
   --output docs/windows-inbox/YYYY-MM-DD-redacted-companion-link-discovery-compare.md
 ```
+
+## Experiment 1A: Mac-To-Windows Bonjour Visibility
+
+Use this when Windows has native Bonjour `dns-sd` installed and we need to
+separate LAN/mDNS visibility from Rapport or Universal Control admission.
+
+On macOS:
+
+```sh
+./scripts/mac/capture-bonjour-visibility.sh \
+  --duration 300 \
+  --expected-remote-instance "AnyKBFlow Windows Bonjour Probe"
+```
+
+On Windows, browse first:
+
+```powershell
+dns-sd -B _companion-link._tcp local
+```
+
+Then advertise a project-owned probe:
+
+```powershell
+dns-sd -R "AnyKBFlow Windows Bonjour Probe" _companion-link._tcp local 49153 probe=windows-bonjour role=windows-native-visibility
+```
+
+Expected evidence:
+
+- Windows browse sees the Mac's project-owned probe while the macOS script is
+  running.
+- macOS browse sees the Windows project-owned probe while the Windows
+  `dns-sd -R` command is running.
+- `scripts/mac/summarize-bonjour-visibility-artifact.py` writes a commit-safe
+  summary preserving only counts and yes/no expected-instance matching.
+- If either direction fails, record native Windows firewall state, network
+  profile, Bonjour service state, and whether Bonjour is bound to the real LAN
+  interface rather than WSL/NAT.
 
 ## Experiment 2: Benign Windows Advertisement
 

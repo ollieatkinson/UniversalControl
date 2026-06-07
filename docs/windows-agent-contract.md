@@ -193,6 +193,8 @@ python scripts/windows/compare-companion-link-discovery-summaries.py `
   --after-label windows-passive `
   --output docs/windows-inbox/YYYY-MM-DD-redacted-companion-link-discovery-compare.md
 cargo run -- discover-companion-link --backend system --seconds 30
+dns-sd -B _companion-link._tcp local
+dns-sd -R "AnyKBFlow Windows Bonjour Probe" _companion-link._tcp local 49153 probe=windows-bonjour role=windows-native-visibility
 python scripts/windows/capture-display-probe.py
 python scripts/windows/capture-native-admission.py --mode benign
 python scripts/windows/capture-native-admission.py --mode companion-link
@@ -209,6 +211,12 @@ For passive CompanionLink discovery, prefer
 `scripts/windows/capture-companion-link-discovery.py` because it captures the
 raw browse output to an ignored transcript, writes the redacted summary, and
 compares it against the local macOS Rust mDNS baseline in one step.
+
+When native Windows Bonjour `dns-sd` is installed, run the browse/register
+commands only while `scripts/mac/capture-bonjour-visibility.sh` is active on the
+Mac. Commit a redacted note saying whether Windows saw the Mac project-owned
+probe and whether macOS saw the Windows project-owned probe. Do not commit raw
+`dns-sd` output.
 
 Use `capture-native-admission.py --mode shape` only while
 `capture-native-admission.sh --mode shape` is running on the Mac. Commit the

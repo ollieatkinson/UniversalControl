@@ -945,6 +945,22 @@ comparison automatically, unless `--skip-awdl-compare` is passed. The Mac
 coordinator now prints the Windows wrapper command instead of a raw `cargo`
 advertisement command so normal coordinated runs produce both artifacts.
 
+Added a Mac-to-Windows Bonjour visibility workflow. The new
+`scripts/mac/capture-bonjour-visibility.sh` advertises a project-owned
+`_companion-link._tcp` probe from macOS while browsing the same service type,
+and `scripts/mac/summarize-bonjour-visibility-artifact.py` reduces the raw
+`dns-sd` output to registration state, counts, and expected remote instance
+yes/no. A manual two-window live run on 2026-06-07 showed macOS could register
+and see its project-owned probe, but no Windows `_companion-link` instance
+appeared while Windows was still installing `dns-sd`.
+
+Pulled the Windows native-check inbox from the same day. The Apple Account
+environment summary reports `apple_account_surface_present`, so same-account
+trust testing remains open through supported Apple Windows software. The WSL
+Rust mDNS browse still resolved no Mac `_companion-link._tcp` services, so the
+next visibility evidence needs native Windows Bonjour on the real LAN
+interface.
+
 ### Shared Replay Mapping Validation
 
 Responded to the Windows unknown-input-mapping note by moving replay dry-run

@@ -153,12 +153,14 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/mac/uc-probe.sh](scripts/mac/uc-probe.sh): read-only macOS probe for Universal Control/Rapport surfaces and local link-loss health state.
 - [scripts/mac/capture-uc-session.sh](scripts/mac/capture-uc-session.sh): paired Apple-to-Apple Universal Control session capture wrapper.
 - [scripts/mac/capture-native-admission.sh](scripts/mac/capture-native-admission.sh): coordinated Mac watcher plus redacted summary wrapper for Windows native-admission probes.
+- [scripts/mac/capture-bonjour-visibility.sh](scripts/mac/capture-bonjour-visibility.sh): advertises a project-owned macOS Bonjour probe while browsing for a Windows `_companion-link._tcp` probe.
 - [scripts/mac/watch-mdns-service.sh](scripts/mac/watch-mdns-service.sh): bounded mDNS plus native log watcher for Windows advertisement checks.
 - [scripts/mac/watch-companion-link-candidate.sh](scripts/mac/watch-companion-link-candidate.sh): native-focused watcher for controlled `_companion-link._tcp` candidate checks.
 - [scripts/mac/summarize-uc-probe-artifact.py](scripts/mac/summarize-uc-probe-artifact.py): redacts baseline macOS probe artifacts into commit-safe Markdown summaries.
 - [scripts/mac/summarize-universalcontrol-strings.py](scripts/mac/summarize-universalcontrol-strings.py): extracts a commit-safe UniversalControl string-surface summary for native protocol search terms.
 - [scripts/mac/compare-uc-probe-summaries.py](scripts/mac/compare-uc-probe-summaries.py): compares two redacted baseline probe summaries.
 - [scripts/mac/summarize-mdns-watch-artifact.py](scripts/mac/summarize-mdns-watch-artifact.py): redacts watcher artifacts into commit-safe Markdown summaries.
+- [scripts/mac/summarize-bonjour-visibility-artifact.py](scripts/mac/summarize-bonjour-visibility-artifact.py): redacts Mac Bonjour cross-visibility artifacts into counts and yes/no expected-peer matching.
 - [scripts/mac/compare-mdns-watch-summaries.py](scripts/mac/compare-mdns-watch-summaries.py): compares two redacted watcher summaries, especially minimal versus shape-only CompanionLink candidates.
 - [scripts/mac/compare-native-signal-baseline.py](scripts/mac/compare-native-signal-baseline.py): compares a Windows-candidate Mac watcher summary with the Apple-to-Apple session signal-family baseline.
 - [scripts/mac/summarize-uc-session-artifact.py](scripts/mac/summarize-uc-session-artifact.py): redacts paired-session artifacts into commit-safe Markdown summaries, including non-payload TCP length/gap and framing buckets when pcaps are present.

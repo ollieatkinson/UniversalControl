@@ -3,7 +3,10 @@ use std::path::Path;
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 
-use crate::protocol::{DisplayGeometry, InputEvent};
+use crate::{
+    protocol::{DisplayGeometry, InputEvent},
+    replay,
+};
 
 #[derive(Debug)]
 pub struct CaptureEvent {
@@ -75,8 +78,18 @@ pub fn probe_grab_events(_count: usize, _suppress: bool) -> Result<()> {
     Ok(())
 }
 
-pub fn probe_replay_events(_path: &Path, _delay_ms: u64, _dry_run: bool) -> Result<()> {
-    warn!("probe replay-events is only available on macOS and Windows");
+pub fn probe_replay_events(path: &Path, _delay_ms: u64, dry_run: bool) -> Result<()> {
+    if !dry_run {
+        anyhow::bail!(
+            "probe replay-events injection is only available on macOS and Windows; use --dry-run to validate JSONL mapping on this target"
+        );
+    }
+
+    warn!(
+        "probe replay-events --dry-run is validating JSONL only; native injection is unavailable on this target"
+    );
+    let validated = replay::replay_events_dry_run(path)?;
+    eprintln!("validated {validated} normalized input events");
     Ok(())
 }
 

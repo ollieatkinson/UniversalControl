@@ -907,3 +907,24 @@ buckets. These are still aggregate, non-payload fields, but they add a coarse
 encrypted/compressed-versus-structured signal for deciding whether a Windows
 read resembles the Apple AWDL baseline closely enough to justify a real parser
 or listener.
+
+### Shared Replay Mapping Validation
+
+Responded to the Windows unknown-input-mapping note by moving replay dry-run
+validation into shared code. `cargo run -- probe replay-events --dry-run` now
+parses normalized `InputEvent` JSONL and rejects unsupported key/button names
+even on the stub WSL/Linux backend, where native injection itself remains
+unavailable.
+
+The replayable key/button whitelist is now explicit and unit-tested against the
+native `rdev` mapping on macOS/Windows. Synthetic smoke checks passed for
+supported `KeyA`/`Left` events and failed with line-numbered errors for
+`unsupported key name: AudioVolumeUp` and
+`unsupported mouse button name: Unknown(0)`.
+
+`scripts/capture-input-events.py --dry-run-replay` now captures the dry-run
+transcript under ignored `artifacts/` and appends a redacted `Replay Dry Run`
+section to the committed summary with pass/fail status and unsupported
+normalized key/button names. This turns future Keychron Fn/function-row captures
+into direct mapping-gap evidence without committing typed text values or replay
+transcripts.

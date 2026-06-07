@@ -7,6 +7,7 @@ mod network;
 mod platform;
 mod preflight;
 mod protocol;
+mod replay;
 mod router;
 
 use std::path::PathBuf;

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import re
 import shlex
 import subprocess
 import sys
@@ -57,6 +58,11 @@ def main() -> int:
         help="Run replay-events --dry-run against the captured JSONL after capture.",
     )
     parser.add_argument(
+        "--replay-transcript",
+        type=Path,
+        help="Raw replay-events --dry-run transcript path under artifacts/.",
+    )
+    parser.add_argument(
         "--print-command-only",
         action="store_true",
         help="Print the capture command and exit.",
@@ -87,6 +93,11 @@ def main() -> int:
         args.route_transcript,
         repo_root / "artifacts" / f"input-events-{args.mode}-{stamp}-route.log",
     )
+    replay_transcript = resolve_path(
+        repo_root,
+        args.replay_transcript,
+        repo_root / "artifacts" / f"input-events-{args.mode}-{stamp}-replay-dry-run.log",
+    )
     output = resolve_path(
         repo_root,
         args.output,
@@ -108,11 +119,14 @@ def main() -> int:
     if args.route_config:
         print(f"Route config: {resolve_path(repo_root, args.route_config, args.route_config)}")
         print(f"Route transcript: {route_transcript}")
+    if args.dry_run_replay:
+        print(f"Replay dry-run transcript: {replay_transcript}")
     print(f"Command: {format_command(command)}\n")
 
     jsonl.parent.mkdir(parents=True, exist_ok=True)
     transcript.parent.mkdir(parents=True, exist_ok=True)
     route_transcript.parent.mkdir(parents=True, exist_ok=True)
+    replay_transcript.parent.mkdir(parents=True, exist_ok=True)
     output.parent.mkdir(parents=True, exist_ok=True)
     return_code = run_capture(command, repo_root, jsonl, transcript)
     summary_code = subprocess.run(
@@ -143,7 +157,9 @@ def main() -> int:
     else:
         route_code = 0
 
-    if args.dry_run_replay and return_code == 0 and route_code == 0:
+    replay_attempted = False
+    if args.dry_run_replay and return_code == 0:
+        replay_attempted = True
         replay_code = run_logged(
             [
                 "cargo",
@@ -156,15 +172,20 @@ def main() -> int:
                 "--dry-run",
             ],
             cwd=repo_root,
-            transcript=None,
+            transcript=replay_transcript,
         )
     else:
         replay_code = 0
+
+    if args.dry_run_replay and summary_code == 0:
+        append_replay_summary(output, replay_code, replay_transcript, replay_attempted)
 
     print(f"Wrote normalized events: {jsonl}")
     print(f"Wrote redacted summary: {output}")
     if args.route_config:
         print(f"Wrote route transcript: {route_transcript}")
+    if args.dry_run_replay:
+        print(f"Wrote replay dry-run transcript: {replay_transcript}")
     if return_code != 0:
         print(f"Capture command exited with status {return_code}", file=sys.stderr)
         return return_code
@@ -285,6 +306,66 @@ def run_logged(
             print(line, end="")
             transcript_out.write(line)
         return process.wait()
+
+
+def append_replay_summary(
+    output: Path,
+    replay_code: int,
+    transcript: Path,
+    attempted: bool,
+) -> None:
+    text = transcript.read_text(encoding="utf-8", errors="replace") if transcript.exists() else ""
+    unsupported_keys = extract_unsupported_names(text, "key")
+    unsupported_buttons = extract_unsupported_names(text, "mouse button")
+    validated = extract_validated_count(text)
+    if not attempted:
+        status = "skipped capture_failed"
+    elif replay_code == 0:
+        status = "passed"
+    else:
+        status = f"failed status={replay_code}"
+    section = [
+        "",
+        "## Replay Dry Run",
+        "",
+        f"- Command status: {status}",
+        f"- Raw dry-run transcript: `{transcript}`",
+        f"- Validated events: {validated}",
+        f"- Unsupported key names: {format_counter(unsupported_keys)}",
+        f"- Unsupported mouse button names: {format_counter(unsupported_buttons)}",
+        "- Notes:",
+        "  - Dry run parses JSONL and validates replay key/button mapping without injecting input.",
+        "  - The raw dry-run transcript may include normalized event JSON and should stay under ignored `artifacts/`.",
+        "",
+    ]
+    with output.open("a", encoding="utf-8") as output_file:
+        output_file.write("\n".join(section))
+
+
+def extract_unsupported_names(text: str, label: str) -> dict[str, int]:
+    pattern = re.compile(rf"unsupported {re.escape(label)} name: (?P<value>[^\r\n]+)")
+    counts: dict[str, int] = {}
+    for match in pattern.finditer(strip_ansi(text)):
+        value = match.group("value").strip().strip("`\"'")
+        if not value:
+            value = "<empty>"
+        counts[value] = counts.get(value, 0) + 1
+    return counts
+
+
+def extract_validated_count(text: str) -> str:
+    matches = re.findall(r"validated (?P<count>\d+) normalized input events", strip_ansi(text))
+    return matches[-1] if matches else "unknown"
+
+
+def strip_ansi(value: str) -> str:
+    return re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", value)
+
+
+def format_counter(counter: dict[str, int]) -> str:
+    if not counter:
+        return "none"
+    return ", ".join(f"`{key}`={counter[key]}" for key in sorted(counter))
 
 
 if __name__ == "__main__":

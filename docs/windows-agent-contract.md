@@ -123,11 +123,13 @@ Preferred capture command:
 python scripts/capture-input-events.py --mode listen --count 20 `
   --route-config configs/input-owner.example.toml `
   --expect-activation `
-  --min-forwarded-inputs 1
+  --min-forwarded-inputs 1 `
+  --dry-run-replay
 python scripts/capture-input-events.py --mode grab --count 20 `
   --route-config configs/input-owner.example.toml `
   --expect-activation `
-  --min-forwarded-inputs 1
+  --min-forwarded-inputs 1 `
+  --dry-run-replay
 ```
 
 Use `--mode grab-suppress` only after the non-suppressing capture has the
@@ -137,13 +139,25 @@ a redacted summary under `docs/windows-inbox/` without typed text values.
 proves whether the captured pointer path would switch to the receiver, suppress
 local events, and forward Keychron/mouse input before running the full daemon.
 The expectation flags make the route check fail if the capture never crosses the
-configured edge or forwards no input.
+configured edge or forwards no input. `--dry-run-replay` adds mapping validation
+without injecting input; the raw replay transcript remains under ignored
+`artifacts/`.
 
 Mac-side normalized event replay from
 `docs/windows-inbox/2026-06-06-oliver-pc-wsl-input-event-replay.md` is also
 pending a controlled foreground target. Replay injects the captured JSONL into
 the active desktop session, so use a disposable text field/window first and
 record whether key, pointer, button, and wheel events reproduce safely.
+
+Windows-side unsupported input mapping follow-up from
+`docs/windows-inbox/2026-06-07-oliver-pc-wsl-unknown-input-mapping.md` is
+partially answered by shared replay validation. `probe replay-events --dry-run`
+now parses JSONL and validates key/button names even on the stub WSL/Linux
+backend; non-dry-run replay still requires native macOS or Windows injection.
+Use `--dry-run-replay` with `scripts/capture-input-events.py` so the committed
+redacted summary includes a `Replay Dry Run` section with exact unsupported
+normalized names. Actual Keychron Fn/function-row evidence still needs a native
+macOS or Windows `listen-events`/`grab-events` capture.
 
 The preferred Mac-side watcher for questions 6 and 7 is:
 

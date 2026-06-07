@@ -166,8 +166,13 @@ local suppression, remote activation/deactivation, and forwarded input counts.
 Use `--expect-activation` and `--min-forwarded-inputs` to fail fast when the
 capture does not actually cross the configured edge or forward input. Run
 `replay-events --dry-run` first to parse the JSONL file and validate native
-key/button mapping without injecting synthetic input. The full replay then
-validates the capture-to-injection path before a two-machine daemon run.
+key/button mapping without injecting synthetic input. This validation is shared
+with the stub backend, so WSL/Linux can reject unsupported normalized names even
+though native injection still requires macOS or Windows. Add `--dry-run-replay`
+to `scripts/capture-input-events.py` when you want the redacted capture summary
+to record pass/fail status and exact unsupported key/button names. The full
+replay then validates the capture-to-injection path before a two-machine daemon
+run.
 
 ## Discovery Probes
 

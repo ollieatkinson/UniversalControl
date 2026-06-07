@@ -1,6 +1,4 @@
 use std::{
-    fs::File,
-    io::{BufRead, BufReader},
     path::Path,
     process,
     sync::{
@@ -24,7 +22,10 @@ use rdev::{Button, Event, EventType, Key};
 use tokio::sync::mpsc;
 use tracing::{info, warn};
 
-use crate::protocol::{DisplayGeometry, InputEvent};
+use crate::{
+    protocol::{DisplayGeometry, InputEvent},
+    replay,
+};
 
 #[derive(Debug)]
 pub struct CaptureEvent {
@@ -131,7 +132,7 @@ pub fn probe_listen_events(count: usize) -> Result<()> {
     eprintln!("listening for {} normalized input events", count.max(1));
     rdev::listen(move |event: Event| {
         if let Some(input) = from_rdev_event(&event) {
-            print_input_event(&input);
+            replay::print_input_event(&input);
             if remaining_events.fetch_sub(1, Ordering::SeqCst) <= 1 {
                 process::exit(0);
             }
@@ -303,7 +304,7 @@ pub fn probe_grab_events(count: usize, suppress: bool) -> Result<()> {
     );
     rdev::grab(move |event: Event| {
         if let Some(input) = from_rdev_event(&event) {
-            print_input_event(&input);
+            replay::print_input_event(&input);
             if remaining_events.fetch_sub(1, Ordering::SeqCst) <= 1 {
                 process::exit(0);
             }
@@ -312,13 +313,6 @@ pub fn probe_grab_events(count: usize, suppress: bool) -> Result<()> {
         if suppress { None } else { Some(event) }
     })
     .map_err(|error| anyhow::anyhow!("{error:?}"))
-}
-
-fn print_input_event(event: &InputEvent) {
-    match serde_json::to_string(event) {
-        Ok(line) => println!("{line}"),
-        Err(error) => eprintln!("failed to encode input event: {error}"),
-    }
 }
 
 fn markdown_cell(value: &str) -> String {
@@ -378,21 +372,17 @@ pub fn probe_replay_events(path: &Path, delay_ms: u64, dry_run: bool) -> Result<
         path.display()
     );
 
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
+    if dry_run {
+        let validated = replay::replay_events_dry_run(path)?;
+        eprintln!("validated {validated} normalized input events");
+        return Ok(());
+    }
+
     let mut replayed = 0usize;
-
-    for (index, line) in reader.lines().enumerate() {
-        let line = line?;
-        let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.starts_with('#') {
-            continue;
-        }
-
-        let event: InputEvent = serde_json::from_str(trimmed)
-            .map_err(|error| anyhow::anyhow!("{}:{}: {error}", path.display(), index + 1))?;
-        print_input_event(&event);
-        let event_type = to_rdev_event_type(event)?;
+    for (line_number, event) in replay::read_input_events_jsonl(path)? {
+        replay::print_input_event(&event);
+        let event_type = to_rdev_event_type(event)
+            .map_err(|error| anyhow::anyhow!("{}:{line_number}: {error}", path.display()))?;
         if !dry_run {
             inject_event_type(event_type)?;
         }
@@ -403,11 +393,7 @@ pub fn probe_replay_events(path: &Path, delay_ms: u64, dry_run: bool) -> Result<
         }
     }
 
-    if dry_run {
-        eprintln!("validated {replayed} normalized input events");
-    } else {
-        eprintln!("replayed {replayed} normalized input events");
-    }
+    eprintln!("replayed {replayed} normalized input events");
     Ok(())
 }
 
@@ -431,15 +417,17 @@ fn inject_event_type(event_type: EventType) -> Result<()> {
 }
 
 fn parse_button(value: &str) -> Result<Button> {
+    replay::validate_mouse_button_name(value)?;
     Ok(match value {
         "Left" => Button::Left,
         "Right" => Button::Right,
         "Middle" => Button::Middle,
-        _ => anyhow::bail!("unsupported mouse button name: {value}"),
+        _ => unreachable!("validated mouse button name is missing native mapping: {value}"),
     })
 }
 
 fn parse_key(value: &str) -> Result<Key> {
+    replay::validate_key_name(value)?;
     Ok(match value {
         "Alt" => Key::Alt,
         "AltGr" => Key::AltGr,
@@ -546,6 +534,25 @@ fn parse_key(value: &str) -> Result<Key> {
         "Kp9" => Key::Kp9,
         "KpDelete" => Key::KpDelete,
         "Function" => Key::Function,
-        _ => anyhow::bail!("unsupported key name: {value}"),
+        _ => unreachable!("validated key name is missing native mapping: {value}"),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn native_key_mapping_covers_replay_validator_names() {
+        for key in replay::REPLAYABLE_KEY_NAMES {
+            parse_key(key).unwrap();
+        }
+    }
+
+    #[test]
+    fn native_button_mapping_covers_replay_validator_names() {
+        for button in replay::REPLAYABLE_MOUSE_BUTTON_NAMES {
+            parse_button(button).unwrap();
+        }
+    }
 }

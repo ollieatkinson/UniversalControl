@@ -424,7 +424,9 @@ native stream, target/input, sync/layout, proximity/ranging, and AWDL/Wi-Fi P2P
 counters so the Windows admission runs can be compared against the signal
 families a real Apple peer produces. The packet summary also preserves 250 ms
 burst buckets so accepted Windows reads can be compared against Apple reconnect
-and input burst structure without payload bytes.
+and input burst structure without payload bytes. Phase-window burst hints are
+only +/-2s correlations around redacted log phase offsets; they are not decoded
+Universal Control messages.
 
 Historical summaries are count-only and can identify promising native
 `UniversalControl`, `rapportd`, proximity, or Wi-Fi peer-to-peer windows, but

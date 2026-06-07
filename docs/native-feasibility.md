@@ -26,10 +26,10 @@ Sources checked on 2026-06-07:
 
 That evidence does not prove Universal Control itself is closed to Windows, but
 it defines the main question: can a Windows peer reach the native
-Rapport/CompanionLink and `com.apple.universalcontrol` session path using either
-public protocol negotiation or a legitimate Apple Account identity source on
-Windows, such as iCloud for Windows or a future CLI login, without extracting
-protected secrets or making false platform claims?
+Rapport/CompanionLink and `com.apple.universalcontrol` session path while using
+a legitimate same-Apple-Account identity source on Windows, such as iCloud for
+Windows or a future CLI login, without extracting protected secrets or making
+false platform claims?
 
 ## Keep-Native Pass Gates
 

@@ -157,9 +157,11 @@ payload-length fingerprints: per-direction payload packet/byte counts, top
 payload lengths, an initial nonzero payload-length sequence, and inter-payload
 gap buckets. They also segment payload bursts separated by at least 250 ms of
 flow idle time, preserving burst count, packet/byte/duration/idle-gap buckets,
-length fingerprints, and initial burst offsets. Direction labels are arbitrary
-within each flow and are only useful for shape comparison. Summaries do not
-include raw packet lines, endpoints, dynamic ports, or payload bytes.
+length fingerprints, and initial burst offsets. When redacted log phase offsets
+exist, summaries also list bursts within +/-2s of first connected,
+TargetConnect, disconnect, and reconnect offsets. Direction labels are
+arbitrary within each flow and are only useful for shape comparison. Summaries
+do not include raw packet lines, endpoints, dynamic ports, or payload bytes.
 
 Active-session baselines may include intentional pointer, scroll, and short
 benign text-entry actions. Summaries should describe this as input activity

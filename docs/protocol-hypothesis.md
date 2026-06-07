@@ -135,9 +135,9 @@ The pragmatic architecture is therefore native-first with an explicit fallback:
 Native Mac-side compatibility remains viable only if these gates can be passed:
 
 1. Windows can advertise or respond in a way that causes macOS Rapport/Universal Control to consider it a candidate.
-2. The session can progress beyond discovery either before account trust is
-   required or using supported Apple Account/iCloud identity material available
-   to Windows.
+2. The session can progress beyond discovery using supported Apple
+   Account/iCloud identity material available to Windows, with the operator
+   locally confirming the same Apple Account as the Mac.
 3. The Windows peer can negotiate the `com.apple.universalcontrol` service role.
 4. The input/control data plane can be decoded and generated with keys negotiated during that session, not keys only Apple devices possess.
 5. The Mac does not require private local entitlements from the remote peer that can only exist on Apple platforms.

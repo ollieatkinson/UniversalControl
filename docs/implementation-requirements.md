@@ -53,14 +53,13 @@ NearbyInteraction, AWDL/Wi-Fi P2P, and private HID/Skylight entitlements.
 For native Windows admission, we need one of these to be true:
 
 - the required trust is negotiated during the observed session and Windows can
-  honestly participate
+  honestly participate using supported Apple Windows software signed in to the
+  same Apple Account as the Mac
 - Windows can use a legitimate Apple Account identity path, such as iCloud for
   Windows or a future CLI login, if Universal Control requires same-account
   Continuity trust
-- Windows can reach a Universal Control service route before same-account trust
-  is required
-- the missing fields are ordinary protocol fields, not protected Apple identity
-  claims
+- the missing fields after same-account authentication are ordinary protocol
+  fields, not protected Apple identity claims
 
 Native should be considered closed only if the remaining path requires
 extracting protected Apple Account or iCloud Keychain secrets, private

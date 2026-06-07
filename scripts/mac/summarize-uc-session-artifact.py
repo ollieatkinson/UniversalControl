@@ -21,6 +21,8 @@ TCPDUMP_TIMEOUT_SECONDS = 30
 PCAP_LINKTYPE_ETHERNET = 1
 PAYLOAD_BURST_GAP_SECONDS = 0.250
 INITIAL_PAYLOAD_BURST_LIMIT = 12
+PHASE_WINDOW_SECONDS = 2.0
+PHASE_WINDOW_BURST_LIMIT = 4
 
 
 @dataclass
@@ -93,7 +95,7 @@ def render_summary(artifact_dir: Path) -> str:
         "rapportd_before": parse_launchctl(read_file(artifact_dir / "launchctl-rapportd-before.txt")),
         "rapportd_after": parse_launchctl(read_file(artifact_dir / "launchctl-rapportd-after.txt")),
     }
-    pcap_summary = summarize_pcaps(artifact_dir)
+    pcap_summary = summarize_pcaps(artifact_dir, phase_signals)
 
     lines = [
         "# Redacted macOS Universal Control Session Summary",
@@ -182,6 +184,7 @@ def render_summary(artifact_dir: Path) -> str:
             f"- mDNS service mentions: {format_counter(pcap_summary['mdns_service_mentions'])}",
             f"- pcap decode failures: {pcap_summary['decode_failures']}",
             f"- pcap frame-shape decode failures: {pcap_summary['tcp_payload_shape_decode_failures']}",
+            f"- phase-window burst radius: +/-{PHASE_WINDOW_SECONDS:.1f}s around redacted session phase offsets",
             "- raw packet data: not included",
             "- raw endpoints and dynamic ports: not included",
         ]
@@ -415,8 +418,10 @@ def summarize_session_phase_signals(text: str) -> dict[str, object]:
 
     return {
         "counters": counters,
+        "first_connected_offset": first_offset(offsets["connected"]),
         "first_disconnect_offset": first_offset(offsets["disconnect"]),
         "first_reconnect_after_disconnect_offset": first_reconnect_after_disconnect_offset(offsets),
+        "first_target_connect_offset": first_offset(offsets["target_connect"]),
     }
 
 
@@ -461,6 +466,8 @@ def render_session_phase_signals(signals: dict[str, object]) -> list[str]:
         f"- Keyboard focus move lines: {counters['keyboard_focus_moves']}",
         f"- Remote pointing reset lines: {counters['remote_pointing_resets']}",
         f"- Remote keyboard reset lines: {counters['remote_keyboard_resets']}",
+        f"- First connected offset: {format_seconds(signals['first_connected_offset'])}",
+        f"- First TargetConnect offset: {format_seconds(signals['first_target_connect_offset'])}",
         f"- First disconnect offset: {format_seconds(signals['first_disconnect_offset'])}",
         f"- First reconnect-after-disconnect offset: {format_seconds(signals['first_reconnect_after_disconnect_offset'])}",
         "- Raw session IDs, device IDs, and log lines: not included",
@@ -512,7 +519,10 @@ def render_lsof_summary(counts: Counter[str]) -> list[str]:
     ]
 
 
-def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
+def summarize_pcaps(
+    artifact_dir: Path,
+    phase_signals: dict[str, object],
+) -> dict[str, object]:
     sizes: Counter[str] = Counter()
     capture_classes: Counter[str] = Counter()
     packet_capture_classes: Counter[str] = Counter()
@@ -591,9 +601,17 @@ def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
         "tcp_payload_shape_packets_by_capture": tcp_payload_shape_packets_by_capture,
         "tcp_payload_shape_decode_failures": payload_shape_decode_failures,
         "mdns_service_mentions": mdns_service_mentions,
-        "awdl_tcp_flows": top_tcp_flow_shapes(tcp_flows, first_packet_time, capture_class="awdl"),
+        "awdl_tcp_flows": top_tcp_flow_shapes(
+            tcp_flows,
+            first_packet_time,
+            phase_signals,
+            capture_class="awdl",
+        ),
         "primary_network_tcp_flows": top_tcp_flow_shapes(
-            tcp_flows, first_packet_time, capture_class="primary-network"
+            tcp_flows,
+            first_packet_time,
+            phase_signals,
+            capture_class="primary-network",
         ),
         "packet_span": seconds_between(first_packet_time, last_packet_time),
         "decode_failures": decode_failures,
@@ -894,6 +912,7 @@ def update_tcp_flow(
             "payload_burst_direction_patterns": Counter(),
             "payload_burst_length_fingerprints": Counter(),
             "initial_payload_bursts": [],
+            "payload_bursts": [],
             "current_payload_burst": None,
             "framing_first_byte_classes": Counter(),
             "framing_length_prefix_candidates": Counter(),
@@ -1110,17 +1129,20 @@ def finalize_payload_burst(flow: dict[str, object], burst: dict[str, object]) ->
 
     initial_bursts = flow["initial_payload_bursts"]
     assert isinstance(initial_bursts, list)
+    all_bursts = flow["payload_bursts"]
+    assert isinstance(all_bursts, list)
+    burst_record = {
+        "index": len(all_bursts) + 1,
+        "start_time": start_time,
+        "end_time": end_time,
+        "packets": packets,
+        "bytes": bytes_total,
+        "direction_pattern": pattern,
+        "lengths": lengths,
+    }
+    all_bursts.append(burst_record)
     if len(initial_bursts) < INITIAL_PAYLOAD_BURST_LIMIT:
-        initial_bursts.append(
-            {
-                "start_time": start_time,
-                "end_time": end_time,
-                "packets": packets,
-                "bytes": bytes_total,
-                "direction_pattern": pattern,
-                "lengths": lengths,
-            }
-        )
+        initial_bursts.append(burst_record)
 
 
 def payload_burst_packet_bucket(packets: int) -> str:
@@ -1418,6 +1440,7 @@ def tcp_flag_classes(rest: str, payload_length: int) -> Counter[str]:
 def top_tcp_flow_shapes(
     tcp_flows: dict[tuple[str, tuple[tuple[str, str], tuple[str, str]]], dict[str, object]],
     first_packet_time: datetime | None,
+    phase_signals: dict[str, object],
     *,
     capture_class: str,
     limit: int = 5,
@@ -1451,6 +1474,11 @@ def top_tcp_flow_shapes(
                 "payload_burst_length_fingerprints": flow["payload_burst_length_fingerprints"],
                 "initial_payload_bursts": initial_payload_bursts(
                     flow["initial_payload_bursts"], first_packet_time
+                ),
+                "phase_window_payload_bursts": phase_window_payload_bursts(
+                    flow["payload_bursts"],
+                    first_packet_time,
+                    phase_signals,
                 ),
                 "framing_first_byte_classes": flow["framing_first_byte_classes"],
                 "framing_length_prefix_candidates": flow["framing_length_prefix_candidates"],
@@ -1542,6 +1570,10 @@ def render_tcp_flow_shapes(flows: list[dict[str, object]]) -> list[str]:
         lines.append(
             "  - initial payload bursts: "
             + format_initial_payload_bursts(flow["initial_payload_bursts"])
+        )
+        lines.append(
+            "  - phase-window payload bursts: "
+            + format_phase_window_payload_bursts(flow["phase_window_payload_bursts"])
         )
         lines.append(
             "  - framing first-byte classes: "
@@ -1648,6 +1680,82 @@ def initial_payload_bursts(value: object, first_packet_time: datetime | None) ->
     return bursts
 
 
+def phase_window_payload_bursts(
+    bursts: object,
+    first_packet_time: datetime | None,
+    phase_signals: dict[str, object],
+) -> list[dict[str, object]]:
+    if not isinstance(bursts, list) or not bursts:
+        return []
+    phase_windows = session_phase_windows(phase_signals)
+    if not phase_windows:
+        return []
+
+    matches: list[dict[str, object]] = []
+    for phase_name, phase_offset in phase_windows:
+        phase_matches = []
+        for burst in bursts:
+            if not isinstance(burst, dict):
+                continue
+            start_time = burst.get("start_time")
+            end_time = burst.get("end_time")
+            start_offset = seconds_between(
+                first_packet_time,
+                start_time if isinstance(start_time, datetime) else None,
+            )
+            end_offset = seconds_between(
+                first_packet_time,
+                end_time if isinstance(end_time, datetime) else None,
+            )
+            if not burst_overlaps_phase_window(start_offset, end_offset, phase_offset):
+                continue
+            lengths = burst.get("lengths")
+            phase_matches.append(
+                {
+                    "phase": phase_name,
+                    "phase_offset": phase_offset,
+                    "burst_index": burst.get("index", "unknown"),
+                    "start_offset": start_offset,
+                    "end_offset": end_offset,
+                    "packets": burst.get("packets", "unknown"),
+                    "bytes": burst.get("bytes", "unknown"),
+                    "direction_pattern": burst.get("direction_pattern", "unknown"),
+                    "length_fingerprint": payload_burst_length_fingerprint(
+                        lengths if isinstance(lengths, Counter) else Counter()
+                    ),
+                }
+            )
+        matches.extend(phase_matches[:PHASE_WINDOW_BURST_LIMIT])
+    return matches
+
+
+def session_phase_windows(phase_signals: dict[str, object]) -> list[tuple[str, float]]:
+    windows: list[tuple[str, float]] = []
+    for label, key in (
+        ("first_connected", "first_connected_offset"),
+        ("first_target_connect", "first_target_connect_offset"),
+        ("first_disconnect", "first_disconnect_offset"),
+        ("first_reconnect", "first_reconnect_after_disconnect_offset"),
+    ):
+        value = phase_signals.get(key)
+        if isinstance(value, (int, float)):
+            windows.append((label, float(value)))
+    return windows
+
+
+def burst_overlaps_phase_window(
+    start_offset: float | None,
+    end_offset: float | None,
+    phase_offset: float,
+) -> bool:
+    if start_offset is None and end_offset is None:
+        return False
+    start = start_offset if start_offset is not None else end_offset
+    end = end_offset if end_offset is not None else start_offset
+    assert start is not None and end is not None
+    return start <= phase_offset + PHASE_WINDOW_SECONDS and end >= phase_offset - PHASE_WINDOW_SECONDS
+
+
 def format_initial_payload_bursts(value: object) -> str:
     if not isinstance(value, list) or not value:
         return "none"
@@ -1658,6 +1766,29 @@ def format_initial_payload_bursts(value: object) -> str:
         rendered.append(
             "`#{}:start={},end={},packets={},bytes={},pattern={},lengths={}`".format(
                 index,
+                format_seconds(item.get("start_offset")),
+                format_seconds(item.get("end_offset")),
+                item.get("packets", "unknown"),
+                item.get("bytes", "unknown"),
+                item.get("direction_pattern", "unknown"),
+                item.get("length_fingerprint", "unknown"),
+            )
+        )
+    return ", ".join(rendered) if rendered else "none"
+
+
+def format_phase_window_payload_bursts(value: object) -> str:
+    if not isinstance(value, list) or not value:
+        return "none"
+    rendered: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        rendered.append(
+            "`phase={},phase_offset={},burst=#{},start={},end={},packets={},bytes={},pattern={},lengths={}`".format(
+                item.get("phase", "unknown"),
+                format_seconds(item.get("phase_offset")),
+                item.get("burst_index", "unknown"),
                 format_seconds(item.get("start_offset")),
                 format_seconds(item.get("end_offset")),
                 item.get("packets", "unknown"),
@@ -1793,6 +1924,19 @@ def render_interpretation_notes(
     if log_counts["native_target_keywords"] or log_counts["native_sync_layout_keywords"]:
         notes.append(
             "  - Native UniversalControl/Rapport target or sync/layout counters are active, so packet bursts should be interpreted together with focus, target-ready, and layout state rather than as raw pointer traffic alone."
+        )
+
+    if any(
+        phase_signals.get(key) is not None
+        for key in (
+            "first_connected_offset",
+            "first_target_connect_offset",
+            "first_disconnect_offset",
+            "first_reconnect_after_disconnect_offset",
+        )
+    ):
+        notes.append(
+            "  - Phase-window payload bursts are correlation hints within +/-2s of redacted session phase offsets; they are not decoded messages."
         )
 
     notes.append(

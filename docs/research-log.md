@@ -26,9 +26,9 @@ alone. That does not prove native Universal Control interop is impossible, and
 it does not rule out using a legitimate Windows Apple identity source such as
 iCloud for Windows or a future CLI login. It defines the main feasibility gate:
 can a Windows peer enter the required Rapport/CompanionLink trust/session path
-through supported Apple Account material on Windows, public protocol
-negotiation, or both, without extracting protected secrets or making false
-platform claims?
+through supported Apple Account material on Windows, such as iCloud for Windows
+or a future CLI login signed in to the same Apple Account as the Mac, without
+extracting protected secrets or making false platform claims?
 
 ### Public Continuity Security Model
 
@@ -923,6 +923,13 @@ by short bidirectional 621-family bursts plus larger 1428-family bursts near
 disconnect/reconnect. Future Windows native-admission runs can now be compared
 against length, gap, burst, entropy/diversity, and framing buckets in one
 commit-safe report.
+
+Added phase-window burst hints to the Apple session summaries. The summarizer
+now carries the first connected, first TargetConnect, first disconnect, and
+first reconnect offsets into the top TCP flow render and lists payload bursts
+within +/-2s of those phases. In the reconnect baseline this makes the
+small-message AWDL 48x2 burst and larger 1428/621-family reconnect-adjacent
+bursts visible without requiring manual offset matching or raw pcap inspection.
 
 ### Shared Replay Mapping Validation
 

@@ -70,6 +70,8 @@
 - Keyboard focus move lines: 3
 - Remote pointing reset lines: 14
 - Remote keyboard reset lines: 6
+- First connected offset: 7.33s
+- First TargetConnect offset: 7.34s
 - First disconnect offset: unknown
 - First reconnect-after-disconnect offset: unknown
 - Raw session IDs, device IDs, and log lines: not included
@@ -116,6 +118,7 @@
 - mDNS service mentions: `_airplay-p2p._tcp.local.`=66, `_airplay._tcp.local.`=92, `_airport._tcp.local.`=2, `_apple-mobdev._tcp.local.`=2, `_apple-mobdev2._tcp.local.`=19, `_apple-pairable._tcp.local.`=2, `_companion-link._tcp.local.`=45, `_googlecast._tcp.local.`=9, `_ipp._tcp.local.`=2, `_ipps._tcp.local.`=2, `_ippusb._tcp.local.`=2, `_pdl-datastream._tcp.local.`=2, `_printer._tcp.local.`=2, `_ptp._tcp.local.`=2, `_raop._tcp.local.`=85, `_rdlink._tcp.local.`=12, `_remotepairing._tcp.local.`=12, `_scanner._tcp.local.`=2, `_universalcontrol._tcp.local.`=14, `_uscan._tcp.local.`=2, `_uscans._tcp.local.`=2
 - pcap decode failures: 0
 - pcap frame-shape decode failures: 0
+- phase-window burst radius: +/-2.0s around redacted session phase offsets
 - raw packet data: not included
 - raw endpoints and dynamic ports: not included
 
@@ -133,6 +136,7 @@
   - payload burst direction patterns: `a_to_b_only`=13, `bidirectional`=12
   - payload burst length fingerprints: `86x1`=3, `48x1+52x1`=1, `126x231+97x188+55x2+59x2`=1, `126x27+97x25+55x2+82x1`=1, `126x123+97x96+59x2+86x1`=1, `126x165+97x121+55x4+82x3`=1, `126x80+111x4`=1, `126x28+111x8`=1
   - initial payload bursts: `#1:start=6.23s,end=6.25s,packets=2,bytes=100,pattern=bidirectional,lengths=48x1+52x1`, `#2:start=8.10s,end=10.9s,packets=429,bytes=48374,pattern=bidirectional,lengths=126x231+97x188+55x2+59x2`, `#3:start=17.8s,end=18.0s,packets=57,bytes=6341,pattern=bidirectional,lengths=126x27+97x25+55x2+82x1`, `#4:start=18.4s,end=19.8s,packets=224,bytes=25328,pattern=bidirectional,lengths=126x123+97x96+59x2+86x1`, `#5:start=20.2s,end=22.2s,packets=302,bytes=34155,pattern=bidirectional,lengths=126x165+97x121+55x4+82x3`, `#6:start=22.5s,end=23.3s,packets=84,bytes=10524,pattern=a_to_b_only,lengths=126x80+111x4`, `#7:start=23.8s,end=24.8s,packets=36,bytes=4416,pattern=a_to_b_only,lengths=126x28+111x8`, `#8:start=25.4s,end=25.9s,packets=10,bytes=1054,pattern=a_to_b_only,lengths=111x6+97x4`, `#9:start=26.4s,end=26.5s,packets=3,bytes=378,pattern=a_to_b_only,lengths=126x3`, `#10:start=27.0s,end=28.9s,packets=292,bytes=33208,pattern=a_to_b_only,lengths=126x172+97x94+93x26`, `#11:start=29.2s,end=31.2s,packets=282,bytes=31383,pattern=a_to_b_only,lengths=126x149+93x73+97x60`, `#12:start=31.8s,end=32.0s,packets=26,bytes=3218,pattern=a_to_b_only,lengths=126x24+97x2`
+  - phase-window payload bursts: `phase=first_connected,phase_offset=7.33s,burst=#1,start=6.23s,end=6.25s,packets=2,bytes=100,pattern=bidirectional,lengths=48x1+52x1`, `phase=first_connected,phase_offset=7.33s,burst=#2,start=8.10s,end=10.9s,packets=429,bytes=48374,pattern=bidirectional,lengths=126x231+97x188+55x2+59x2`, `phase=first_target_connect,phase_offset=7.34s,burst=#1,start=6.23s,end=6.25s,packets=2,bytes=100,pattern=bidirectional,lengths=48x1+52x1`, `phase=first_target_connect,phase_offset=7.34s,burst=#2,start=8.10s,end=10.9s,packets=429,bytes=48374,pattern=bidirectional,lengths=126x231+97x188+55x2+59x2`
   - framing first-byte classes: `control`=5796
   - framing byte-class ratios: ascii=`10-49pct`=5768, `50-89pct`=28; high=`10-49pct`=3623, `50-89pct`=2173; zero=`1-9pct`=5796; control=`1-9pct`=1591, `10-49pct`=4205
   - framing entropy buckets: `4-6bits`=45, `6-7bits`=5751
@@ -153,6 +157,7 @@
   - payload burst direction patterns: `bidirectional`=15
   - payload burst length fingerprints: `621x2`=11, `1428x7+978x2+641x1+912x1`=1, `621x3+635x1+672x1`=1, `621x4`=1, `674x2+658x1`=1
   - initial payload bursts: `#1:start=6.16s,end=6.26s,packets=15,bytes=17562,pattern=bidirectional,lengths=1428x7+978x2+641x1+912x1`, `#2:start=8.04s,end=8.10s,packets=5,bytes=3170,pattern=bidirectional,lengths=621x3+635x1+672x1`, `#3:start=10.9s,end=10.9s,packets=2,bytes=1242,pattern=bidirectional,lengths=621x2`, `#4:start=17.8s,end=17.8s,packets=2,bytes=1242,pattern=bidirectional,lengths=621x2`, `#5:start=19.7s,end=19.7s,packets=2,bytes=1242,pattern=bidirectional,lengths=621x2`, `#6:start=20.2s,end=20.2s,packets=2,bytes=1242,pattern=bidirectional,lengths=621x2`, `#7:start=20.6s,end=20.7s,packets=4,bytes=2484,pattern=bidirectional,lengths=621x4`, `#8:start=36.6s,end=36.6s,packets=2,bytes=1242,pattern=bidirectional,lengths=621x2`, `#9:start=45.7s,end=45.7s,packets=2,bytes=1242,pattern=bidirectional,lengths=621x2`, `#10:start=53.4s,end=53.4s,packets=2,bytes=1242,pattern=bidirectional,lengths=621x2`, `#11:start=57.0s,end=57.1s,packets=2,bytes=1242,pattern=bidirectional,lengths=621x2`, `#12:start=64.9s,end=64.9s,packets=2,bytes=1242,pattern=bidirectional,lengths=621x2`
+  - phase-window payload bursts: `phase=first_connected,phase_offset=7.33s,burst=#1,start=6.16s,end=6.26s,packets=15,bytes=17562,pattern=bidirectional,lengths=1428x7+978x2+641x1+912x1`, `phase=first_connected,phase_offset=7.33s,burst=#2,start=8.04s,end=8.10s,packets=5,bytes=3170,pattern=bidirectional,lengths=621x3+635x1+672x1`, `phase=first_target_connect,phase_offset=7.34s,burst=#1,start=6.16s,end=6.26s,packets=15,bytes=17562,pattern=bidirectional,lengths=1428x7+978x2+641x1+912x1`, `phase=first_target_connect,phase_offset=7.34s,burst=#2,start=8.04s,end=8.10s,packets=5,bytes=3170,pattern=bidirectional,lengths=621x3+635x1+672x1`
   - framing first-byte classes: `ascii`=2, `control`=43, `high`=4
   - framing byte-class ratios: ascii=`10-49pct`=49; high=`10-49pct`=26, `50-89pct`=23; zero=`1-9pct`=49; control=`1-9pct`=2, `10-49pct`=47
   - framing entropy buckets: `7-8bits`=49
@@ -173,6 +178,7 @@
   - payload burst direction patterns: none
   - payload burst length fingerprints: none
   - initial payload bursts: none
+  - phase-window payload bursts: none
   - framing first-byte classes: none
   - framing byte-class ratios: ascii=none; high=none; zero=none; control=none
   - framing entropy buckets: none
@@ -193,6 +199,7 @@
   - payload burst direction patterns: none
   - payload burst length fingerprints: none
   - initial payload bursts: none
+  - phase-window payload bursts: none
   - framing first-byte classes: none
   - framing byte-class ratios: ascii=none; high=none; zero=none; control=none
   - framing entropy buckets: none
@@ -213,6 +220,7 @@
   - payload burst direction patterns: none
   - payload burst length fingerprints: none
   - initial payload bursts: none
+  - phase-window payload bursts: none
   - framing first-byte classes: none
   - framing byte-class ratios: ascii=none; high=none; zero=none; control=none
   - framing entropy buckets: none
@@ -237,6 +245,7 @@
   - payload burst direction patterns: `bidirectional`=2
   - payload burst length fingerprints: `1388x869+1440x2+6x1+45x1`=1, `1440x35+1398x9+1272x3+1356x3`=1
   - initial payload bursts: `#1:start=145.1s,end=145.2s,packets=878,bytes=1210794,pattern=bidirectional,lengths=1388x869+1440x2+6x1+45x1`, `#2:start=196.2s,end=196.2s,packets=56,bytes=74784,pattern=bidirectional,lengths=1440x35+1398x9+1272x3+1356x3`
+  - phase-window payload bursts: none
   - framing first-byte classes: `ascii`=313, `ascii-whitespace`=8, `control`=138, `high`=473, `zero`=2
   - framing byte-class ratios: ascii=`0pct`=1, `10-49pct`=933; high=`0pct`=1, `10-49pct`=486, `50-89pct`=447; zero=`0pct`=10, `1-9pct`=921, `10-49pct`=3; control=`1-9pct`=49, `10-49pct`=884, `50-89pct`=1
   - framing entropy buckets: `0-2bits`=1, `4-6bits`=5, `6-7bits`=1, `7-8bits`=927
@@ -257,6 +266,7 @@
   - payload burst direction patterns: `a_to_b_only`=28, `b_to_a_only`=11, `bidirectional`=83
   - payload burst length fingerprints: `172x1+188x1+332x1`=21, `24x1+28x1`=20, `24x1`=7, `28x1`=6, `28x1+32x1`=5, `161x2`=4, `188x1+332x1`=4, `172x1`=4
   - initial payload bursts: `#1:start=3.01s,end=3.18s,packets=2,bytes=52,pattern=bidirectional,lengths=24x1+28x1`, `#2:start=4.75s,end=4.93s,packets=4,bytes=880,pattern=bidirectional,lengths=188x2+172x1+332x1`, `#3:start=5.99s,end=6.00s,packets=2,bytes=496,pattern=bidirectional,lengths=176x1+320x1`, `#4:start=6.38s,end=6.38s,packets=1,bytes=160,pattern=a_to_b_only,lengths=160x1`, `#5:start=12.7s,end=12.7s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#6:start=13.0s,end=13.2s,packets=2,bytes=52,pattern=bidirectional,lengths=24x1+28x1`, `#7:start=14.5s,end=14.8s,packets=3,bytes=692,pattern=bidirectional,lengths=172x1+188x1+332x1`, `#8:start=19.1s,end=19.2s,packets=5,bytes=4222,pattern=bidirectional,lengths=1440x2+237x1+483x1+622x1`, `#9:start=19.8s,end=19.8s,packets=3,bytes=483,pattern=a_to_b_only,lengths=161x3`, `#10:start=23.0s,end=23.2s,packets=2,bytes=52,pattern=bidirectional,lengths=24x1+28x1`, `#11:start=24.6s,end=24.8s,packets=3,bytes=692,pattern=bidirectional,lengths=172x1+188x1+332x1`, `#12:start=32.9s,end=33.0s,packets=3,bytes=88,pattern=bidirectional,lengths=28x2+32x1`
+  - phase-window payload bursts: `phase=first_connected,phase_offset=7.33s,burst=#3,start=5.99s,end=6.00s,packets=2,bytes=496,pattern=bidirectional,lengths=176x1+320x1`, `phase=first_connected,phase_offset=7.33s,burst=#4,start=6.38s,end=6.38s,packets=1,bytes=160,pattern=a_to_b_only,lengths=160x1`, `phase=first_target_connect,phase_offset=7.34s,burst=#3,start=5.99s,end=6.00s,packets=2,bytes=496,pattern=bidirectional,lengths=176x1+320x1`, `phase=first_target_connect,phase_offset=7.34s,burst=#4,start=6.38s,end=6.38s,packets=1,bytes=160,pattern=a_to_b_only,lengths=160x1`
   - framing first-byte classes: `ascii`=294, `ascii-whitespace`=7, `control`=677, `high`=410, `zero`=3
   - framing byte-class ratios: ascii=`1-9pct`=1, `10-49pct`=1382, `50-89pct`=8; high=`10-49pct`=749, `50-89pct`=642; zero=`0pct`=45, `1-9pct`=1346; control=`0pct`=1, `1-9pct`=76, `10-49pct`=1314
   - framing entropy buckets: `2-4bits`=3, `4-6bits`=99, `6-7bits`=243, `7-8bits`=1046
@@ -277,6 +287,7 @@
   - payload burst direction patterns: `a_to_b_only`=34, `b_to_a_only`=4, `bidirectional`=15
   - payload burst length fingerprints: `28x1+32x1`=6, `914x1`=2, `1388x266+1440x3+80x1+184x1`=1, `1440x17+117x1+525x1`=1, `930x1`=1, `50x11+51x7+48x4+47x3`=1, `51x9+50x6+53x4+46x3`=1, `1440x9+71x2+189x1`=1
   - initial payload bursts: `#1:start=126.8s,end=127.4s,packets=276,bytes=375443,pattern=bidirectional,lengths=1388x266+1440x3+80x1+184x1`, `#2:start=129.5s,end=129.6s,packets=19,bytes=25122,pattern=a_to_b_only,lengths=1440x17+117x1+525x1`, `#3:start=132.8s,end=132.8s,packets=1,bytes=930,pattern=a_to_b_only,lengths=930x1`, `#4:start=142.3s,end=143.6s,packets=39,bytes=5153,pattern=a_to_b_only,lengths=50x11+51x7+48x4+47x3`, `#5:start=144.1s,end=144.3s,packets=45,bytes=4649,pattern=a_to_b_only,lengths=51x9+50x6+53x4+46x3`, `#6:start=144.6s,end=144.6s,packets=12,bytes=13291,pattern=a_to_b_only,lengths=1440x9+71x2+189x1`, `#7:start=147.2s,end=147.2s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#8:start=167.2s,end=167.2s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#9:start=187.3s,end=187.3s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#10:start=196.7s,end=196.7s,packets=26,bytes=35086,pattern=b_to_a_only,lengths=1388x25+386x1`, `#11:start=197.0s,end=197.0s,packets=19,bytes=24616,pattern=a_to_b_only,lengths=1440x16+525x2+526x1`, `#12:start=198.1s,end=198.1s,packets=1,bytes=931,pattern=a_to_b_only,lengths=931x1`
+  - phase-window payload bursts: none
   - framing first-byte classes: `ascii`=250, `ascii-whitespace`=6, `control`=2191, `high`=302, `zero`=3
   - framing byte-class ratios: ascii=`10-49pct`=2699, `50-89pct`=53; high=`10-49pct`=1876, `50-89pct`=876; zero=`0pct`=18, `1-9pct`=2733, `10-49pct`=1; control=`0pct`=1, `1-9pct`=161, `10-49pct`=2590
   - framing entropy buckets: `2-4bits`=1, `4-6bits`=1948, `6-7bits`=113, `7-8bits`=690
@@ -297,6 +308,7 @@
   - payload burst direction patterns: `a_to_b_only`=14, `b_to_a_only`=1, `bidirectional`=19
   - payload burst length fingerprints: `28x1+32x1`=10, `28x2+32x1`=2, `916x1`=2, `1388x10+261x1+551x1`=1, `1440x16+1088x1+1090x1`=1, `50x9+48x7+49x7+51x6`=1, `51x13+49x10+48x7+50x7`=1, `1440x9+213x1+620x1`=1
   - initial payload bursts: `#1:start=18.3s,end=18.3s,packets=3,bytes=88,pattern=bidirectional,lengths=28x2+32x1`, `#2:start=38.4s,end=38.4s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#3:start=58.6s,end=58.6s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#4:start=78.8s,end=78.8s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#5:start=98.9s,end=98.9s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#6:start=119.0s,end=119.0s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#7:start=139.1s,end=139.1s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#8:start=159.2s,end=159.2s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#9:start=179.3s,end=179.3s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#10:start=199.4s,end=199.4s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#11:start=219.5s,end=219.5s,packets=2,bytes=60,pattern=bidirectional,lengths=28x1+32x1`, `#12:start=219.8s,end=220.0s,packets=12,bytes=14692,pattern=bidirectional,lengths=1388x10+261x1+551x1`
+  - phase-window payload bursts: none
   - framing first-byte classes: `ascii`=42, `ascii-whitespace`=3, `control`=2835, `high`=81, `zero`=1
   - framing byte-class ratios: ascii=`10-49pct`=2906, `50-89pct`=56; high=`10-49pct`=2184, `50-89pct`=778; zero=`0pct`=10, `1-9pct`=2952; control=`1-9pct`=171, `10-49pct`=2791
   - framing entropy buckets: `4-6bits`=2714, `6-7bits`=76, `7-8bits`=172
@@ -317,6 +329,7 @@
   - payload burst direction patterns: `bidirectional`=3
   - payload burst length fingerprints: `1388x74+45x2+1440x2+6x1`=1, `1388x68+311x1+628x1+1398x1`=1, `1388x75+309x1+701x1+1398x1`=1
   - initial payload bursts: `#1:start=170.0s,end=170.3s,packets=86,bytes=108317,pattern=bidirectional,lengths=1388x74+45x2+1440x2+6x1`, `#2:start=230.0s,end=230.1s,packets=71,bytes=96721,pattern=bidirectional,lengths=1388x68+311x1+628x1+1398x1`, `#3:start=290.0s,end=290.1s,packets=78,bytes=106508,pattern=bidirectional,lengths=1388x75+309x1+701x1+1398x1`
+  - phase-window payload bursts: none
   - framing first-byte classes: `ascii`=79, `ascii-whitespace`=2, `control`=47, `high`=106, `zero`=1
   - framing byte-class ratios: ascii=`0pct`=1, `10-49pct`=234; high=`0pct`=1, `10-49pct`=119, `50-89pct`=115; zero=`0pct`=1, `1-9pct`=231, `10-49pct`=3; control=`1-9pct`=17, `10-49pct`=217, `50-89pct`=1
   - framing entropy buckets: `0-2bits`=1, `4-6bits`=5, `6-7bits`=1, `7-8bits`=228
@@ -346,5 +359,6 @@
   - Decoded pcap timing exceeds the requested capture duration; treat packet and unified-log counts as active-session signal shape rather than an exact bounded window.
   - The strongest packet clue is the dominant AWDL IPv6 link-local dynamic-port TCP flow. A Windows native probe that reaches admission should be compared against this flow's payload-length frequencies, initial length sequence, and gap buckets before chasing generic primary-network HTTPS traffic.
   - Native UniversalControl/Rapport target or sync/layout counters are active, so packet bursts should be interpreted together with focus, target-ready, and layout state rather than as raw pointer traffic alone.
+  - Phase-window payload bursts are correlation hints within +/-2s of redacted session phase offsets; they are not decoded messages.
   - The action timeline includes pointer movement, scrolling, and harmless key activity; interpret input/action counters and packet bursts as mixed input activity, not pointer-only traffic. Literal typed text is intentionally not recorded.
   - Do not paste raw hostnames, addresses, TXT values, interface identifiers, packet payloads, typed text, or unified-log lines.

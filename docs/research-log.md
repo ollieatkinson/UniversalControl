@@ -381,7 +381,7 @@ values matching the redacted local macOS baseline key/value classes:
 
 - `rpAD`, `rpHA`, `rpHI`, `rpHN`: hex length 12
 - `rpBA`: MAC-like placeholder
-- `rpFl`: hex length 5
+- `rpFl`: `0x`-prefixed hex, seven TXT bytes with five hex digits
 - `rpMac`: hex length 1
 - `rpVr`: number
 
@@ -510,3 +510,23 @@ changed recent unified-log counters and parsed Rapport event/message IDs.
 Fixed `scripts/mac/summarize-uc-probe-artifact.py` to parse normal `dns-sd`
 timestamp lines with leading whitespace. Without that, a valid browse/resolve
 capture could be summarized incorrectly as `Events: none observed`.
+
+### Redacted Rust CompanionLink Discovery Baseline
+
+Added `scripts/windows/summarize-companion-link-discovery-output.py` to turn
+`discover-companion-link --backend rust-mdns --redact` transcripts into
+commit-safe Markdown summaries. It preserves search/found/resolved counts,
+service type, port, redacted host/fullname lengths, address counts, and TXT
+key/value length classes.
+
+Recorded `docs/observations/2026-06-07-redacted-macos-rust-mdns-companion-link.md`
+from `cargo run -- discover-companion-link --backend rust-mdns --seconds 10
+--redact`. The local Rust mDNS backend resolved `_companion-link._tcp.local.`
+on port `61833`, preserved address count and redacted TXT key/value
+length/classes, and confirmed the exact output shape Windows should produce for
+the passive browse gate.
+
+That run also exposed that `rpFl` is `0x`-prefixed in the Rust redacted output.
+Updated the shape-only CompanionLink advertiser to use a non-sensitive
+`0x`-prefixed placeholder and taught the Rust redactor to classify this as
+`hex-prefixed` instead of generic text.

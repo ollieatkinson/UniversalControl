@@ -31,10 +31,13 @@ discovery is still not proven:
 On Windows:
 
 ```powershell
-cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact
+cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact *> artifacts/windows-companion-link-discovery.txt
+python scripts/windows/summarize-companion-link-discovery-output.py `
+  artifacts/windows-companion-link-discovery.txt `
+  --output docs/windows-inbox/YYYY-MM-DD-redacted-companion-link-discovery.md
 ```
 
-Commit the redacted output in a Windows note. The important signal is whether
+Commit the redacted summary in a Windows note. The important signal is whether
 Windows sees a `service_resolved` event, the dynamic port, TXT key names, TXT
 value length/class, and address count.
 
@@ -128,7 +131,7 @@ values that match the observed key set and value classes:
 
 - `rpAD`, `rpHA`, `rpHI`, `rpHN`: hex length 12
 - `rpBA`: MAC-like placeholder
-- `rpFl`: hex length 5
+- `rpFl`: `0x`-prefixed hex, seven TXT bytes with five hex digits
 - `rpMac`: hex length 1
 - `rpVr`: number
 

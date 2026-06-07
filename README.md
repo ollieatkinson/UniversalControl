@@ -41,7 +41,8 @@ Useful variants:
 ```sh
 cargo run -- discover-companion-link --backend system --seconds 10
 cargo run -- discover-companion-link --backend rust-mdns --seconds 10
-cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact
+cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact > artifacts/windows-companion-link-discovery.txt 2>&1
+scripts/windows/summarize-companion-link-discovery-output.py artifacts/windows-companion-link-discovery.txt
 ```
 
 `auto` uses the system `dns-sd` command when available, otherwise it uses the pure Rust mDNS backend. With `--redact`, `auto` uses the Rust backend because system `dns-sd` output is pass-through and cannot be sanitized. Review unredacted output before sharing because hostnames, addresses, instance names, and TXT values can be stable identifiers.
@@ -120,6 +121,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/mac/compare-mdns-watch-summaries.py](scripts/mac/compare-mdns-watch-summaries.py): compares two redacted watcher summaries, especially minimal versus shape-only CompanionLink candidates.
 - [scripts/mac/summarize-uc-session-artifact.py](scripts/mac/summarize-uc-session-artifact.py): redacts paired-session artifacts into commit-safe Markdown summaries.
 - [scripts/compare-native-admission-pair.py](scripts/compare-native-admission-pair.py): pairs redacted Mac watcher and Windows TCP-observer summaries into one admission report.
+- [scripts/windows/summarize-companion-link-discovery-output.py](scripts/windows/summarize-companion-link-discovery-output.py): redacts `discover-companion-link --redact` output into commit-safe Markdown.
 - [scripts/windows/summarize-native-admission-output.py](scripts/windows/summarize-native-admission-output.py): redacts Windows native-admission command output into commit-safe Markdown.
 - [scripts/windows/compare-native-admission-summaries.py](scripts/windows/compare-native-admission-summaries.py): compares two redacted Windows native-admission summaries.
 

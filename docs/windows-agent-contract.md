@@ -138,7 +138,10 @@ For the shape-only follow-up, use:
 Useful commands from this repo:
 
 ```powershell
-cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact
+cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact *> artifacts/windows-companion-link-discovery.txt
+python scripts/windows/summarize-companion-link-discovery-output.py `
+  artifacts/windows-companion-link-discovery.txt `
+  --output docs/windows-inbox/YYYY-MM-DD-redacted-companion-link-discovery.md
 cargo run -- discover-companion-link --backend system --seconds 30
 cargo run -- probe displays
 cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
@@ -182,4 +185,7 @@ python scripts/compare-native-admission-pair.py `
   --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
 ```
 
-The redacted Rust mDNS output should preserve event type, service type, port, TXT key names, TXT value length/class, and address count. Do not commit unredacted `dns-sd` or `--backend system` output unless it has been manually reviewed and sanitized.
+The redacted Rust mDNS summary should preserve event type, service type, port,
+TXT key names, TXT value length/class, and address count. Do not commit
+unredacted `dns-sd` or `--backend system` output unless it has been manually
+reviewed and sanitized.

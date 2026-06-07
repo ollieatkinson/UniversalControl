@@ -22,7 +22,7 @@ const TCP_OBSERVER_READ_CHUNK_BYTES: usize = 256;
 const COMPANION_LINK_SHAPE_TXT: [(&str, &str); 8] = [
     ("rpAD", "000000000001"),
     ("rpBA", "02:00:00:00:00:01"),
-    ("rpFl", "abcde"),
+    ("rpFl", "0xabcde"),
     ("rpHA", "000000000002"),
     ("rpHI", "000000000003"),
     ("rpHN", "000000000004"),
@@ -678,6 +678,12 @@ fn classify_txt_value(val: Option<&[u8]>) -> &'static str {
     if text.chars().all(|character| character.is_ascii_digit()) {
         return "integer";
     }
+    if let Some(hex) = text.strip_prefix("0x").or_else(|| text.strip_prefix("0X"))
+        && !hex.is_empty()
+        && hex.chars().all(|character| character.is_ascii_hexdigit())
+    {
+        return "hex-prefixed";
+    }
     if looks_like_version(text) {
         return "version";
     }
@@ -900,8 +906,14 @@ mod tests {
         assert!(properties["rpAD"].chars().all(|ch| ch.is_ascii_hexdigit()));
         assert_eq!(properties["rpAD"].len(), 12);
         assert_eq!(properties["rpBA"], "02:00:00:00:00:01");
-        assert!(properties["rpFl"].chars().all(|ch| ch.is_ascii_hexdigit()));
-        assert_eq!(properties["rpFl"].len(), 5);
+        assert!(properties["rpFl"].starts_with("0x"));
+        assert_eq!(properties["rpFl"].len(), 7);
+        assert!(
+            properties["rpFl"]
+                .trim_start_matches("0x")
+                .chars()
+                .all(|ch| ch.is_ascii_hexdigit())
+        );
         assert!(properties["rpHA"].chars().all(|ch| ch.is_ascii_hexdigit()));
         assert_eq!(properties["rpHA"].len(), 12);
         assert!(properties["rpHI"].chars().all(|ch| ch.is_ascii_hexdigit()));
@@ -975,6 +987,10 @@ mod tests {
         assert_eq!(classify_txt_value(Some(b"true".as_slice())), "boolean");
         assert_eq!(classify_txt_value(Some(b"1234".as_slice())), "integer");
         assert_eq!(classify_txt_value(Some(b"1.2.3".as_slice())), "version");
+        assert_eq!(
+            classify_txt_value(Some(b"0x20040".as_slice())),
+            "hex-prefixed"
+        );
         assert_eq!(
             classify_txt_value(Some(b"00:11:22:33:44:55".as_slice())),
             "mac-like"

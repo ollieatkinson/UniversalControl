@@ -141,7 +141,10 @@ Resolve-DnsName -Type PTR _companion-link._tcp.local
 Repo-native discovery command:
 
 ```powershell
-cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact
+cargo run -- discover-companion-link --backend rust-mdns --seconds 30 --redact *> artifacts/windows-companion-link-discovery.txt
+python scripts/windows/summarize-companion-link-discovery-output.py `
+  artifacts/windows-companion-link-discovery.txt `
+  --output docs/windows-inbox/YYYY-MM-DD-redacted-companion-link-discovery.md
 ```
 
 Repo-native display geometry command:

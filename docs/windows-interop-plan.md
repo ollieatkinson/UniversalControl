@@ -33,7 +33,8 @@ Work items:
 1. Use `cargo run -- discover-companion-link --backend rust-mdns --seconds 30
    --redact` on Windows for passive DNS-SD browsing of
    `_companion-link._tcp`, then summarize it with
-   `scripts/windows/summarize-companion-link-discovery-output.py`.
+   `scripts/windows/summarize-companion-link-discovery-output.py` and compare
+   it with `scripts/windows/compare-companion-link-discovery-summaries.py`.
 2. Parse and log TXT records without assigning meanings prematurely.
 3. Compare the Rust mDNS backend with `--backend system` if Bonjour's `dns-sd.exe` is installed.
 4. Use `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe` to prove macOS can see and resolve a Windows-advertised service.

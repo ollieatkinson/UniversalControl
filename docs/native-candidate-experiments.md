@@ -41,6 +41,17 @@ Commit the redacted summary in a Windows note. The important signal is whether
 Windows sees a `service_resolved` event, the dynamic port, TXT key names, TXT
 value length/class, and address count.
 
+Compare the Windows summary against the local macOS Rust mDNS baseline:
+
+```sh
+python scripts/windows/compare-companion-link-discovery-summaries.py \
+  docs/observations/2026-06-07-redacted-macos-rust-mdns-companion-link.md \
+  docs/windows-inbox/YYYY-MM-DD-redacted-companion-link-discovery.md \
+  --before-label local-macos-rust-mdns \
+  --after-label windows-passive \
+  --output docs/windows-inbox/YYYY-MM-DD-redacted-companion-link-discovery-compare.md
+```
+
 ## Experiment 2: Benign Windows Advertisement
 
 On Windows:

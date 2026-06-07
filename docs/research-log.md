@@ -543,3 +543,9 @@ Updated the Mac-side UC probe and mDNS watcher summarizers to use the same
 2026-06-07 redacted macOS UC probe summaries from their raw artifacts so the
 baseline, Rust mDNS discovery output, and shape-only Windows advertiser all
 preserve the same `rpFl` wire shape.
+
+Added `scripts/windows/compare-companion-link-discovery-summaries.py` so the
+Windows passive browse summary can be compared directly against
+`docs/observations/2026-06-07-redacted-macos-rust-mdns-companion-link.md`. The
+comparison highlights service resolution, port, address count, TXT keys, and
+TXT value length/classes while ignoring source transcript paths by default.

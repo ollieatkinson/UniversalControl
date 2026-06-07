@@ -108,7 +108,8 @@ Expected evidence:
 - `rapportd` and `UniversalControl` logs either ignore the service or record a
   concrete discovery/rejection reason.
 - The Windows TCP observer records whether anything connects to the advertised
-  port and, if data is sent immediately, only a short first-read hex prefix.
+  port and, if data is sent immediately, bounded read counts, byte counts, and
+  hex lengths without raw payload bytes.
 - `scripts/windows/summarize-native-admission-output.py` creates the commit-safe
   Windows summary from the ignored command transcript.
 - The committed observation is generated from the watcher artifact summary, not
@@ -178,6 +179,11 @@ Pair the redacted Mac and Windows summaries:
   --label shape \
   --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
 ```
+
+The Windows summary preserves accepted connection counts, per-connection read
+counts, total byte counts, first-read byte counts, hex-string lengths,
+read-limit status, and peer-close-after-data status without committing raw peer
+addresses or payload bytes.
 
 This command intentionally does not copy identifiers, certificates, account
 material, hostnames, or real `rp*` values from an Apple device. With

@@ -31,6 +31,11 @@ WINDOWS_HIGHLIGHTS = [
     "TCP Observer / Connection outcomes",
     "TCP Observer / First-read byte counts",
     "TCP Observer / First-read hex lengths",
+    "TCP Observer / Per-connection read counts",
+    "TCP Observer / Per-connection total byte counts",
+    "TCP Observer / Read limit reached",
+    "TCP Observer / Closed by peer after data",
+    "TCP Observer / Additional-read hex lengths",
     "Interpretation / macOS attempted advertised TCP port",
 ]
 
@@ -127,7 +132,7 @@ def render_report(
             "- DNS-SD browse/resolve alone is visibility, not native admission.",
             "- A Windows TCP observer connection is evidence that macOS tried the advertised SRV endpoint.",
             "- Candidate or rejection keywords in native macOS logs should be inspected locally in raw artifacts before drawing conclusions.",
-            "- Do not commit raw peer addresses, hostnames, TXT values, log lines, or first-read payload bytes.",
+            "- Do not commit raw peer addresses, hostnames, TXT values, log lines, or TCP payload bytes.",
             "",
         ]
     )

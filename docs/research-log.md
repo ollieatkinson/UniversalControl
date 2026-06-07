@@ -454,6 +454,13 @@ the Windows-side advertised service/port, TCP observer status, accepted
 connection counts, connection outcomes, first-read byte counts, and first-read
 hex lengths without raw peer addresses or payload bytes.
 
+Expanded the `--observe-tcp` admission observer from a single first-read sample
+to a bounded multi-read transcript. It still avoids committing raw payloads:
+the Windows summarizer preserves accepted connection counts, read counts, byte
+counts, read durations, hex-string lengths, read-limit status, and peer-close
+status. This is the next useful evidence if macOS resolves a Windows
+`_companion-link._tcp` candidate and attempts the advertised port.
+
 ### Local macOS Bridge Preflight
 
 Recorded `docs/observations/2026-06-07-local-macos-bridge-preflight.md` after

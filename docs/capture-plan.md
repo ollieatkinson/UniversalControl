@@ -301,8 +301,9 @@ Expected evidence:
 - `rapportd` or `UniversalControl` either ignores the service, attempts a
   connection, or logs a concrete rejection reason.
 - Windows summary includes whether the TCP observer accepted any connections,
-  first-read byte counts, and first-read hex lengths without raw peer addresses
-  or payload bytes.
+  per-connection read counts, total byte counts, first-read byte counts,
+  first-read hex lengths, additional-read hex lengths, read-limit status, and
+  peer-close-after-data status without raw peer addresses or payload bytes.
 - The paired report combines the Mac and Windows summaries:
 
   ```sh
@@ -313,8 +314,8 @@ Expected evidence:
     --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
   ```
 
-- Treat any connection attempt as a signal to build a real listener next, not as
-  Universal Control admission.
+- Treat any connection attempt as a signal to inspect the bounded read summary
+  and build a real listener next, not as Universal Control admission.
 
 ## First Experiments
 

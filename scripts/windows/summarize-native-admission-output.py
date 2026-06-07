@@ -17,6 +17,12 @@ class ObserverConnection:
     outcome: str = "unknown"
     first_read_bytes: int | None = None
     first_read_hex_len: int | None = None
+    read_count: int | None = None
+    total_bytes: int | None = None
+    duration_ms: int | None = None
+    read_limit_reached: bool | None = None
+    closed_by_peer: bool | None = None
+    read_hex_lens: list[int] | None = None
 
 
 def main() -> int:
@@ -81,6 +87,12 @@ def render_summary(path: Path, text: str) -> str:
         f"- Connection outcomes: {format_counter(Counter(connection.outcome for connection in connections))}",
         f"- First-read byte counts: {format_set(str(connection.first_read_bytes) for connection in connections if connection.first_read_bytes is not None)}",
         f"- First-read hex lengths: {format_set(str(connection.first_read_hex_len) for connection in connections if connection.first_read_hex_len is not None)}",
+        f"- Per-connection read counts: {format_set(str(connection.read_count) for connection in connections if connection.read_count is not None)}",
+        f"- Per-connection total byte counts: {format_set(str(connection.total_bytes) for connection in connections if connection.total_bytes is not None)}",
+        f"- Per-connection duration ms: {format_set(str(connection.duration_ms) for connection in connections if connection.duration_ms is not None)}",
+        f"- Read limit reached: {format_bool(any(connection.read_limit_reached for connection in connections))}",
+        f"- Closed by peer after data: {format_bool(any(connection.closed_by_peer for connection in connections))}",
+        f"- Additional-read hex lengths: {format_set(str(length) for connection in connections for length in (connection.read_hex_lens or []))}",
         "",
         "## Interpretation",
         "",
@@ -153,6 +165,12 @@ def parse_connections(text: str) -> list[ObserverConnection]:
     first_read_pattern = re.compile(
         r"^TCP observer connection #(?P<index>\d+) first_read_bytes=(?P<bytes>\d+) first_read_hex=(?P<hex>[0-9a-fA-F]*)$"
     )
+    read_pattern = re.compile(
+        r"^TCP observer connection #(?P<index>\d+) read #(?P<read_index>\d+) elapsed_ms=(?P<elapsed>\d+) bytes=(?P<bytes>\d+) hex_prefix=(?P<hex>[0-9a-fA-F]*)$"
+    )
+    summary_pattern = re.compile(
+        r"^TCP observer connection #(?P<index>\d+) summary reads=(?P<reads>\d+) total_bytes=(?P<total_bytes>\d+) duration_ms=(?P<duration_ms>\d+) read_limit_reached=(?P<read_limit_reached>true|false) closed_by_peer=(?P<closed_by_peer>true|false)$"
+    )
     closed_pattern = re.compile(r"^TCP observer connection #(?P<index>\d+) closed without data$")
     timeout_pattern = re.compile(
         r"^TCP observer connection #(?P<index>\d+) produced no data before timeout$"
@@ -179,6 +197,30 @@ def parse_connections(text: str) -> list[ObserverConnection]:
             connection.outcome = "first_read"
             connection.first_read_bytes = int(first_read.group("bytes"))
             connection.first_read_hex_len = len(first_read.group("hex"))
+            continue
+
+        read = read_pattern.match(stripped)
+        if read:
+            connection = connections.setdefault(
+                read.group("index"),
+                ObserverConnection(index=read.group("index"), peer="<unknown>"),
+            )
+            if connection.read_hex_lens is None:
+                connection.read_hex_lens = []
+            connection.read_hex_lens.append(len(read.group("hex")))
+            continue
+
+        summary = summary_pattern.match(stripped)
+        if summary:
+            connection = connections.setdefault(
+                summary.group("index"),
+                ObserverConnection(index=summary.group("index"), peer="<unknown>"),
+            )
+            connection.read_count = int(summary.group("reads"))
+            connection.total_bytes = int(summary.group("total_bytes"))
+            connection.duration_ms = int(summary.group("duration_ms"))
+            connection.read_limit_reached = summary.group("read_limit_reached") == "true"
+            connection.closed_by_peer = summary.group("closed_by_peer") == "true"
             continue
 
         for pattern, outcome in (

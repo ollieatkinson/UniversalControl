@@ -17,6 +17,8 @@ use mdns_sd::{ResolvedService, ServiceDaemon, ServiceEvent, ServiceInfo};
 const COMPANION_LINK_SERVICE: &str = "_companion-link._tcp.local.";
 const DNS_SD_SERVICE: &str = "_companion-link._tcp";
 const ANYKBFLOW_SERVICE: &str = "_anykbflow._tcp.local.";
+const TCP_OBSERVER_READ_LIMIT: usize = 8;
+const TCP_OBSERVER_READ_CHUNK_BYTES: usize = 256;
 const COMPANION_LINK_SHAPE_TXT: [(&str, &str); 8] = [
     ("rpAD", "000000000001"),
     ("rpBA", "02:00:00:00:00:01"),
@@ -272,27 +274,7 @@ fn run_tcp_observer(
                     continue;
                 }
 
-                let mut buffer = [0u8; 64];
-                match stream.read(&mut buffer) {
-                    Ok(0) => println!("TCP observer connection #{index} closed without data"),
-                    Ok(bytes) => println!(
-                        "TCP observer connection #{index} first_read_bytes={bytes} first_read_hex={}",
-                        hex_prefix(&buffer[..bytes])
-                    ),
-                    Err(error)
-                        if matches!(
-                            error.kind(),
-                            io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut
-                        ) =>
-                    {
-                        println!(
-                            "TCP observer connection #{index} produced no data before timeout"
-                        );
-                    }
-                    Err(error) => {
-                        eprintln!("TCP observer read error on connection #{index}: {error}");
-                    }
-                }
+                observe_tcp_connection(&mut stream, index);
             }
             Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
                 thread::sleep(Duration::from_millis(50));
@@ -302,6 +284,65 @@ fn run_tcp_observer(
                 thread::sleep(Duration::from_millis(250));
             }
         }
+    }
+}
+
+fn observe_tcp_connection(stream: &mut impl Read, index: usize) {
+    let started = Instant::now();
+    let mut buffer = [0u8; TCP_OBSERVER_READ_CHUNK_BYTES];
+    let mut reads = 0usize;
+    let mut total_bytes = 0usize;
+    let mut closed_by_peer = false;
+
+    for read_index in 1..=TCP_OBSERVER_READ_LIMIT {
+        match stream.read(&mut buffer) {
+            Ok(0) => {
+                if reads == 0 {
+                    println!("TCP observer connection #{index} closed without data");
+                } else {
+                    closed_by_peer = true;
+                }
+                break;
+            }
+            Ok(bytes) => {
+                reads += 1;
+                total_bytes += bytes;
+                let hex = hex_prefix(&buffer[..bytes]);
+                if read_index == 1 {
+                    println!(
+                        "TCP observer connection #{index} first_read_bytes={bytes} first_read_hex={hex}"
+                    );
+                } else {
+                    println!(
+                        "TCP observer connection #{index} read #{read_index} elapsed_ms={} bytes={bytes} hex_prefix={hex}",
+                        started.elapsed().as_millis()
+                    );
+                }
+            }
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut
+                ) =>
+            {
+                if reads == 0 {
+                    println!("TCP observer connection #{index} produced no data before timeout");
+                }
+                break;
+            }
+            Err(error) => {
+                eprintln!("TCP observer read error on connection #{index}: {error}");
+                break;
+            }
+        }
+    }
+
+    if reads > 0 {
+        println!(
+            "TCP observer connection #{index} summary reads={reads} total_bytes={total_bytes} duration_ms={} read_limit_reached={} closed_by_peer={closed_by_peer}",
+            started.elapsed().as_millis(),
+            reads >= TCP_OBSERVER_READ_LIMIT
+        );
     }
 }
 

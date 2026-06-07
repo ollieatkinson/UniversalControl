@@ -30,6 +30,12 @@ HIGHLIGHT_FIELDS = [
     "TCP Observer / Connection outcomes",
     "TCP Observer / First-read byte counts",
     "TCP Observer / First-read hex lengths",
+    "TCP Observer / Per-connection read counts",
+    "TCP Observer / Per-connection total byte counts",
+    "TCP Observer / Per-connection duration ms",
+    "TCP Observer / Read limit reached",
+    "TCP Observer / Closed by peer after data",
+    "TCP Observer / Additional-read hex lengths",
     "Interpretation / macOS attempted advertised TCP port",
 ]
 

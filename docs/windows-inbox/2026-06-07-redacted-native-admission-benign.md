@@ -8,13 +8,13 @@
 ## Command Result
 
 - Cargo finished lines: 1
-- AnyKBFlow command executed: yes
+- AnyUniversalControl command executed: yes
 - Error lines: 0
 - Observer bind errors: 0
 
 ## Advertisement
 
-- Advertised service: `_anykbflow-probe._tcp.local.`
+- Advertised service: `_anyuniversalcontrol-probe._tcp.local.`
 - Advertised port: 49152
 - Advertised host length: 16
 - Advertise duration: 15s

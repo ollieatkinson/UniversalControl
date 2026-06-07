@@ -150,7 +150,7 @@ The Windows agent would:
 - handle display geometry, DPI scale, and virtual desktop offsets
 - suppress local delivery only while focus is remote
 
-Most of the existing AnyKBFlow prototype work belongs here.
+Most of the existing AnyUniversalControl prototype work belongs here.
 
 ### Shared Protocol
 
@@ -211,4 +211,4 @@ Until gate 3 or 4 moves, the right implementation work is instrumentation,
 redaction, comparison, and small probes. After a native handshake appears, the
 right work becomes framing, message labeling, and input-event decoding. If the
 handshake is blocked by Apple-private trust, the right work becomes hardening the
-AnyKBFlow bridge into the production path.
+AnyUniversalControl bridge into the production path.

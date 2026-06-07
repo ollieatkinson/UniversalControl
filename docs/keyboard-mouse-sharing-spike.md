@@ -1,4 +1,4 @@
-# AnyKBFlow / Universal Control Spike
+# AnyUniversalControl / Universal Control Spike
 
 Date: 2026-06-06
 
@@ -69,7 +69,7 @@ These are also in the same solution class. Mousehop and AcrossKM appear particul
 
 ## Custom Build Direction
 
-If we build `AnyKBFlow`, do it as a software KVM, not as a Keychron Bluetooth switcher.
+If we build `AnyUniversalControl`, do it as a software KVM, not as a Keychron Bluetooth switcher.
 
 Recommended stack:
 
@@ -82,7 +82,7 @@ Recommended stack:
 
 ### Core Components
 
-1. `anykbflowd`
+1. `anyuniversalcontrold`
    - Runs on both macOS and Windows.
    - Maintains peer connection, active screen, screen geometry, and input routing state.
 
@@ -217,7 +217,7 @@ Use this order of attack:
 1. Try Input Leap with Flow disabled.
 2. If Input Leap works well, use it instead of building custom software.
 3. If Input Leap is close but flawed, inspect whether configuration or a small wrapper solves the problem.
-4. If it fails materially, build `AnyKBFlow` as a Rust-based software KVM.
+4. If it fails materially, build `AnyUniversalControl` as a Rust-based software KVM.
 5. Do not spend time on automatic Keychron Bluetooth switching unless a model-specific vendor command is discovered.
 
 ## Sources Checked

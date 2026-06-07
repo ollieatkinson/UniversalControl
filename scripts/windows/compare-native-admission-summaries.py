@@ -14,7 +14,7 @@ DEFAULT_IGNORED_FIELDS = {
 
 HIGHLIGHT_FIELDS = [
     "Command Result / Cargo finished lines",
-    "Command Result / AnyKBFlow command executed",
+    "Command Result / AnyUniversalControl command executed",
     "Command Result / Error lines",
     "Command Result / Observer bind errors",
     "Advertisement / Advertised service",

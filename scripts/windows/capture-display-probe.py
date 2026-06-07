@@ -13,7 +13,7 @@ from pathlib import Path
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Capture native Windows display geometry for AnyKBFlow calibration."
+        description="Capture native Windows display geometry for AnyUniversalControl calibration."
     )
     parser.add_argument(
         "--transcript",

@@ -27,7 +27,7 @@ Options:
 
 Modes:
   benign
-    Watches _anykbflow-probe._tcp while Windows advertises a non-Apple probe.
+    Watches _anyuniversalcontrol-probe._tcp while Windows advertises a non-Apple probe.
 
   companion-link
     Watches _companion-link._tcp while Windows advertises the controlled native
@@ -114,9 +114,9 @@ done
 
 if [[ -z "${instance}" ]]; then
   case "${mode}" in
-    benign) instance="AnyKBFlow Probe" ;;
-    companion-link) instance="AnyKBFlow Native Probe" ;;
-    shape) instance="AnyKBFlow Native Shape Probe" ;;
+    benign) instance="AnyUniversalControl Probe" ;;
+    companion-link) instance="AnyUniversalControl Native Probe" ;;
+    shape) instance="AnyUniversalControl Native Shape Probe" ;;
   esac
 fi
 
@@ -196,7 +196,7 @@ watch_args=(
 
 case "${mode}" in
   benign)
-    watch_args+=(--service "_anykbflow-probe._tcp" --instance "${instance}")
+    watch_args+=(--service "_anyuniversalcontrol-probe._tcp" --instance "${instance}")
     "${repo_root}/scripts/mac/watch-mdns-service.sh" "${watch_args[@]}"
     ;;
   companion-link)

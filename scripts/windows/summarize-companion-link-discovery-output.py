@@ -68,7 +68,7 @@ def render_summary(path: Path, text: str) -> str:
         "## Command Result",
         "",
         f"- Cargo finished lines: {command['finished']}",
-        f"- AnyKBFlow command executed: {format_bool(command['ran_anykbflow'])}",
+        f"- AnyUniversalControl command executed: {format_bool(command['ran_anyuniversalcontrol'])}",
         f"- Redaction enabled line: {format_bool(command['redaction_enabled'])}",
         f"- Error lines: {command['error_lines']}",
         "",
@@ -109,8 +109,8 @@ def summarize_command(text: str) -> Counter[str]:
         stripped = line.strip()
         if "Finished `" in stripped:
             counts["finished"] += 1
-        if "Running `" in stripped and "anykbflow" in stripped:
-            counts["ran_anykbflow"] = 1
+        if "Running `" in stripped and "anyuniversalcontrol" in stripped:
+            counts["ran_anyuniversalcontrol"] = 1
         if "Redaction enabled:" in stripped:
             counts["redaction_enabled"] = 1
         if stripped.startswith("Error:") or " error" in stripped.lower():

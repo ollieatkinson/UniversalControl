@@ -40,9 +40,9 @@ as the local macOS CompanionLink advertisement.
 On macOS first:
 
 ```sh
-./scripts/mac/watch-companion-link-candidate.sh --duration 90 --instance "AnyKBFlow Native Shape Probe"
+./scripts/mac/watch-companion-link-candidate.sh --duration 90 --instance "AnyUniversalControl Native Shape Probe"
 ./scripts/mac/summarize-mdns-watch-artifact.py artifacts/mac-mdns-watch-YYYYMMDDTHHMMSSZ \
-  --expected-instance "AnyKBFlow Native Shape Probe" \
+  --expected-instance "AnyUniversalControl Native Shape Probe" \
   --output docs/observations/YYYY-MM-DD-redacted-companion-link-shape-candidate.md
 ```
 
@@ -77,7 +77,7 @@ observer output no longer prints payload hex.
 
 ## Questions For Mac Side
 
-- Does `dns-sd -B` see `AnyKBFlow Native Shape Probe`?
+- Does `dns-sd -B` see `AnyUniversalControl Native Shape Probe`?
 - Does `dns-sd -L` resolve the published port and all eight `rp*` TXT keys?
 - Do `rapportd` or `UniversalControl` logs change compared with the minimal
   `probe=visibility` candidate?

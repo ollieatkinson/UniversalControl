@@ -34,7 +34,7 @@ python scripts/windows/capture-native-admission.py --mode benign --seconds 15 --
 - Rust mDNS passive CompanionLink discovery ran for 30 seconds but did not find or resolve the Mac `_companion-link._tcp.local.` service from this environment.
 - System Bonjour discovery could not run from WSL because `dns-sd` was not found. This does not prove native Windows Bonjour is unavailable; rerun from a native Windows terminal if Bonjour tools are installed there.
 - Display probe ran against the WSL stub backend, so native Windows display geometry is still missing.
-- Benign `_anykbflow-probe._tcp.local.` advertisement ran for 15 seconds and wrote a redacted summary. No TCP observer was enabled for benign mode, and no macOS visibility confirmation was captured in this run.
+- Benign `_anyuniversalcontrol-probe._tcp.local.` advertisement ran for 15 seconds and wrote a redacted summary. No TCP observer was enabled for benign mode, and no macOS visibility confirmation was captured in this run.
 
 ## Evidence Files
 
@@ -47,6 +47,6 @@ python scripts/windows/capture-native-admission.py --mode benign --seconds 15 --
 ## Questions For Mac Side
 
 - Was the Mac awake, on the same LAN, and advertising `_companion-link._tcp.local.` during the Windows passive browse?
-- Can macOS see the benign Windows `_anykbflow-probe._tcp.local.` advertisement from the 15 second run, or should we rerun while `scripts/mac/capture-native-admission.sh --mode benign` is active?
+- Can macOS see the benign Windows `_anyuniversalcontrol-probe._tcp.local.` advertisement from the 15 second run, or should we rerun while `scripts/mac/capture-native-admission.sh --mode benign` is active?
 - Can the Mac-side watcher be started for coordinated `companion-link` and `shape` native-admission runs?
 - After native Windows terminal access is available, rerun `python scripts/windows/capture-display-probe.py` so bridge geometry is not based on WSL stub output.

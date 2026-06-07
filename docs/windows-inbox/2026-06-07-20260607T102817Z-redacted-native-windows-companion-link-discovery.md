@@ -8,7 +8,7 @@
 ## Command Result
 
 - Cargo finished lines: 1
-- AnyKBFlow command executed: yes
+- AnyUniversalControl command executed: yes
 - Redaction enabled line: yes
 - Error lines: 0
 

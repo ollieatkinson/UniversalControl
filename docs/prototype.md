@@ -1,6 +1,6 @@
 # Prototype
 
-`anykbflow` is currently a two-node software KVM prototype. It does not switch the Keychron Bluetooth profile. One machine owns the physical keyboard/mouse and forwards events to the other machine when the pointer crosses the configured edge.
+`anyuniversalcontrol` is currently a two-node software KVM prototype. It does not switch the Keychron Bluetooth profile. One machine owns the physical keyboard/mouse and forwards events to the other machine when the pointer crosses the configured edge.
 
 ## Roles
 
@@ -37,7 +37,7 @@ On the other machine:
 cargo run -- --config configs/receiver.example.toml
 ```
 
-Edit `local_width`, `local_height`, and `remote_edge` before running. Native macOS/Windows builds detect the primary display with the same display path used by `probe displays`; Linux/WSL and detection failures fall back to configured dimensions. The input owner uses detected local dimensions for edge routing, and the peer `Hello` message includes each side's detected primary display size so the input owner updates remote routing dimensions from the receiver after connection. The configured `remote_width` and `remote_height` remain fallback values until the receiver hello arrives. The input owner advertises `_anykbflow._tcp.local.` and the receiver discovers it automatically when `peer_addr` is omitted. Add `peer_addr = "host:24800"` to the receiver config to bypass discovery.
+Edit `local_width`, `local_height`, and `remote_edge` before running. Native macOS/Windows builds detect the primary display with the same display path used by `probe displays`; Linux/WSL and detection failures fall back to configured dimensions. The input owner uses detected local dimensions for edge routing, and the peer `Hello` message includes each side's detected primary display size so the input owner updates remote routing dimensions from the receiver after connection. The configured `remote_width` and `remote_height` remain fallback values until the receiver hello arrives. The input owner advertises `_anyuniversalcontrol._tcp.local.` and the receiver discovers it automatically when `peer_addr` is omitted. Add `peer_addr = "host:24800"` to the receiver config to bypass discovery.
 
 For real bridge tests, configure the same local shared secret on both peers:
 
@@ -186,8 +186,8 @@ Advertise a controlled test service from Windows so macOS can check whether it a
 
 ```sh
 cargo run -- discovery advertise \
-  --service _anykbflow-probe._tcp.local. \
-  --instance "AnyKBFlow Probe" \
+  --service _anyuniversalcontrol-probe._tcp.local. \
+  --instance "AnyUniversalControl Probe" \
   --addr 192.0.2.10 \
   --port 49152 \
   --txt phase=visibility \
@@ -206,14 +206,14 @@ cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windo
 The software-KVM fallback uses its own service:
 
 ```sh
-_anykbflow._tcp.local.
+_anyuniversalcontrol._tcp.local.
 ```
 
 This is deliberately separate from Apple's `_companion-link._tcp.local.` so bridge discovery does not pretend to be native Universal Control.
 
 ## macOS Permissions
 
-The native backend uses global event grab/injection. macOS needs Accessibility permission for the terminal/app running `anykbflow`. If events are not captured or injected, add the launcher app under:
+The native backend uses global event grab/injection. macOS needs Accessibility permission for the terminal/app running `anyuniversalcontrol`. If events are not captured or injected, add the launcher app under:
 
 `System Settings -> Privacy & Security -> Accessibility`
 

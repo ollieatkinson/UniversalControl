@@ -36,7 +36,7 @@ class ObserverConnection:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Summarize Windows AnyKBFlow native-admission stdout without leaking addresses."
+        description="Summarize Windows AnyUniversalControl native-admission stdout without leaking addresses."
     )
     parser.add_argument("transcript", type=Path, help="Captured Windows command output")
     parser.add_argument(
@@ -77,7 +77,7 @@ def render_summary(path: Path, text: str) -> str:
         "## Command Result",
         "",
         f"- Cargo finished lines: {cargo['finished']}",
-        f"- AnyKBFlow command executed: {format_bool(cargo['ran_anykbflow'])}",
+        f"- AnyUniversalControl command executed: {format_bool(cargo['ran_anyuniversalcontrol'])}",
         f"- Error lines: {errors['error_lines']}",
         f"- Observer bind errors: {errors['observer_bind_errors']}",
         "",
@@ -594,8 +594,8 @@ def summarize_cargo(text: str) -> Counter[str]:
     for line in text.splitlines():
         if "Finished `" in line:
             counts["finished"] += 1
-        if "Running `" in line and "anykbflow" in line:
-            counts["ran_anykbflow"] = 1
+        if "Running `" in line and "anyuniversalcontrol" in line:
+            counts["ran_anyuniversalcontrol"] = 1
     return counts
 
 

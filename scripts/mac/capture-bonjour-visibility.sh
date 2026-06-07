@@ -5,7 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 duration=300
 service="_companion-link._tcp"
-instance="AnyKBFlow Mac Bonjour Probe"
+instance="AnyUniversalControl Mac Bonjour Probe"
 port=49152
 output_dir=""
 summary_output=""

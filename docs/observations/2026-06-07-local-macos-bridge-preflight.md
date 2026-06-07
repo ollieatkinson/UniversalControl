@@ -44,7 +44,7 @@ remote_edge=Right
 detected_primary_display=1710x1112
 effective_local_display=1710x1112
 listen_addr=0.0.0.0:24800
-advertises_service=_anykbflow._tcp.local.
+advertises_service=_anyuniversalcontrol._tcp.local.
 peer_mode=listen
 warnings=0
 ```
@@ -62,7 +62,7 @@ detected_primary_display=1710x1112
 effective_local_display=1710x1112
 peer_addr=none
 peer_mode=mdns_discovery
-discovers_service=_anykbflow._tcp.local.
+discovers_service=_anyuniversalcontrol._tcp.local.
 warnings=0
 ```
 

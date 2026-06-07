@@ -3,7 +3,7 @@
 ## Context
 
 - Request: macOS advertised `_companion-link._tcp.local`; Windows should check visibility and try to message it.
-- Pull status before the check: both `AnyKBFlow` and sibling `UniversalControl` were already up to date.
+- Pull status before the check: both `AnyUniversalControl` and sibling `UniversalControl` were already up to date.
 - Windows host role: Windows-side development/prototype host, commands launched from WSL with native Windows PowerShell interop where noted.
 
 ## Discovery Results

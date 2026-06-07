@@ -10,7 +10,7 @@
 ## Repo State
 
 - Branch: `trunk`
-- Base commit before this change: `1c336cd Add AnyKBFlow mDNS peer discovery`
+- Base commit before this change: `1c336cd Add AnyUniversalControl mDNS peer discovery`
 - Uncommitted changes at note time: heartbeat and stub keepalive
 
 ## What Changed
@@ -32,7 +32,7 @@ timeout 8 cargo run -- --config configs/receiver.example.toml
 
 ## Observations
 
-- The receiver discovered `_anykbflow._tcp.local.` and connected to the input owner.
+- The receiver discovered `_anyuniversalcontrol._tcp.local.` and connected to the input owner.
 - The receiver stayed connected until the `timeout 8` wrapper stopped it.
 - The input owner observed the peer close and logged a broken pipe on the next heartbeat write.
 - This proves local discovery, TCP connection, idle-session survival, and dead-peer write detection in WSL.

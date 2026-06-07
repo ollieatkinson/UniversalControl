@@ -22,13 +22,13 @@ struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
 
-    #[arg(short, long, default_value = "anykbflow.toml", global = true)]
+    #[arg(short, long, default_value = "anyuniversalcontrol.toml", global = true)]
     config: PathBuf,
 }
 
 #[derive(Debug, Subcommand)]
 enum Command {
-    /// Run the AnyKBFlow software KVM daemon.
+    /// Run the AnyUniversalControl software KVM daemon.
     Run,
     /// Validate config and print runtime assumptions before a bridge run.
     Preflight,
@@ -53,10 +53,10 @@ enum Command {
         #[arg(long, default_value_t = 30)]
         seconds: u64,
         /// DNS-SD service type, with or without the .local. suffix.
-        #[arg(long, default_value = "_anykbflow-probe._tcp")]
+        #[arg(long, default_value = "_anyuniversalcontrol-probe._tcp")]
         service_type: String,
         /// Instance name to publish.
-        #[arg(long, default_value = "AnyKBFlow Probe")]
+        #[arg(long, default_value = "AnyUniversalControl Probe")]
         instance: String,
         /// Hostname to publish, with or without the .local. suffix. Defaults to this machine's hostname.
         #[arg(long)]
@@ -89,10 +89,10 @@ enum Command {
         #[arg(long, default_value_t = 60)]
         seconds: u64,
         /// Instance name to publish.
-        #[arg(long, default_value = "AnyKBFlow Native Shape Probe")]
+        #[arg(long, default_value = "AnyUniversalControl Native Shape Probe")]
         instance: String,
         /// Hostname to publish, with or without the .local. suffix.
-        #[arg(long, default_value = "anykbflow-native-shape-probe")]
+        #[arg(long, default_value = "anyuniversalcontrol-native-shape-probe")]
         hostname: String,
         /// Explicit IP address to publish. If omitted, local interface addresses are selected automatically.
         #[arg(long)]
@@ -142,9 +142,9 @@ enum DiscoveryCommand {
     },
     /// Advertise an arbitrary DNS-SD service with the Rust mDNS backend.
     Advertise {
-        #[arg(long, default_value = "_anykbflow-probe._tcp")]
+        #[arg(long, default_value = "_anyuniversalcontrol-probe._tcp")]
         service: String,
-        #[arg(long, default_value = "AnyKBFlow Probe")]
+        #[arg(long, default_value = "AnyUniversalControl Probe")]
         instance: String,
         /// Hostname to publish. Defaults to this machine's hostname.
         #[arg(long)]
@@ -186,7 +186,7 @@ enum ProbeCommand {
         #[arg(short, long, default_value_t = 10)]
         count: usize,
     },
-    /// Print normalized AnyKBFlow input events without suppressing them.
+    /// Print normalized AnyUniversalControl input events without suppressing them.
     ListenEvents {
         #[arg(long, default_value_t = 10)]
         count: usize,
@@ -199,7 +199,7 @@ enum ProbeCommand {
         #[arg(long)]
         suppress: bool,
     },
-    /// Grab normalized AnyKBFlow input events, optionally suppressing local delivery.
+    /// Grab normalized AnyUniversalControl input events, optionally suppressing local delivery.
     GrabEvents {
         #[arg(long, default_value_t = 10)]
         count: usize,
@@ -207,7 +207,7 @@ enum ProbeCommand {
         #[arg(long)]
         suppress: bool,
     },
-    /// Replay normalized AnyKBFlow input events from a JSONL file.
+    /// Replay normalized AnyUniversalControl input events from a JSONL file.
     ReplayEvents {
         #[arg(long)]
         path: PathBuf,
@@ -277,7 +277,8 @@ enum DiscoveryBackend {
 async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("anykbflow=info")),
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("anyuniversalcontrol=info")),
         )
         .init();
 

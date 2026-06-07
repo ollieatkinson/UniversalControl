@@ -67,7 +67,7 @@ def render_summary(path: Path, text: str) -> str:
         "## Command Result",
         "",
         f"- Cargo finished lines: {command['finished']}",
-        f"- AnyKBFlow command executed: {format_bool(command['ran_anykbflow'])}",
+        f"- AnyUniversalControl command executed: {format_bool(command['ran_anyuniversalcontrol'])}",
         f"- Warning lines: {command['warnings']}",
         f"- Error lines: {command['errors']}",
         "",
@@ -93,7 +93,7 @@ def render_summary(path: Path, text: str) -> str:
             f"- Native display geometry available: {format_bool(bool(rows))}",
             "- Notes:",
             "  - Display names and friendly names are omitted; only their lengths are preserved.",
-            "  - Use primary width/height and virtual bounds to calibrate AnyKBFlow bridge configs.",
+            "  - Use primary width/height and virtual bounds to calibrate AnyUniversalControl bridge configs.",
             "  - Negative origins matter for displays placed left or above the primary display.",
             "",
         ]
@@ -161,8 +161,8 @@ def summarize_command(text: str) -> Counter[str]:
         stripped = line.strip()
         if "Finished `" in stripped:
             counts["finished"] += 1
-        if "Running `" in stripped and "anykbflow" in stripped:
-            counts["ran_anykbflow"] = 1
+        if "Running `" in stripped and "anyuniversalcontrol" in stripped:
+            counts["ran_anyuniversalcontrol"] = 1
         if "WARN" in stripped or stripped.lower().startswith("warning"):
             counts["warnings"] += 1
         if stripped.startswith("Error:") or " error" in stripped.lower():

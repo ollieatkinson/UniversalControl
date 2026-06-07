@@ -27,7 +27,7 @@
 - This does not prove Windows Bonjour is blocked, because Windows was still installing `dns-sd` during the test.
 - Next evidence should come from native Windows Bonjour, not WSL:
   - browse: `dns-sd -B _companion-link._tcp local`
-  - advertise: `dns-sd -R "AnyKBFlow Windows Bonjour Probe" _companion-link._tcp local 49153 probe=windows-bonjour role=windows-native-visibility`
+  - advertise: `dns-sd -R "AnyUniversalControl Windows Bonjour Probe" _companion-link._tcp local 49153 probe=windows-bonjour role=windows-native-visibility`
   - then compare whether Windows sees the Mac probe and whether macOS sees the Windows probe.
 
 Do not paste raw Bonjour instance names, hostnames, addresses, TXT values, or interface identifiers into committed notes.

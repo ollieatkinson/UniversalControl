@@ -2,13 +2,13 @@
 
 ## Source
 
-- Transcript file: `/home/oliver/src/github.com/ollieatkinson/AnyKBFlow/artifacts/windows-display-probe-20260607T101543Z.txt`
+- Transcript file: `/home/oliver/src/github.com/ollieatkinson/AnyUniversalControl/artifacts/windows-display-probe-20260607T101543Z.txt`
 - Raw output: not included
 
 ## Command Result
 
 - Cargo finished lines: 1
-- AnyKBFlow command executed: yes
+- AnyUniversalControl command executed: yes
 - Warning lines: 1
 - Error lines: 0
 
@@ -31,5 +31,5 @@
 - Native display geometry available: no
 - Notes:
   - Display names and friendly names are omitted; only their lengths are preserved.
-  - Use primary width/height and virtual bounds to calibrate AnyKBFlow bridge configs.
+  - Use primary width/height and virtual bounds to calibrate AnyUniversalControl bridge configs.
   - Negative origins matter for displays placed left or above the primary display.

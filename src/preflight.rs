@@ -49,7 +49,7 @@ fn print_network(config: &Config) {
     match config.role {
         Role::InputOwner => {
             println!("listen_addr={}", format_option(config.listen_addr));
-            println!("advertises_service=_anykbflow._tcp.local.");
+            println!("advertises_service=_anyuniversalcontrol._tcp.local.");
             println!("peer_mode=listen");
         }
         Role::Receiver => {
@@ -58,7 +58,7 @@ fn print_network(config: &Config) {
                 println!("peer_mode=manual_connect");
             } else {
                 println!("peer_mode=mdns_discovery");
-                println!("discovers_service=_anykbflow._tcp.local.");
+                println!("discovers_service=_anyuniversalcontrol._tcp.local.");
             }
         }
     }

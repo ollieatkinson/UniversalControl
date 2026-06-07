@@ -3,9 +3,9 @@
 ## Source
 
 - Before label: `local-macos-rust-mdns`
-- Before file: `/home/oliver/src/github.com/ollieatkinson/AnyKBFlow/docs/observations/2026-06-07-redacted-macos-rust-mdns-companion-link.md`
+- Before file: `/home/oliver/src/github.com/ollieatkinson/AnyUniversalControl/docs/observations/2026-06-07-redacted-macos-rust-mdns-companion-link.md`
 - After label: `windows-passive`
-- After file: `/home/oliver/src/github.com/ollieatkinson/AnyKBFlow/docs/windows-inbox/2026-06-07-redacted-companion-link-discovery.md`
+- After file: `/home/oliver/src/github.com/ollieatkinson/AnyUniversalControl/docs/windows-inbox/2026-06-07-redacted-companion-link-discovery.md`
 - Ignored source metadata: yes
 
 ## Summary
@@ -16,7 +16,7 @@
 
 ## Evidence Highlights
 
-- `Command Result / AnyKBFlow command executed`: same
+- `Command Result / AnyUniversalControl command executed`: same
   - local-macos-rust-mdns: yes
   - windows-passive: yes
 - `Command Result / Redaction enabled line`: same

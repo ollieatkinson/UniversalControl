@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture normalized AnyKBFlow input events and write a redacted summary."""
+"""Capture normalized AnyUniversalControl input events and write a redacted summary."""
 
 from __future__ import annotations
 
@@ -111,7 +111,7 @@ def main() -> int:
             / f"{day}-{stamp}-redacted-input-events-{args.mode}.md"
         )
 
-    print("AnyKBFlow input event capture")
+    print("AnyUniversalControl input event capture")
     print(f"Mode: {args.mode}")
     print(f"JSONL events: {jsonl}")
     print(f"Raw transcript: {transcript}")

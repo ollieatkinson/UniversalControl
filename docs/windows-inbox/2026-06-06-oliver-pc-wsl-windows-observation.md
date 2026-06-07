@@ -18,8 +18,8 @@
 
 ## What Changed
 
-- Added `anykbflow discovery browse` for DNS-SD/mDNS service browsing.
-- Added `anykbflow discovery advertise` for publishing a controlled test service from Windows.
+- Added `anyuniversalcontrol discovery browse` for DNS-SD/mDNS service browsing.
+- Added `anyuniversalcontrol discovery advertise` for publishing a controlled test service from Windows.
 - Added native input probe commands in `5eeb447`:
   - `probe listen`
   - `probe grab`
@@ -54,7 +54,7 @@ Resolve-DnsName -Name _companion-link._tcp.local -Type PTR -DnsOnly -ErrorAction
 - This machine has Windows PowerShell available from WSL2.
 - `dns-sd` is not currently available in the Windows PATH.
 - PowerShell `Resolve-DnsName -DnsOnly` did not resolve `_companion-link._tcp.local`; this is not strong evidence about mDNS visibility because `-DnsOnly` bypasses multicast DNS behavior.
-- `anykbflow` now has its own cross-platform mDNS commands, so the next Windows check should use the Rust binary rather than relying on OS tools.
+- `anyuniversalcontrol` now has its own cross-platform mDNS commands, so the next Windows check should use the Rust binary rather than relying on OS tools.
 - Local Rust checks passed for Linux, macOS target, and Windows target after the discovery CLI was added.
 - The current Windows prototype is source-controlled in this repo on `trunk`.
 - The implementation language/runtime is Rust 1.94.0 for the shared daemon and probes.
@@ -80,7 +80,7 @@ Resolve-DnsName -Name _companion-link._tcp.local -Type PTR -DnsOnly -ErrorAction
    - Not proven yet. The repo now has the command needed to test it:
 
      ```powershell
-     cargo run -- discovery advertise --service _anykbflow-test._tcp.local. --instance anykbflow-windows --host anykbflow.local. --addr <redacted-lan-ip> --port 24800 --txt role=windows --txt probe=phase1 --seconds 60
+     cargo run -- discovery advertise --service _anyuniversalcontrol-test._tcp.local. --instance anyuniversalcontrol-windows --host anyuniversalcontrol.local. --addr <redacted-lan-ip> --port 24800 --txt role=windows --txt probe=phase1 --seconds 60
      ```
 
 4. Is the Windows prototype currently source-controlled somewhere outside this empty initial repo?
@@ -91,6 +91,6 @@ Resolve-DnsName -Name _companion-link._tcp.local -Type PTR -DnsOnly -ErrorAction
 
 ## Questions For Mac Side
 
-- When Windows advertises `_anykbflow-test._tcp.local.`, does macOS `dns-sd -B _anykbflow-test._tcp local` see it?
+- When Windows advertises `_anyuniversalcontrol-test._tcp.local.`, does macOS `dns-sd -B _anyuniversalcontrol-test._tcp local` see it?
 - Do `rapportd` or `UniversalControl` logs react to the test service at all?
 - Can the Mac side capture a real Apple-to-Apple Universal Control `_companion-link._tcp` TXT record shape so the Windows advertiser can mimic only non-sensitive structural fields?

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Summarize normalized AnyKBFlow InputEvent JSONL without leaking typed text."""
+"""Summarize normalized AnyUniversalControl InputEvent JSONL without leaking typed text."""
 
 from __future__ import annotations
 

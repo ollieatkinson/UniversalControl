@@ -16,7 +16,7 @@ use mdns_sd::{ResolvedService, ServiceDaemon, ServiceEvent, ServiceInfo};
 
 const COMPANION_LINK_SERVICE: &str = "_companion-link._tcp.local.";
 const DNS_SD_SERVICE: &str = "_companion-link._tcp";
-const ANYKBFLOW_SERVICE: &str = "_anykbflow._tcp.local.";
+const ANYUNIVERSALCONTROL_SERVICE: &str = "_anyuniversalcontrol._tcp.local.";
 const TCP_OBSERVER_READ_LIMIT: usize = 16;
 const TCP_OBSERVER_READ_CHUNK_BYTES: usize = 4096;
 const COMPANION_LINK_SHAPE_TXT: [(&str, &str); 8] = [
@@ -576,14 +576,14 @@ pub fn spawn_bridge_advertisement(node_name: &str, listen_addr: SocketAddr) -> R
     ]);
     let mdns = ServiceDaemon::new().context("failed to create mDNS daemon")?;
     let service_info = ServiceInfo::new(
-        ANYKBFLOW_SERVICE,
+        ANYUNIVERSALCONTROL_SERVICE,
         &instance,
         &host,
         advertise_addr,
         port,
         Some(properties),
     )
-    .context("failed to build AnyKBFlow service info")?;
+    .context("failed to build AnyUniversalControl service info")?;
     let fullname = service_info.get_fullname().to_string();
 
     mdns.register(service_info)
@@ -603,13 +603,13 @@ pub fn spawn_bridge_advertisement(node_name: &str, listen_addr: SocketAddr) -> R
 pub fn discover_bridge_peer(timeout: Duration) -> Result<SocketAddr> {
     let mdns = ServiceDaemon::new().context("failed to create mDNS daemon")?;
     let receiver = mdns
-        .browse(ANYKBFLOW_SERVICE)
-        .context("failed to browse AnyKBFlow service")?;
+        .browse(ANYUNIVERSALCONTROL_SERVICE)
+        .context("failed to browse AnyUniversalControl service")?;
     let started = Instant::now();
     let deadline = started + timeout;
 
     println!(
-        "discovering {ANYKBFLOW_SERVICE} for {}s",
+        "discovering {ANYUNIVERSALCONTROL_SERVICE} for {}s",
         timeout.as_secs().max(1)
     );
 
@@ -618,8 +618,8 @@ pub fn discover_bridge_peer(timeout: Duration) -> Result<SocketAddr> {
             Ok(ServiceEvent::ServiceResolved(info)) => {
                 if let Some(addr) = socket_addr_from_resolved(&info) {
                     println!("discovered {} at {}", info.get_fullname(), addr);
-                    mdns.stop_browse(ANYKBFLOW_SERVICE)
-                        .context("failed to stop AnyKBFlow browse")?;
+                    mdns.stop_browse(ANYUNIVERSALCONTROL_SERVICE)
+                        .context("failed to stop AnyUniversalControl browse")?;
                     mdns.shutdown().context("failed to shut down mDNS daemon")?;
                     return Ok(addr);
                 }
@@ -629,10 +629,10 @@ pub fn discover_bridge_peer(timeout: Duration) -> Result<SocketAddr> {
         }
     }
 
-    mdns.stop_browse(ANYKBFLOW_SERVICE)
-        .context("failed to stop AnyKBFlow browse")?;
+    mdns.stop_browse(ANYUNIVERSALCONTROL_SERVICE)
+        .context("failed to stop AnyUniversalControl browse")?;
     mdns.shutdown().context("failed to shut down mDNS daemon")?;
-    bail!("no AnyKBFlow input owner discovered");
+    bail!("no AnyUniversalControl input owner discovered");
 }
 
 fn browse_with_dns_sd(seconds: u64) -> Result<()> {
@@ -1000,7 +1000,7 @@ fn sanitize_instance_name(value: &str) -> String {
         })
         .collect::<String>();
     if name.is_empty() {
-        name = "anykbflow".to_string();
+        name = "anyuniversalcontrol".to_string();
     }
     name.truncate(48);
     name
@@ -1044,34 +1044,34 @@ mod tests {
     #[test]
     fn normalizes_service_type_suffixes() {
         assert_eq!(
-            normalize_service_type("_anykbflow-probe._tcp").unwrap(),
-            "_anykbflow-probe._tcp.local."
+            normalize_service_type("_anyuniversalcontrol-probe._tcp").unwrap(),
+            "_anyuniversalcontrol-probe._tcp.local."
         );
         assert_eq!(
-            normalize_service_type("_anykbflow-probe._tcp.local").unwrap(),
-            "_anykbflow-probe._tcp.local."
+            normalize_service_type("_anyuniversalcontrol-probe._tcp.local").unwrap(),
+            "_anyuniversalcontrol-probe._tcp.local."
         );
         assert_eq!(
-            normalize_service_type("_anykbflow-probe._tcp.local.").unwrap(),
-            "_anykbflow-probe._tcp.local."
+            normalize_service_type("_anyuniversalcontrol-probe._tcp.local.").unwrap(),
+            "_anyuniversalcontrol-probe._tcp.local."
         );
     }
 
     #[test]
     fn rejects_invalid_service_type() {
-        assert!(normalize_service_type("anykbflow").is_err());
-        assert!(normalize_service_type("_anykbflow-probe._http").is_err());
+        assert!(normalize_service_type("anyuniversalcontrol").is_err());
+        assert!(normalize_service_type("_anyuniversalcontrol-probe._http").is_err());
     }
 
     #[test]
     fn normalizes_hostname_suffixes() {
         assert_eq!(
-            normalize_hostname("anykbflow-probe").unwrap(),
-            "anykbflow-probe.local."
+            normalize_hostname("anyuniversalcontrol-probe").unwrap(),
+            "anyuniversalcontrol-probe.local."
         );
         assert_eq!(
-            normalize_hostname("anykbflow-probe.local.").unwrap(),
-            "anykbflow-probe.local."
+            normalize_hostname("anyuniversalcontrol-probe.local.").unwrap(),
+            "anyuniversalcontrol-probe.local."
         );
     }
 
@@ -1135,7 +1135,7 @@ mod tests {
     #[test]
     fn tcp_observer_defaults_to_unspecified_bind_address() {
         assert_eq!(
-            observe_tcp_addr(None, 61833, "anykbflow-native-shape-probe.local.").unwrap(),
+            observe_tcp_addr(None, 61833, "anyuniversalcontrol-native-shape-probe.local.").unwrap(),
             SocketAddr::new(IpAddr::from([0, 0, 0, 0]), 61833)
         );
     }
@@ -1173,13 +1173,13 @@ mod tests {
     #[test]
     fn sanitize_instance_name_keeps_dns_sd_friendly_name() {
         assert_eq!(sanitize_instance_name("Windows Desk"), "Windows-Desk");
-        assert_eq!(sanitize_instance_name(""), "anykbflow");
+        assert_eq!(sanitize_instance_name(""), "anyuniversalcontrol");
     }
 
     #[test]
     fn socket_addr_prefers_non_loopback_ipv4() {
         let service = ServiceInfo::new(
-            ANYKBFLOW_SERVICE,
+            ANYUNIVERSALCONTROL_SERVICE,
             "desk",
             "desk.local.",
             &[

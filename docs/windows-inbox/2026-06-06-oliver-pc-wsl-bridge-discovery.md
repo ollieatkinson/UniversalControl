@@ -12,12 +12,12 @@
 
 - Branch: `trunk`
 - Base commit before this change: `ab97841 Add mDNS discovery probes and Windows report`
-- Uncommitted changes at note time: AnyKBFlow bridge mDNS auto-discovery
+- Uncommitted changes at note time: AnyUniversalControl bridge mDNS auto-discovery
 
 ## What Changed
 
-- The input-owner role now advertises `_anykbflow._tcp.local.` after successfully binding its TCP listener.
-- The receiver role can omit `peer_addr`; it browses `_anykbflow._tcp.local.` and connects to the first resolved input owner.
+- The input-owner role now advertises `_anyuniversalcontrol._tcp.local.` after successfully binding its TCP listener.
+- The receiver role can omit `peer_addr`; it browses `_anyuniversalcontrol._tcp.local.` and connects to the first resolved input owner.
 - Manual `peer_addr` remains supported and bypasses discovery.
 
 ## Commands Run
@@ -34,7 +34,7 @@ cargo run -- --config configs/receiver.example.toml
 
 ## Observations
 
-- The input-owner role advertised `windows-desk._anykbflow._tcp.local.` on port `24800`.
+- The input-owner role advertised `windows-desk._anyuniversalcontrol._tcp.local.` on port `24800`.
 - The receiver role, with `peer_addr` omitted, discovered that service and connected successfully.
 - The advertised WSL address was redacted from this note.
 - Because this was run on Linux/WSL, native capture/injection was stubbed; this test proves discovery and TCP connection only, not real keyboard/mouse transfer.
@@ -45,7 +45,7 @@ cargo run -- --config configs/receiver.example.toml
 
 ## Questions For Mac Side
 
-- Does macOS resolve `_anykbflow._tcp.local.` when the Windows/input-owner daemon is running?
+- Does macOS resolve `_anyuniversalcontrol._tcp.local.` when the Windows/input-owner daemon is running?
 - Can the macOS receiver connect with `peer_addr` omitted?
 - Does macOS require firewall prompts or extra permissions for the receiver role beyond Accessibility/Input Monitoring needed by native input probes?
 

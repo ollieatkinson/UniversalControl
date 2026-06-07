@@ -21,9 +21,9 @@ Start with:
 - [docs/native-candidate-experiments.md](docs/native-candidate-experiments.md)
 - [scripts/mac/uc-probe.sh](scripts/mac/uc-probe.sh)
 
-### AnyKBFlow Prototype
+### AnyUniversalControl Prototype
 
-`anykbflow` is an early Rust software KVM prototype for sharing a Keychron keyboard and mouse between macOS and Windows without relying on Logitech Flow or Bluetooth profile switching.
+`anyuniversalcontrol` is an early Rust software KVM prototype for sharing a Keychron keyboard and mouse between macOS and Windows without relying on Logitech Flow or Bluetooth profile switching.
 
 It has a TCP JSON-lines peer protocol, edge-crossing router, and a macOS/Windows native input backend based on `rdev` grab/simulate. Linux builds use a no-op backend so the shared code can be checked in this workspace.
 
@@ -77,8 +77,8 @@ On the Mac:
 
 ```sh
 ./scripts/mac/watch-mdns-service.sh --duration 60
-dns-sd -B _anykbflow-probe._tcp local
-dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local
+dns-sd -B _anyuniversalcontrol-probe._tcp local
+dns-sd -L "AnyUniversalControl Probe" _anyuniversalcontrol-probe._tcp local
 ```
 
 For the coordinated native-admission run, prefer the Mac wrapper that prints the
@@ -124,7 +124,7 @@ Run it only while the Mac-side CompanionLink watcher is capturing `rapportd` and
 `UniversalControl` logs; `capture-native-admission.sh --mode shape` starts that
 watcher and writes the redacted summary.
 
-The fallback bridge advertises `_anykbflow._tcp.local.` for project-owned peer discovery. Native Apple compatibility experiments continue to use `_companion-link._tcp.local.` and are tracked separately.
+The fallback bridge advertises `_anyuniversalcontrol._tcp.local.` for project-owned peer discovery. Native Apple compatibility experiments continue to use `_companion-link._tcp.local.` and are tracked separately.
 
 ## Current Findings
 

@@ -3,8 +3,8 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 duration=60
-service="_anykbflow-probe._tcp"
-instance="AnyKBFlow Probe"
+service="_anyuniversalcontrol-probe._tcp"
+instance="AnyUniversalControl Probe"
 include_resolve=1
 output_dir=""
 
@@ -14,8 +14,8 @@ Usage: scripts/mac/watch-mdns-service.sh [options]
 
 Options:
   --duration SECONDS    Capture duration. Default: 60.
-  --service TYPE        DNS-SD service type without .local. Default: _anykbflow-probe._tcp.
-  --instance NAME       Instance to resolve with dns-sd -L. Default: AnyKBFlow Probe.
+  --service TYPE        DNS-SD service type without .local. Default: _anyuniversalcontrol-probe._tcp.
+  --instance NAME       Instance to resolve with dns-sd -L. Default: AnyUniversalControl Probe.
   --output-dir DIR      Write artifact files to DIR. Default: artifacts/mac-mdns-watch-<timestamp>/.
   --no-resolve          Skip dns-sd -L.
   -h, --help            Show this help.

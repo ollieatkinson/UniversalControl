@@ -1,6 +1,6 @@
 node_name = "macbook"
 role = "receiver"
-# Optional. If omitted, the receiver discovers an input_owner via _anykbflow._tcp.local.
+# Optional. If omitted, the receiver discovers an input_owner via _anyuniversalcontrol._tcp.local.
 # peer_addr = "192.168.1.20:24800"
 
 # Optional but recommended for real bridge tests. Use the same value on both peers.

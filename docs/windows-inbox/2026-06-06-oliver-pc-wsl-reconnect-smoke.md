@@ -18,7 +18,7 @@
 - The daemon now runs peer sessions in a reconnect loop.
 - After a session ends or fails, the input-owner role listens again.
 - After a session ends or fails, the receiver role re-runs manual connect or mDNS discovery.
-- The `_anykbflow._tcp.local.` advertisement is guarded so it is registered once per process rather than on every reconnect.
+- The `_anyuniversalcontrol._tcp.local.` advertisement is guarded so it is registered once per process rather than on every reconnect.
 
 ## Commands Run
 
@@ -35,7 +35,7 @@ timeout 4 cargo run -- --config configs/receiver.example.toml
 
 ## Observations
 
-- First receiver discovered `_anykbflow._tcp.local.`, connected, and was stopped by `timeout`.
+- First receiver discovered `_anyuniversalcontrol._tcp.local.`, connected, and was stopped by `timeout`.
 - Input-owner detected the broken peer on heartbeat and returned to `waiting for receiver`.
 - Second receiver discovered the same service and connected successfully.
 - Input-owner again detected the second broken peer and returned to `waiting for receiver`.

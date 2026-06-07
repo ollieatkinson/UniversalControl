@@ -168,8 +168,8 @@ cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windo
 
 Defaults:
 
-- service type: `_anykbflow-probe._tcp.local.`
-- instance: `AnyKBFlow Probe`
+- service type: `_anyuniversalcontrol-probe._tcp.local.`
+- instance: `AnyUniversalControl Probe`
 - hostname: the local machine hostname, unless `--hostname` is supplied
 - port: `49152`
 
@@ -177,8 +177,8 @@ The command rejects Apple-owned service types such as `_companion-link._tcp` unl
 
 Local validation on macOS:
 
-- `dns-sd -B _anykbflow-probe._tcp local` saw the advertised `AnyKBFlow Probe` service.
-- `dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local` resolved the hostname, port, and TXT values.
+- `dns-sd -B _anyuniversalcontrol-probe._tcp local` saw the advertised `AnyUniversalControl Probe` service.
+- `dns-sd -L "AnyUniversalControl Probe" _anyuniversalcontrol-probe._tcp local` resolved the hostname, port, and TXT values.
 - Because this validation ran on one Mac, the resolver reported the loopback interface; Windows-to-Mac visibility still needs a Windows-machine report.
 
 ### macOS mDNS Watcher
@@ -196,12 +196,12 @@ It writes an ignored artifact directory containing:
 - unified logs for `UniversalControl`, `rapportd`, and `mDNSResponder`
 - launchd state snapshots for `com.apple.ensemble` and `com.apple.rapportd`
 
-This is intended to run while Windows advertises `_anykbflow-probe._tcp` or a controlled `_companion-link._tcp` experiment. Raw output is not committed because it can contain hostnames, addresses, TXT values, and local interface identifiers.
+This is intended to run while Windows advertises `_anyuniversalcontrol-probe._tcp` or a controlled `_companion-link._tcp` experiment. Raw output is not committed because it can contain hostnames, addresses, TXT values, and local interface identifiers.
 
 Added a native-specific wrapper:
 
 ```sh
-./scripts/mac/watch-companion-link-candidate.sh --duration 90 --instance "AnyKBFlow Native Probe"
+./scripts/mac/watch-companion-link-candidate.sh --duration 90 --instance "AnyUniversalControl Native Probe"
 ```
 
 It wraps the generic watcher with service type `_companion-link._tcp` so a
@@ -267,8 +267,8 @@ unified-log lines.
 
 ### Windows Bridge Progress Versus Native Gap
 
-Windows-side notes now show the separate AnyKBFlow bridge track can advertise
-`_anykbflow._tcp.local.`, discover that service from the receiver role, keep a
+Windows-side notes now show the separate AnyUniversalControl bridge track can advertise
+`_anyuniversalcontrol._tcp.local.`, discover that service from the receiver role, keep a
 TCP JSON-lines session alive with heartbeats, and reconnect after receiver
 process restarts under WSL. The receiver also tracks injected key/button state
 and releases those inputs when the peer disconnects, plus releases common
@@ -824,7 +824,7 @@ worth a targeted framing probe.
 
 ### Bridge Hello Authentication
 
-Added optional shared-secret authentication for the AnyKBFlow bridge `Hello`
+Added optional shared-secret authentication for the AnyUniversalControl bridge `Hello`
 message. When `[auth].shared_secret` is configured on both peers, each side
 sends a nonce-backed HMAC-SHA256 proof over its hello identity, role, and display
 geometry. The receiver verifies the proof before accepting the peer role or

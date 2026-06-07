@@ -13,20 +13,20 @@ from pathlib import Path
 
 MODE_DEFAULTS = {
     "benign": {
-        "instance": "AnyKBFlow Probe",
+        "instance": "AnyUniversalControl Probe",
         "hostname": None,
         "port": 49152,
         "output_suffix": "redacted-native-admission-benign.md",
     },
     "companion-link": {
-        "instance": "AnyKBFlow Native Probe",
-        "hostname": "anykbflow-native-probe",
+        "instance": "AnyUniversalControl Native Probe",
+        "hostname": "anyuniversalcontrol-native-probe",
         "port": 49152,
         "output_suffix": "redacted-native-admission-companion-link.md",
     },
     "shape": {
-        "instance": "AnyKBFlow Native Shape Probe",
-        "hostname": "anykbflow-native-shape-probe",
+        "instance": "AnyUniversalControl Native Shape Probe",
+        "hostname": "anyuniversalcontrol-native-shape-probe",
         "port": 61833,
         "output_suffix": "redacted-native-admission-shape.md",
     },
@@ -265,7 +265,7 @@ def build_windows_command(
             "--instance",
             instance,
             "--hostname",
-            hostname or "anykbflow-native-probe",
+            hostname or "anyuniversalcontrol-native-probe",
             "--port",
             str(port),
             "--txt",
@@ -292,7 +292,7 @@ def build_windows_command(
         "--instance",
         instance,
         "--hostname",
-        hostname or "anykbflow-native-shape-probe",
+        hostname or "anyuniversalcontrol-native-shape-probe",
         "--port",
         str(port),
         "--observe-tcp",

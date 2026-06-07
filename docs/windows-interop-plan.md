@@ -112,8 +112,8 @@ Native discovery:
 
 Fallback discovery:
 
-- advertise the project-specific `_anykbflow._tcp.local.` service only for the bridge track
-- keep `_anykbflow._tcp.local.` separate from `_companion-link._tcp.local.` so bridge testing does not masquerade as native Universal Control
+- advertise the project-specific `_anyuniversalcontrol._tcp.local.` service only for the bridge track
+- keep `_anyuniversalcontrol._tcp.local.` separate from `_companion-link._tcp.local.` so bridge testing does not masquerade as native Universal Control
 
 Input capture:
 

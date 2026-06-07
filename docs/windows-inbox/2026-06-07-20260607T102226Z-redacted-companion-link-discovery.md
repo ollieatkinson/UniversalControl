@@ -2,13 +2,13 @@
 
 ## Source
 
-- Transcript file: `/home/oliver/src/github.com/ollieatkinson/AnyKBFlow/artifacts/windows-companion-link-discovery-20260607T102226Z.txt`
+- Transcript file: `/home/oliver/src/github.com/ollieatkinson/AnyUniversalControl/artifacts/windows-companion-link-discovery-20260607T102226Z.txt`
 - Raw output: not included
 
 ## Command Result
 
 - Cargo finished lines: 1
-- AnyKBFlow command executed: yes
+- AnyUniversalControl command executed: yes
 - Redaction enabled line: yes
 - Error lines: 0
 

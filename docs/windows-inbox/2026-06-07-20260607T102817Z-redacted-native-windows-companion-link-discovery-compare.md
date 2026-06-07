@@ -16,7 +16,7 @@
 
 ## Evidence Highlights
 
-- `Command Result / AnyKBFlow command executed`: same
+- `Command Result / AnyUniversalControl command executed`: same
   - before: yes
   - after: yes
 - `Command Result / Redaction enabled line`: same

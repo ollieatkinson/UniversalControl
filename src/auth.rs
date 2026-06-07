@@ -10,7 +10,7 @@ use crate::{
 
 type HmacSha256 = Hmac<Sha256>;
 
-const DOMAIN: &str = "anykbflow-hello-auth-v1";
+const DOMAIN: &str = "anyuniversalcontrol-hello-auth-v1";
 
 pub fn hello_auth(
     auth: &AuthConfig,

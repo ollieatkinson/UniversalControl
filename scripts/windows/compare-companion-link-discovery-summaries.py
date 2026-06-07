@@ -13,7 +13,7 @@ DEFAULT_IGNORED_FIELDS = {
 }
 
 HIGHLIGHT_FIELDS = [
-    "Command Result / AnyKBFlow command executed",
+    "Command Result / AnyUniversalControl command executed",
     "Command Result / Redaction enabled line",
     "Command Result / Error lines",
     "Discovery Events / Search started lines",

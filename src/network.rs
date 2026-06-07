@@ -39,7 +39,7 @@ pub async fn connect(config: &Config) -> Result<Peer> {
             let peer_addr = match config.peer_addr {
                 Some(peer_addr) => peer_addr,
                 None => discovery::discover_bridge_peer(Duration::from_secs(30))
-                    .context("failed to discover AnyKBFlow input owner")?,
+                    .context("failed to discover AnyUniversalControl input owner")?,
             };
             loop {
                 match TcpStream::connect(peer_addr).await {

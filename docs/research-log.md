@@ -689,3 +689,19 @@ stream, target/input, sync/layout, candidate, or rejection log signal as
 `resolved_with_native_log_signal` when no TCP observer connection is seen. If
 both a TCP attempt and focused native-log signal appear, the pair report now
 uses `resolved_with_tcp_attempt_and_native_log_signal`.
+
+### Apple Session Baseline Comparator
+
+Added `scripts/mac/compare-native-signal-baseline.py` to compare a redacted Mac
+watcher summary from a Windows native-admission candidate against the real
+Apple-to-Apple Universal Control session summary. It preserves only aggregate
+signal-family counts and reports whether the candidate overlaps baseline
+stream, target/input, sync/layout, proximity, or Wi-Fi P2P families.
+
+This closes a review gap in the coordinated Windows experiments: the paired
+Mac/Windows report can show visibility, resolve, TCP observer behavior, and
+native-log signal, while the baseline comparison answers whether the Mac-side
+candidate signal resembles the focused families seen during a real Apple peer
+session. Side-channel-only overlap stays below stream, target/input, and
+sync/layout overlap when deciding whether to inspect raw local artifacts or
+build a richer Windows listener.

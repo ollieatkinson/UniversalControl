@@ -394,11 +394,26 @@ Expected evidence:
     --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
   ```
 
+- The Mac-side watcher summary is compared with the Apple-to-Apple session
+  signal baseline:
+
+  ```sh
+  ./scripts/mac/compare-native-signal-baseline.py \
+    docs/observations/2026-06-07-redacted-uc-session.md \
+    docs/observations/YYYY-MM-DD-redacted-companion-link-shape-candidate.md \
+    --baseline-label apple-session \
+    --candidate-label shape \
+    --output docs/observations/YYYY-MM-DD-redacted-native-signal-baseline-shape.md
+  ```
+
 - Treat any connection attempt as a signal to inspect the bounded read summary
   and build a real listener next, not as Universal Control admission.
 - If the paired report says `resolved_with_native_log_signal`, inspect the raw
   local Mac artifact before changing the Windows candidate shape; DNS-SD
   visibility alone is still not native admission.
+- If the baseline comparison reports only side-channel overlap, keep it below
+  stream, target/input, or sync/layout evidence when deciding whether to build a
+  richer Windows listener.
 
 ## First Experiments
 

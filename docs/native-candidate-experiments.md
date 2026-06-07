@@ -227,6 +227,18 @@ Pair the redacted Mac and Windows summaries:
   --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
 ```
 
+Compare the Mac-side watcher summary against the real Apple-to-Apple session
+signal-family baseline:
+
+```sh
+./scripts/mac/compare-native-signal-baseline.py \
+  docs/observations/2026-06-07-redacted-uc-session.md \
+  docs/observations/YYYY-MM-DD-redacted-companion-link-shape-candidate.md \
+  --baseline-label apple-session \
+  --candidate-label shape \
+  --output docs/observations/YYYY-MM-DD-redacted-native-signal-baseline-shape.md
+```
+
 The Windows summary preserves accepted connection counts, per-connection read
 counts, total byte counts, first-read byte counts, hex-string lengths,
 read-limit status, and peer-close-after-data status without committing raw peer
@@ -244,6 +256,12 @@ raw Mac watcher artifact before changing the Windows candidate shape. That tier
 means the redacted Mac summary saw focused stream, target/input, sync/layout, or
 candidate/rejection signal; it does not mean the Windows peer joined native
 Universal Control.
+
+If the baseline comparison says `resolved_with_session_like_signal`, prioritize
+the raw Mac artifact window for local inspection before changing TXT shape or
+TCP behavior. If it says only `resolved_with_side_channel_signal`, keep it
+separate from stream/target/sync evidence and compare against the Apple session
+side-channel counts before escalating.
 
 After the minimal and shape-only summaries are committed or staged locally,
 compare their redacted Mac-side effects:

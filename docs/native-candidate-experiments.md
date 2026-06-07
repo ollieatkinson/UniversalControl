@@ -238,6 +238,11 @@ On Windows while the macOS watcher is running:
 python scripts/windows/capture-native-admission.py --mode shape
 ```
 
+The wrapper writes a raw transcript under ignored `artifacts/`, a redacted
+summary under `docs/windows-inbox/`, and a redacted AWDL comparison under
+`docs/observations/`. Use `--skip-awdl-compare` only when the summary must be
+generated without the committed Apple reconnect baseline.
+
 Manual equivalent:
 
 ```powershell
@@ -247,8 +252,7 @@ cargo run -- advertise-companion-link-shape `
   --seconds 60
 ```
 
-The wrapper writes a raw transcript under ignored `artifacts/` and a redacted
-summary under `docs/windows-inbox/`. Manual capture plus summary:
+Manual capture plus summary, if bypassing the wrapper:
 
 ```powershell
 cargo run -- advertise-companion-link-shape `
@@ -287,8 +291,8 @@ Pair the redacted Mac and Windows summaries:
   --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
 ```
 
-Compare the Windows TCP read/framing shape with the Apple-to-Apple AWDL payload
-length/gap/burst, phase-window burst, and framing-bucket baseline:
+The wrapper runs this AWDL comparison automatically for `shape` and
+`companion-link` modes. Manual comparison command:
 
 ```sh
 ./scripts/compare-native-admission-awdl-baseline.py \

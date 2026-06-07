@@ -60,6 +60,24 @@ def main() -> int:
         help="Redacted summary path under docs/windows-inbox/.",
     )
     parser.add_argument(
+        "--awdl-baseline",
+        type=Path,
+        help=(
+            "Apple-to-Apple AWDL baseline summary used for companion-link/shape "
+            "comparison. Defaults to the committed reconnect baseline."
+        ),
+    )
+    parser.add_argument(
+        "--awdl-output",
+        type=Path,
+        help="Redacted AWDL comparison output path under docs/observations/.",
+    )
+    parser.add_argument(
+        "--skip-awdl-compare",
+        action="store_true",
+        help="Skip the AWDL baseline comparison for companion-link/shape modes.",
+    )
+    parser.add_argument(
         "--no-prompt",
         action="store_true",
         help="Start the Windows command immediately.",
@@ -103,6 +121,26 @@ def main() -> int:
             / "windows-inbox"
             / f"{day}-{stamp}-{defaults['output_suffix']}"
         )
+    awdl_baseline = resolve_path(
+        repo_root,
+        args.awdl_baseline,
+        repo_root / "docs" / "observations" / "2026-06-07-redacted-uc-session-reconnect.md",
+    )
+    awdl_output = resolve_path(
+        repo_root,
+        args.awdl_output,
+        repo_root
+        / "docs"
+        / "observations"
+        / f"{day}-redacted-native-admission-{args.mode}-awdl-compare.md",
+    )
+    if awdl_output.exists() and args.awdl_output is None:
+        awdl_output = (
+            repo_root
+            / "docs"
+            / "observations"
+            / f"{day}-{stamp}-redacted-native-admission-{args.mode}-awdl-compare.md"
+        )
 
     windows_command = build_windows_command(
         args.mode,
@@ -125,6 +163,9 @@ def main() -> int:
     print(f"Native admission capture mode: {args.mode}")
     print(f"Raw Windows transcript: {transcript}")
     print(f"Redacted summary output: {output}\n")
+    if should_compare_awdl(args.mode, args.skip_awdl_compare):
+        print(f"AWDL baseline summary: {awdl_baseline}")
+        print(f"Redacted AWDL comparison output: {awdl_output}\n")
     print("Start this on macOS first:\n")
     print(mac_command)
     print("\nWindows command:\n")
@@ -150,10 +191,22 @@ def main() -> int:
     ).returncode
 
     print(f"Wrote redacted summary: {output}")
+    compare_code = 0
+    if summary_code == 0:
+        compare_code = run_awdl_comparison(
+            repo_root,
+            args.mode,
+            args.skip_awdl_compare,
+            awdl_baseline,
+            output,
+            awdl_output,
+        )
     if return_code != 0:
         print(f"Windows advertisement command exited with status {return_code}", file=sys.stderr)
         return return_code
-    return summary_code
+    if summary_code != 0:
+        return summary_code
+    return compare_code
 
 
 def positive_int(value: str) -> int:
@@ -251,6 +304,45 @@ def build_windows_command(
     if framing_probe:
         command.append("--observe-framing")
     return command
+
+
+def should_compare_awdl(mode: str, skip_awdl_compare: bool) -> bool:
+    return mode in {"companion-link", "shape"} and not skip_awdl_compare
+
+
+def run_awdl_comparison(
+    repo_root: Path,
+    mode: str,
+    skip_awdl_compare: bool,
+    baseline: Path,
+    windows_summary: Path,
+    output: Path,
+) -> int:
+    if not should_compare_awdl(mode, skip_awdl_compare):
+        return 0
+    if not baseline.exists():
+        print(f"Skipping AWDL comparison; baseline not found: {baseline}", file=sys.stderr)
+        return 0
+    output.parent.mkdir(parents=True, exist_ok=True)
+    code = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "scripts" / "compare-native-admission-awdl-baseline.py"),
+            str(baseline),
+            str(windows_summary),
+            "--baseline-label",
+            "apple-reconnect-awdl",
+            "--windows-label",
+            mode,
+            "--output",
+            str(output),
+        ],
+        cwd=repo_root,
+        check=False,
+    ).returncode
+    if code == 0:
+        print(f"Wrote redacted AWDL comparison: {output}")
+    return code
 
 
 def format_command(command: list[str]) -> str:

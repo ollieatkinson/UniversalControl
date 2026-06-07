@@ -938,6 +938,13 @@ gets a `session_like_phase_window_burst_overlap` tier when length, gap, and
 phase-window burst evidence align. This remains a correlation signal only, not
 decoded Universal Control phase identification.
 
+Wired the Windows native-admission wrapper into that comparison flow. For
+`companion-link` and `shape` modes, `scripts/windows/capture-native-admission.py`
+now writes the redacted Windows summary and then emits the AWDL baseline
+comparison automatically, unless `--skip-awdl-compare` is passed. The Mac
+coordinator now prints the Windows wrapper command instead of a raw `cargo`
+advertisement command so normal coordinated runs produce both artifacts.
+
 ### Shared Replay Mapping Validation
 
 Responded to the Windows unknown-input-mapping note by moving replay dry-run

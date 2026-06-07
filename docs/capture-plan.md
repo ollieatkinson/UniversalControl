@@ -388,14 +388,17 @@ On Windows while the macOS watcher is running:
 python scripts/windows/capture-native-admission.py --mode shape
 ```
 
+This wrapper captures the raw transcript under ignored `artifacts/`, writes the
+redacted Windows summary under `docs/windows-inbox/`, and writes the AWDL
+baseline comparison under `docs/observations/`.
+
 Manual equivalent:
 
 ```powershell
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60
 ```
 
-The wrapper captures and summarizes the Windows output. Manual capture plus
-summary:
+Manual capture plus summary, if bypassing the wrapper:
 
 ```powershell
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60 *> artifacts/windows-native-admission-shape.txt
@@ -453,8 +456,8 @@ Expected evidence:
     --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
   ```
 
-- Compare the Windows read/framing shape with the Apple-to-Apple AWDL
-  length/gap/burst, phase-window burst, and framing-bucket baseline:
+- The Windows wrapper runs the AWDL comparison automatically for native modes.
+  Manual comparison command:
 
   ```sh
   ./scripts/compare-native-admission-awdl-baseline.py \

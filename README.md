@@ -92,7 +92,8 @@ matching Windows command and writes a redacted Mac summary after capture:
 
 On Windows, use the matching wrapper to print the Mac command, capture the raw
 Windows transcript under ignored `artifacts/`, and write a redacted Windows
-summary:
+summary. In `companion-link` and `shape` modes it also writes the AWDL baseline
+comparison under `docs/observations/` unless `--skip-awdl-compare` is passed:
 
 ```sh
 python scripts/windows/capture-native-admission.py --mode benign
@@ -110,9 +111,10 @@ python scripts/windows/capture-native-admission.py --mode shape --framing-probe
 The advertiser refuses Apple-owned service types such as `_companion-link._tcp` unless `--allow-apple-service` is supplied for a controlled native-compatibility experiment.
 
 After a benign visibility check and a minimal `_companion-link._tcp` candidate
-check, this guarded command advertises a shape-only CompanionLink candidate with
-non-sensitive placeholder `rp*` TXT values matching the redacted macOS baseline
-key/value classes:
+check, `capture-native-admission.py --mode shape` advertises a guarded
+shape-only CompanionLink candidate with non-sensitive placeholder `rp*` TXT
+values matching the redacted macOS baseline key/value classes. The low-level
+Rust command is:
 
 ```sh
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment
@@ -171,7 +173,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/windows/compare-companion-link-discovery-summaries.py](scripts/windows/compare-companion-link-discovery-summaries.py): compares two redacted CompanionLink discovery summaries.
 - [scripts/windows/capture-display-probe.py](scripts/windows/capture-display-probe.py): captures native Windows display geometry and writes a redacted bridge-calibration summary.
 - [scripts/windows/summarize-display-probe-output.py](scripts/windows/summarize-display-probe-output.py): redacts display probe names while preserving bounds, scale, and virtual layout.
-- [scripts/windows/capture-native-admission.py](scripts/windows/capture-native-admission.py): coordinated Windows advertiser plus redacted summary wrapper for native-admission probes, with opt-in `--framing-probe`.
+- [scripts/windows/capture-native-admission.py](scripts/windows/capture-native-admission.py): coordinated Windows advertiser plus redacted summary wrapper for native-admission probes, with automatic AWDL baseline comparison for native modes and opt-in `--framing-probe`.
 - [scripts/windows/summarize-native-admission-output.py](scripts/windows/summarize-native-admission-output.py): redacts Windows native-admission command output into commit-safe Markdown, including safe peer classes, TCP read length/timing shapes, and non-payload framing buckets when enabled.
 - [scripts/windows/compare-native-admission-summaries.py](scripts/windows/compare-native-admission-summaries.py): compares two redacted Windows native-admission summaries.
 

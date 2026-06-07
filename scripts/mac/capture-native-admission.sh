@@ -39,6 +39,9 @@ Modes:
 
 Raw artifacts are written under artifacts/ and can contain identifiers. The
 summary written by this wrapper is generated through summarize-mdns-watch-artifact.py.
+The printed Windows command uses scripts/windows/capture-native-admission.py so
+the Windows side also writes a redacted summary and, for native modes, an AWDL
+baseline comparison.
 EOF
 }
 
@@ -118,36 +121,13 @@ if [[ -z "${instance}" ]]; then
 fi
 
 windows_command() {
-  case "${mode}" in
-    benign)
-      cat <<EOF
-cargo run -- advertise-mdns --seconds ${windows_seconds} --txt phase=visibility --txt role=windows-probe
-EOF
-      ;;
-    companion-link)
-      cat <<EOF
-cargo run -- advertise-mdns \`
-  --service-type _companion-link._tcp \`
+  cat <<EOF
+python scripts/windows/capture-native-admission.py \`
+  --mode ${mode} \`
+  --seconds ${windows_seconds} \`
   --instance "${instance}" \`
-  --hostname anykbflow-native-probe \`
-  --port 49152 \`
-  --txt probe=visibility \`
-  --txt role=windows-native-candidate \`
-  --allow-apple-service \`
-  --observe-tcp \`
-  --seconds ${windows_seconds}
+  --no-prompt
 EOF
-      ;;
-    shape)
-      cat <<EOF
-cargo run -- advertise-companion-link-shape \`
-  --acknowledge-shape-experiment \`
-  --instance "${instance}" \`
-  --observe-tcp \`
-  --seconds ${windows_seconds}
-EOF
-      ;;
-  esac
 }
 
 if [[ "${print_windows_command_only}" -eq 1 ]]; then

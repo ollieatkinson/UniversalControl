@@ -61,8 +61,9 @@ Evidence required:
 - redacted watcher summary preserving browse/resolve counts, ports, TXT key names, TXT value classes, and native-process log counts
 - packet capture showing DNS-SD exchange
 - the exact `scripts/mac/watch-companion-link-candidate.sh` command and Windows `--allow-apple-service` command used for the controlled candidate check
-- the exact `advertise-companion-link-shape` command used, when running the
-  shape-only follow-up
+- the exact `scripts/windows/capture-native-admission.py --mode shape` wrapper
+  command used for the shape-only follow-up, plus the underlying
+  `advertise-companion-link-shape` command if the wrapper was bypassed
 
 ## Phase 3: Session Setup
 

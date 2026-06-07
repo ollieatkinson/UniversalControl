@@ -212,7 +212,8 @@ compares it against the local macOS Rust mDNS baseline in one step.
 
 Use `capture-native-admission.py --mode shape` only while
 `capture-native-admission.sh --mode shape` is running on the Mac. Commit the
-redacted Windows summary, not the raw TCP observer transcript.
+redacted Windows summary and AWDL comparison, not the raw TCP observer
+transcript.
 
 Use `capture-native-admission.py --mode shape --framing-probe` only after a
 normal native-admission run accepted a TCP connection. The framing probe records
@@ -231,8 +232,9 @@ redacts display names, and preserves routing-relevant bounds under
 
 For native-admission runs, prefer `scripts/windows/capture-native-admission.py`
 because it captures the full Windows output to an ignored file under
-`artifacts/`, then writes only the redacted summary. Manual equivalent for any
-command using `--observe-tcp`:
+`artifacts/`, writes only the redacted summary, and for `companion-link` or
+`shape` mode also writes the AWDL baseline comparison. Manual equivalent for
+any command using `--observe-tcp`:
 
 ```powershell
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60 *> artifacts/windows-native-admission-shape.txt
@@ -268,8 +270,9 @@ python scripts/compare-native-admission-pair.py `
   --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
 ```
 
-Then compare the Windows TCP read shape with the Apple-to-Apple AWDL baseline,
-including phase-window burst correlations from the reconnect session:
+The wrapper runs this comparison automatically for native-admission modes.
+Manual AWDL comparison command, including phase-window burst correlations from
+the reconnect session:
 
 ```powershell
 python scripts/compare-native-admission-awdl-baseline.py `

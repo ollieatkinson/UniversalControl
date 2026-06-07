@@ -99,11 +99,12 @@ Run the next native checks in this order:
 4. Controlled CompanionLink candidate:
    `scripts/mac/capture-native-admission.sh --mode companion-link` on macOS
    while Windows runs the printed
-   `advertise-mdns --service-type _companion-link._tcp --allow-apple-service`
+   `scripts/windows/capture-native-admission.py --mode companion-link`
    command.
 5. Shape-only CompanionLink candidate:
    `scripts/mac/capture-native-admission.sh --mode shape` on macOS while
-   Windows runs the printed `advertise-companion-link-shape` command.
+   Windows runs the printed
+   `scripts/windows/capture-native-admission.py --mode shape` command.
 6. Apple peer TXT and state comparison using `scripts/mac/uc-probe.sh`,
    `scripts/mac/summarize-uc-probe-artifact.py`, and
    `scripts/mac/compare-uc-probe-summaries.py`.

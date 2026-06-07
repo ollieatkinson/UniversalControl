@@ -447,6 +447,13 @@ This pairs with the Mac-side `capture-native-admission.sh` summary so one
 commit can contain both sides of the same admission attempt without raw network
 identifiers.
 
+Added `scripts/windows/compare-native-admission-summaries.py` to compare two
+redacted Windows native-admission summaries. The intended first use is minimal
+CompanionLink candidate versus shape-only CompanionLink candidate, preserving
+the Windows-side advertised service/port, TCP observer status, accepted
+connection counts, connection outcomes, first-read byte counts, and first-read
+hex lengths without raw peer addresses or payload bytes.
+
 ### Local macOS Bridge Preflight
 
 Recorded `docs/observations/2026-06-07-local-macos-bridge-preflight.md` after

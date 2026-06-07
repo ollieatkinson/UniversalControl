@@ -198,6 +198,17 @@ compare their redacted Mac-side effects:
   --output docs/observations/YYYY-MM-DD-redacted-companion-link-candidate-compare.md
 ```
 
+Compare their redacted Windows-side TCP observer behavior:
+
+```powershell
+python scripts/windows/compare-native-admission-summaries.py `
+  docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-companion-link.md `
+  docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md `
+  --before-label minimal `
+  --after-label shape `
+  --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-compare.md
+```
+
 ## Experiment 5: Apple Peer TXT Shape
 
 Only run this when a real Mac or iPad Universal Control peer is available.

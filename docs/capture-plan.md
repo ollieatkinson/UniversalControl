@@ -296,6 +296,8 @@ Expected evidence:
   classes, and native-process log counts.
 - Compare the minimal and shape-only watcher summaries with
   `scripts/mac/compare-mdns-watch-summaries.py`.
+- Compare the minimal and shape-only Windows summaries with
+  `scripts/windows/compare-native-admission-summaries.py`.
 - `rapportd` or `UniversalControl` either ignores the service, attempts a
   connection, or logs a concrete rejection reason.
 - Windows summary includes whether the TCP observer accepted any connections,

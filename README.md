@@ -120,6 +120,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [scripts/mac/summarize-uc-session-artifact.py](scripts/mac/summarize-uc-session-artifact.py): redacts paired-session artifacts into commit-safe Markdown summaries.
 - [scripts/compare-native-admission-pair.py](scripts/compare-native-admission-pair.py): pairs redacted Mac watcher and Windows TCP-observer summaries into one admission report.
 - [scripts/windows/summarize-native-admission-output.py](scripts/windows/summarize-native-admission-output.py): redacts Windows native-admission command output into commit-safe Markdown.
+- [scripts/windows/compare-native-admission-summaries.py](scripts/windows/compare-native-admission-summaries.py): compares two redacted Windows native-admission summaries.
 
 ## Running The macOS Probe
 

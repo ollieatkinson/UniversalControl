@@ -161,6 +161,17 @@ python scripts/windows/summarize-native-admission-output.py `
   --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md
 ```
 
+When both minimal and shape-only Windows summaries exist, compare them:
+
+```powershell
+python scripts/windows/compare-native-admission-summaries.py `
+  docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-companion-link.md `
+  docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md `
+  --before-label minimal `
+  --after-label shape `
+  --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-compare.md
+```
+
 After the Mac-side redacted summary exists, create a paired report:
 
 ```powershell

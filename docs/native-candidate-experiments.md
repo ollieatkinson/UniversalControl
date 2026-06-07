@@ -302,4 +302,7 @@ When packet capture is required and you are ready to handle raw `.pcap` files:
 Use the action timeline written in the artifact README: idle, edge push, pointer
 movement, one harmless key press, one scroll, return to local, then idle. The
 goal is to label which logs and network streams change at each action before
-attempting any Windows native handshake.
+attempting any Windows native handshake. The paired summary reports focused
+native stream, target/input, sync/layout, proximity/ranging, and AWDL/Wi-Fi P2P
+counters so the Windows admission runs can be compared against the signal
+families a real Apple peer produces.

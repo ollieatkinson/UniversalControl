@@ -627,3 +627,8 @@ Hardened the fallback bridge session handshake so each role rejects an unexpecte
 peer role in the initial `Hello` instead of only logging a warning. This reduces
 the chance that a misconfigured two-machine run suppresses local input or
 injects into the wrong side while still lacking transport authentication.
+
+Updated the Apple-to-Apple Universal Control session summarizer to report the
+same focused native signal families as the Windows admission watcher: stream,
+target/input, sync/layout, proximity/ranging, and AWDL/Wi-Fi P2P. This keeps the
+real Apple-peer baseline comparable with controlled Windows candidate runs.

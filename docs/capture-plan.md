@@ -117,6 +117,12 @@ What it captures:
 - optional `tcpdump` packet captures on `en0` plus `awdl0` when present
 - `scripts/mac/summarize-uc-session-artifact.py` creates the commit-safe Markdown summary from the ignored artifact folder.
 
+The session summary reports broad discovery/session/input counters plus the
+same focused native counters used by Windows admission captures: stream,
+target/input, sync/layout, proximity/ranging, and AWDL/Wi-Fi peer-to-peer. This
+lets a real Apple-peer run define which signal families should appear when a
+candidate advances beyond DNS-SD.
+
 Notes:
 
 - `--tcpdump` requires admin privileges and writes raw `.pcap` files that must not be committed.

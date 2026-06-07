@@ -121,9 +121,14 @@ snapshot_lsof "before"
 run_capture "companion-link-browse" dns-sd -B _companion-link._tcp local
 run_capture "universalcontrol-browse" dns-sd -B _universalcontrol._tcp local
 
+log_predicate='process == "UniversalControl"'
+log_predicate+=' || process == "rapportd"'
+log_predicate+=' || process == "mDNSResponder"'
+log_predicate+=' || process == "nearbyd"'
+log_predicate+=' || process == "wifip2pd"'
 {
-  printf '$ log stream --style compact --predicate ...\n\n'
-  log stream --style compact --predicate 'process == "UniversalControl" || process == "rapportd" || process == "mDNSResponder" || process == "nearbyd" || process == "wifip2pd"'
+  printf '$ log stream --style compact --predicate %q\n\n' "${log_predicate}"
+  log stream --style compact --predicate "${log_predicate}"
 } >"${out_dir}/unified-log.txt" 2>&1 &
 pids+=("$!")
 

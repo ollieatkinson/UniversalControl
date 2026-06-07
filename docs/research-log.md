@@ -341,3 +341,34 @@ The relevant cache path found locally is:
 ```
 
 Later symbol or string inspection of private frameworks should use dyld shared cache tooling rather than assuming the framework symlink points to a standalone Mach-O file.
+
+## 2026-06-07
+
+### Native Feasibility Position
+
+Added `docs/native-feasibility.md` to make the native-first decision explicit.
+The Mac side should stay on Apple's `UniversalControl.app` while Windows can
+advance through observable Rapport/CompanionLink and
+`com.apple.universalcontrol` gates without Apple-private identity material.
+
+Checked Apple's current Universal Control support page and Handoff security
+guide on 2026-06-07:
+
+- Universal Control still lists same Apple Account with two-factor
+  authentication, Bluetooth, Wi-Fi, and Handoff as requirements.
+- Handoff security still describes iCloud-mediated BLE pairing,
+  Keychain-stored symmetric keys, protected advertisements, and larger
+  peer-to-peer Wi-Fi transfers whose TLS trust derives from an iCloud Keychain
+  identity.
+
+Sources:
+
+- <https://support.apple.com/en-us/102459>
+- <https://support.apple.com/guide/security-pdf/handoff-security-secf78dbe639/web>
+
+Interpretation for Windows: native Universal Control is not disproven, but it
+is high risk. The immediate proof gates are still Windows passive browsing of
+the Mac `_companion-link._tcp` advertisement, macOS visibility of a benign
+Windows mDNS probe, a controlled Windows `_companion-link._tcp` candidate run
+with macOS `rapportd`/`UniversalControl` logs, and Apple-to-Apple baseline
+captures before any deeper Windows native handshake attempt.

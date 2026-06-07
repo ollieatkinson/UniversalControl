@@ -78,6 +78,11 @@ Evidence required:
 
 ## Fallback Decision
 
+Use [native-feasibility.md](native-feasibility.md) as the decision record for
+whether the Mac can remain on native Universal Control. A failed probe is not
+enough by itself; compare against Apple peer evidence before declaring native
+admission closed.
+
 Do not switch to a custom Mac agent until at least one of these is proven:
 
 - macOS requires Apple Account/iCloud Keychain identity unavailable to Windows.

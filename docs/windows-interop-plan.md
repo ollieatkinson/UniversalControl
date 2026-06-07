@@ -16,6 +16,14 @@ The native Apple feature is not just "send mouse events over TCP." Public requir
 
 The project should keep native macOS compatibility as the lead strategy until evidence proves it cannot work. A separate Mac agent is not the target architecture; it is the fallback if Apple's native trust/session path cannot admit Windows.
 
+The native/fallback decision is tracked in
+[native-feasibility.md](native-feasibility.md). In short, native remains open
+while Windows can advance through observable Rapport/CompanionLink and
+`com.apple.universalcontrol` gates without Apple-private identity material. It
+closes only when captures show the remaining path depends on Apple Account,
+iCloud Keychain, private certificates, protected entitlements, or non-negotiated
+Apple-only keys.
+
 ## Track A: Native Compatibility Investigation
 
 Purpose: learn whether a Windows peer can be accepted by macOS Universal Control without Apple-private secrets or entitlements.

@@ -12,6 +12,7 @@ This is the preferred path. The Mac should stay on Apple's native Universal Cont
 
 Start with:
 
+- [docs/native-feasibility.md](docs/native-feasibility.md)
 - [docs/research-log.md](docs/research-log.md)
 - [docs/protocol-hypothesis.md](docs/protocol-hypothesis.md)
 - [docs/native-compatibility-checklist.md](docs/native-compatibility-checklist.md)
@@ -78,6 +79,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 ## Repo Layout
 
 - [docs/research-log.md](docs/research-log.md): dated evidence and source notes.
+- [docs/native-feasibility.md](docs/native-feasibility.md): native-first decision gates and fallback evidence threshold.
 - [docs/protocol-hypothesis.md](docs/protocol-hypothesis.md): current model of discovery, trust, control, and HID data flow.
 - [docs/native-compatibility-checklist.md](docs/native-compatibility-checklist.md): gates for keeping the Mac side on native Universal Control.
 - [docs/capture-plan.md](docs/capture-plan.md): repeatable experiments for macOS and Windows captures.

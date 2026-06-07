@@ -2,6 +2,10 @@
 
 The goal is to produce evidence that can drive an implementation, not just collect noisy traces. Every capture should record the machine state, exact commands, participants, and user action being performed.
 
+Use [native-feasibility.md](native-feasibility.md) for the current native-first
+pass gates and fallback decision threshold. Captures should advance or close
+those gates directly.
+
 ## Capture Safety
 
 - Do not commit raw packet captures, Keychain output, Apple Account identifiers, or unredacted local device IDs.

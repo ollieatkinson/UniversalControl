@@ -72,10 +72,41 @@ out_dir="${repo_root}/artifacts/mac-uc-session-${stamp}"
 mkdir -p "${out_dir}"
 
 pids=()
-cleanup() {
-  for pid in "${pids[@]}"; do
-    kill "${pid}" 2>/dev/null || true
+
+descendant_pids() {
+  local pid="$1"
+  local child
+  while IFS= read -r child; do
+    descendant_pids "${child}"
+    printf '%s\n' "${child}"
+  done < <(pgrep -P "${pid}" 2>/dev/null || true)
+}
+
+send_signal() {
+  local signal="$1"
+  shift
+  local pid
+  for pid in "$@"; do
+    kill "-${signal}" "${pid}" 2>/dev/null || true
+    if [[ "${enable_tcpdump}" -eq 1 ]]; then
+      sudo -n kill "-${signal}" "${pid}" 2>/dev/null || true
+    fi
   done
+}
+
+cleanup() {
+  local targets=()
+  local pid
+  local child
+  for pid in "${pids[@]}"; do
+    while IFS= read -r child; do
+      targets+=("${child}")
+    done < <(descendant_pids "${pid}")
+    targets+=("${pid}")
+  done
+  send_signal INT "${targets[@]}"
+  sleep 1
+  send_signal TERM "${targets[@]}"
   for pid in "${pids[@]}"; do
     wait "${pid}" 2>/dev/null || true
   done

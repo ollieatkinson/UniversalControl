@@ -123,6 +123,12 @@ target/input, sync/layout, proximity/ranging, and AWDL/Wi-Fi peer-to-peer. This
 lets a real Apple-peer run define which signal families should appear when a
 candidate advances beyond DNS-SD.
 
+When `.pcap` files are present and `tcpdump` is available locally, the session
+summary also decodes the packet captures offline and keeps only aggregate
+packet-shape metadata: capture class, decoded packet count, IP version counts,
+transport counts, and protocol-relevant port hits. It does not include raw
+packet lines, endpoints, payload bytes, or dynamic ports.
+
 Notes:
 
 - `--tcpdump` requires admin privileges and writes raw `.pcap` files that must not be committed.

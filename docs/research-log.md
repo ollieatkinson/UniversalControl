@@ -632,3 +632,24 @@ Updated the Apple-to-Apple Universal Control session summarizer to report the
 same focused native signal families as the Windows admission watcher: stream,
 target/input, sync/layout, proximity/ranging, and AWDL/Wi-Fi P2P. This keeps the
 real Apple-peer baseline comparable with controlled Windows candidate runs.
+
+### TCPDump-Backed Universal Control Session Summary
+
+Processed `artifacts/mac-uc-session-20260607T072939Z` into
+`docs/observations/2026-06-07-redacted-uc-session.md`. The raw artifact stays
+ignored because it contains unified logs and packet captures.
+
+The redacted summary preserved no DNS-SD browse rows for `_companion-link._tcp`
+or `_universalcontrol._tcp`, but the active-session log counters did show native
+UniversalControl/Rapport target/input, sync/layout, proximity/ranging, and
+Wi-Fi peer-to-peer signal families. The pcap metadata decoded cleanly: 29,534
+packet lines, split between an AWDL-class capture and a primary-network
+capture, with TCP-heavy transport counts and protocol-relevant hits for ports
+3722 and 5353.
+
+The first version of `capture-uc-session.sh` left `dns-sd`, `log stream`, and
+`tcpdump` descendants running after printing `Wrote`, so this artifact should be
+treated as a useful active-session signal shape rather than an exact 120 second
+window. The script now tears down descendant process trees with interrupt and
+terminate signals, using a non-interactive `sudo kill` fallback for root-owned
+tcpdump descendants.

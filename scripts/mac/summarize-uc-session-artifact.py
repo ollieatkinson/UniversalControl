@@ -5,12 +5,16 @@ from __future__ import annotations
 
 import argparse
 import re
+import shutil
+import subprocess
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
 
 NATIVE_PROCESSES = ("UniversalControl", "rapportd", "mDNSResponder", "nearbyd", "wifip2pd")
+KNOWN_PACKET_PORTS = ("3722", "5353")
+TCPDUMP_TIMEOUT_SECONDS = 30
 
 
 @dataclass
@@ -133,7 +137,16 @@ def render_summary(artifact_dir: Path) -> str:
             f"- pcap files: {pcap_summary['count']}",
             f"- total pcap bytes: {pcap_summary['bytes']}",
             f"- pcap byte sizes: {format_counter(pcap_summary['sizes'])}",
+            f"- pcap capture classes: {format_counter(pcap_summary['capture_classes'])}",
+            f"- tcpdump packet decode: {pcap_summary['decode_status']}",
+            f"- decoded packet lines: {pcap_summary['decoded_packets']}",
+            f"- packet counts by capture class: {format_counter(pcap_summary['packet_capture_classes'])}",
+            f"- IP version counts: {format_counter(pcap_summary['ip_versions'])}",
+            f"- transport counts: {format_counter(pcap_summary['transports'])}",
+            f"- protocol-relevant port hits: {format_counter(pcap_summary['known_ports'])}",
+            f"- pcap decode failures: {pcap_summary['decode_failures']}",
             "- raw packet data: not included",
+            "- raw endpoints and dynamic ports: not included",
         ]
     )
 
@@ -335,13 +348,99 @@ def render_lsof_summary(counts: Counter[str]) -> list[str]:
 
 def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
     sizes: Counter[str] = Counter()
+    capture_classes: Counter[str] = Counter()
+    packet_capture_classes: Counter[str] = Counter()
+    ip_versions: Counter[str] = Counter()
+    transports: Counter[str] = Counter()
+    known_ports: Counter[str] = Counter()
     total_bytes = 0
+    decoded_packets = 0
+    decode_failures = 0
+    tcpdump = shutil.which("tcpdump")
     pcaps = sorted(artifact_dir.glob("*.pcap"))
     for pcap in pcaps:
         size = pcap.stat().st_size
         total_bytes += size
         sizes[str(size)] += 1
-    return {"count": len(pcaps), "bytes": total_bytes, "sizes": sizes}
+        capture_class = pcap_capture_class(pcap)
+        capture_classes[capture_class] += 1
+        if tcpdump is None:
+            continue
+        result = decode_pcap_lines(tcpdump, pcap)
+        if result is None:
+            decode_failures += 1
+            continue
+        decoded_packets += len(result)
+        packet_capture_classes[capture_class] += len(result)
+        for line in result:
+            count_packet_shape(line, ip_versions, transports, known_ports)
+    decode_status = "not attempted"
+    if pcaps and tcpdump is None:
+        decode_status = "tcpdump unavailable"
+    elif pcaps:
+        decode_status = "ok" if not decode_failures else "partial"
+    return {
+        "count": len(pcaps),
+        "bytes": total_bytes,
+        "sizes": sizes,
+        "capture_classes": capture_classes,
+        "decode_status": decode_status,
+        "decoded_packets": decoded_packets,
+        "packet_capture_classes": packet_capture_classes,
+        "ip_versions": ip_versions,
+        "transports": transports,
+        "known_ports": known_ports,
+        "decode_failures": decode_failures,
+    }
+
+
+def pcap_capture_class(path: Path) -> str:
+    name = path.stem.lower()
+    if "awdl" in name:
+        return "awdl"
+    return "primary-network"
+
+
+def decode_pcap_lines(tcpdump: str, path: Path) -> list[str] | None:
+    try:
+        result = subprocess.run(
+            [tcpdump, "-nn", "-tttt", "-r", str(path)],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=TCPDUMP_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def count_packet_shape(
+    line: str,
+    ip_versions: Counter[str],
+    transports: Counter[str],
+    known_ports: Counter[str],
+) -> None:
+    if " IP6 " in line:
+        ip_versions["ipv6"] += 1
+    elif " IP " in line:
+        ip_versions["ipv4"] += 1
+
+    if " UDP," in line or " UDP " in line:
+        transports["udp"] += 1
+    if " Flags [" in line:
+        transports["tcp"] += 1
+
+    for port in KNOWN_PACKET_PORTS:
+        if packet_line_mentions_port(line, port):
+            known_ports[port] += 1
+
+
+def packet_line_mentions_port(line: str, port: str) -> bool:
+    return re.search(rf"\.{re.escape(port)}(?:[ >:,]|$)", line) is not None
 
 
 def parse_launchctl(text: str) -> dict[str, str]:

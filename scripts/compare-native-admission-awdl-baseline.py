@@ -21,6 +21,10 @@ class AwdlFlow:
     payload_lengths: Counter[str] = field(default_factory=Counter)
     initial_sequence: list[str] = field(default_factory=list)
     gap_buckets: Counter[str] = field(default_factory=Counter)
+    framing_first_byte_classes: Counter[str] = field(default_factory=Counter)
+    framing_length_prefix_candidates: Counter[str] = field(default_factory=Counter)
+    framing_tls_record_like: Counter[str] = field(default_factory=Counter)
+    framing_tls_record_len_match: Counter[str] = field(default_factory=Counter)
 
 
 def main() -> int:
@@ -97,6 +101,18 @@ def parse_awdl_flows(path: Path) -> list[AwdlFlow]:
             continue
         if stripped.startswith("- inter-payload gap buckets:"):
             current.gap_buckets.update(parse_backtick_counter(stripped))
+            continue
+        if stripped.startswith("- framing first-byte classes:"):
+            current.framing_first_byte_classes.update(parse_backtick_counter(stripped))
+            continue
+        if stripped.startswith("- framing length-prefix candidates:"):
+            current.framing_length_prefix_candidates.update(parse_backtick_counter(stripped))
+            continue
+        if stripped.startswith("- framing TLS record-like reads:"):
+            current.framing_tls_record_like.update(parse_backtick_counter(stripped))
+            continue
+        if stripped.startswith("- framing TLS record length matches:"):
+            current.framing_tls_record_len_match.update(parse_backtick_counter(stripped))
 
     return flows
 
@@ -152,6 +168,7 @@ def render_report(
 ) -> str:
     baseline_lengths = combined_lengths(baseline_flows)
     baseline_gaps = combined_gaps(baseline_flows)
+    baseline_framing = combined_framing(baseline_flows)
     windows_lengths = parse_backtick_counter(
         windows.get("TCP Observer / Read byte counts", "none")
     )
@@ -170,6 +187,20 @@ def render_report(
             for bucket in sorted(set(baseline_gaps) & set(windows_gaps))
         }
     )
+    windows_framing = {
+        "first_byte_classes": parse_backtick_counter(
+            windows.get("TCP Observer / Framing first-byte classes", "none")
+        ),
+        "length_prefix_candidates": parse_backtick_counter(
+            windows.get("TCP Observer / Framing length-prefix candidates", "none")
+        ),
+        "tls_record_like": parse_backtick_counter(
+            windows.get("TCP Observer / Framing TLS record-like reads", "none")
+        ),
+        "tls_record_len_match": parse_backtick_counter(
+            windows.get("TCP Observer / Framing TLS record length matches", "none")
+        ),
+    }
     tier = evidence_tier(windows, windows_lengths, common_lengths, common_gaps)
 
     lines = [
@@ -190,6 +221,10 @@ def render_report(
         f"- Baseline small-family lengths: {format_family(baseline_lengths, APPLE_AWDL_SMALL_LENGTHS)}",
         f"- Baseline large-family lengths: {format_family(baseline_lengths, APPLE_AWDL_LARGE_LENGTHS)}",
         f"- Baseline inter-payload gap buckets: {format_counter(baseline_gaps)}",
+        f"- Baseline framing first-byte classes: {format_counter(baseline_framing['first_byte_classes'])}",
+        f"- Baseline framing length-prefix candidates: {format_counter(baseline_framing['length_prefix_candidates'])}",
+        f"- Baseline framing TLS record-like reads: {format_counter(baseline_framing['tls_record_like'])}",
+        f"- Baseline framing TLS record length matches: {format_counter(baseline_framing['tls_record_len_match'])}",
         "",
         "## Windows Read Shape",
         "",
@@ -215,6 +250,10 @@ def render_report(
         f"- Gap bucket overlap: {format_overlap(common_gaps, baseline_gaps)}",
         f"- Small-family overlap count: {family_overlap_count(common_lengths, APPLE_AWDL_SMALL_LENGTHS)}",
         f"- Large-family overlap count: {family_overlap_count(common_lengths, APPLE_AWDL_LARGE_LENGTHS)}",
+        f"- Framing first-byte overlap: {format_overlap(overlap_counter(windows_framing['first_byte_classes'], baseline_framing['first_byte_classes']), baseline_framing['first_byte_classes'])}",
+        f"- Framing length-prefix overlap: {format_overlap(overlap_counter(windows_framing['length_prefix_candidates'], baseline_framing['length_prefix_candidates']), baseline_framing['length_prefix_candidates'])}",
+        f"- Framing TLS record-like overlap: {format_overlap(overlap_counter(windows_framing['tls_record_like'], baseline_framing['tls_record_like']), baseline_framing['tls_record_like'])}",
+        f"- Framing compatibility: {framing_compatibility(windows_framing, baseline_framing)}",
         f"- Evidence tier: {tier}",
         "",
         "## Notes",
@@ -268,6 +307,51 @@ def combined_gaps(flows: list[AwdlFlow]) -> Counter[str]:
     for flow in flows:
         combined.update(flow.gap_buckets)
     return combined
+
+
+def combined_framing(flows: list[AwdlFlow]) -> dict[str, Counter[str]]:
+    combined = {
+        "first_byte_classes": Counter(),
+        "length_prefix_candidates": Counter(),
+        "tls_record_like": Counter(),
+        "tls_record_len_match": Counter(),
+    }
+    for flow in flows:
+        combined["first_byte_classes"].update(flow.framing_first_byte_classes)
+        combined["length_prefix_candidates"].update(flow.framing_length_prefix_candidates)
+        combined["tls_record_like"].update(flow.framing_tls_record_like)
+        combined["tls_record_len_match"].update(flow.framing_tls_record_len_match)
+    return combined
+
+
+def overlap_counter(candidate: Counter[str], baseline: Counter[str]) -> Counter[str]:
+    return Counter(
+        {
+            key: candidate[key]
+            for key in sorted(set(candidate) & set(baseline), key=sort_key)
+        }
+    )
+
+
+def framing_compatibility(
+    windows_framing: dict[str, Counter[str]],
+    baseline_framing: dict[str, Counter[str]],
+) -> str:
+    if not any(windows_framing[key] for key in windows_framing):
+        return "not_observed"
+    if not any(baseline_framing[key] for key in baseline_framing):
+        return "baseline_framing_not_observed"
+    if baseline_framing["tls_record_like"]["yes"] == 0 and windows_framing["tls_record_like"]["yes"]:
+        return "tls_like_where_awdl_baseline_is_not_tls_like"
+    if not overlap_counter(
+        windows_framing["first_byte_classes"], baseline_framing["first_byte_classes"]
+    ):
+        return "no_first_byte_class_overlap"
+    if overlap_counter(
+        windows_framing["length_prefix_candidates"], baseline_framing["length_prefix_candidates"]
+    ):
+        return "framing_bucket_overlap"
+    return "first_byte_class_overlap_only"
 
 
 def family_overlap_count(counter: Counter[str], family: set[str]) -> int:

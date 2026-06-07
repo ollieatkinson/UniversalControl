@@ -886,3 +886,18 @@ The probe still does not log raw payload bytes, hex prefixes, peer addresses, or
 decoded message values. Its output is only a frame-shape hypothesis layer above
 the existing read length/timing observer, intended to decide whether to build a
 real parser/listener and what framing family to try first.
+
+### Apple Session Framing Baseline
+
+Extended `scripts/mac/summarize-uc-session-artifact.py` to parse local Ethernet
+pcap files directly for TCP payload slices and emit only non-payload
+frame-shape buckets. The committed Apple-to-Apple session summaries now include
+first-byte classes, byte-class ratio buckets, length-prefix candidates, and
+TLS-record-like counters for each top AWDL and primary-network TCP flow.
+
+Regenerated the 2026-06-07 session and reconnect observations. The AWDL
+Universal Control flows are not TLS-record-like and do not show simple
+big/little-endian length-prefix matches, while several ordinary primary-network
+HTTPS flows are TLS-record-like. This gives the Windows `--framing-probe`
+output a stronger baseline: a TLS-shaped Windows read would look unlike the
+native AWDL data path even if it had a TCP connection and some length overlap.

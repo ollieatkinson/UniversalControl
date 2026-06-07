@@ -448,7 +448,8 @@ Expected evidence:
     --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
   ```
 
-- Compare the Windows read shape with the Apple-to-Apple AWDL packet baseline:
+- Compare the Windows read/framing shape with the Apple-to-Apple AWDL packet
+  baseline:
 
   ```sh
   ./scripts/compare-native-admission-awdl-baseline.py \

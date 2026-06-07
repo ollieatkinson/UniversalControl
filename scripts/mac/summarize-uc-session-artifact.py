@@ -17,6 +17,7 @@ from pathlib import Path
 NATIVE_PROCESSES = ("UniversalControl", "rapportd", "mDNSResponder", "nearbyd", "wifip2pd")
 KNOWN_PACKET_PORTS = ("3722", "5353")
 TCPDUMP_TIMEOUT_SECONDS = 30
+PCAP_LINKTYPE_ETHERNET = 1
 
 
 @dataclass
@@ -39,6 +40,16 @@ class PacketRecord:
     destination_host: str
     destination_port: str
     rest: str
+
+
+@dataclass(frozen=True)
+class PcapPayloadRecord:
+    ip_version: str
+    source_host: str
+    source_port: str
+    destination_host: str
+    destination_port: str
+    payload: bytes
 
 
 def main() -> int:
@@ -164,8 +175,10 @@ def render_summary(artifact_dir: Path) -> str:
             f"- protocol-relevant port hits: {format_counter(pcap_summary['known_ports'])}",
             f"- TCP flow counts by capture class: {format_counter(pcap_summary['tcp_flow_capture_classes'])}",
             f"- TCP payload bytes by capture class: {format_counter(pcap_summary['tcp_payload_bytes_by_capture'])}",
+            f"- TCP payload frame-shape packets by capture class: {format_counter(pcap_summary['tcp_payload_shape_packets_by_capture'])}",
             f"- mDNS service mentions: {format_counter(pcap_summary['mdns_service_mentions'])}",
             f"- pcap decode failures: {pcap_summary['decode_failures']}",
+            f"- pcap frame-shape decode failures: {pcap_summary['tcp_payload_shape_decode_failures']}",
             "- raw packet data: not included",
             "- raw endpoints and dynamic ports: not included",
         ]
@@ -505,11 +518,13 @@ def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
     known_ports: Counter[str] = Counter()
     tcp_flow_capture_classes: Counter[str] = Counter()
     tcp_payload_bytes_by_capture: Counter[str] = Counter()
+    tcp_payload_shape_packets_by_capture: Counter[str] = Counter()
     mdns_service_mentions: Counter[str] = Counter()
     tcp_flows: dict[tuple[str, tuple[tuple[str, str], tuple[str, str]]], dict[str, object]] = {}
     total_bytes = 0
     decoded_packets = 0
     decode_failures = 0
+    payload_shape_decode_failures = 0
     first_packet_time: datetime | None = None
     last_packet_time: datetime | None = None
     tcpdump = shutil.which("tcpdump")
@@ -544,6 +559,13 @@ def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
                     tcp_flow_capture_classes,
                     tcp_payload_bytes_by_capture,
                 )
+        payload_records = parse_pcap_tcp_payloads(pcap)
+        if payload_records is None:
+            payload_shape_decode_failures += 1
+        else:
+            tcp_payload_shape_packets_by_capture[capture_class] += len(payload_records)
+            for payload_record in payload_records:
+                update_tcp_flow_framing(tcp_flows, capture_class, payload_record)
     decode_status = "not attempted"
     if pcaps and tcpdump is None:
         decode_status = "tcpdump unavailable"
@@ -562,6 +584,8 @@ def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
         "known_ports": known_ports,
         "tcp_flow_capture_classes": tcp_flow_capture_classes,
         "tcp_payload_bytes_by_capture": tcp_payload_bytes_by_capture,
+        "tcp_payload_shape_packets_by_capture": tcp_payload_shape_packets_by_capture,
+        "tcp_payload_shape_decode_failures": payload_shape_decode_failures,
         "mdns_service_mentions": mdns_service_mentions,
         "awdl_tcp_flows": top_tcp_flow_shapes(tcp_flows, first_packet_time, capture_class="awdl"),
         "primary_network_tcp_flows": top_tcp_flow_shapes(
@@ -594,6 +618,155 @@ def decode_pcap_lines(tcpdump: str, path: Path) -> list[str] | None:
     if result.returncode != 0:
         return None
     return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def parse_pcap_tcp_payloads(path: Path) -> list[PcapPayloadRecord] | None:
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return None
+    if len(data) < 24:
+        return None
+
+    magic = data[:4]
+    if magic in (b"\xd4\xc3\xb2\xa1", b"\x4d\x3c\xb2\xa1"):
+        endian = "<"
+    elif magic in (b"\xa1\xb2\xc3\xd4", b"\xa1\xb2\x3c\x4d"):
+        endian = ">"
+    else:
+        return None
+
+    try:
+        linktype = int.from_bytes(data[20:24], endian_byteorder(endian))
+    except ValueError:
+        return None
+    if linktype != PCAP_LINKTYPE_ETHERNET:
+        return None
+
+    records: list[PcapPayloadRecord] = []
+    offset = 24
+    while offset + 16 <= len(data):
+        try:
+            incl_len = int.from_bytes(data[offset + 8 : offset + 12], endian_byteorder(endian))
+        except ValueError:
+            return None
+        offset += 16
+        packet = data[offset : offset + incl_len]
+        if len(packet) != incl_len:
+            return None
+        offset += incl_len
+        payload_record = parse_ethernet_tcp_payload(packet)
+        if payload_record is not None and payload_record.payload:
+            records.append(payload_record)
+    return records
+
+
+def endian_byteorder(endian: str) -> str:
+    return "little" if endian == "<" else "big"
+
+
+def parse_ethernet_tcp_payload(packet: bytes) -> PcapPayloadRecord | None:
+    if len(packet) < 14:
+        return None
+    offset = 14
+    ethertype = int.from_bytes(packet[12:14], "big")
+    if ethertype in {0x8100, 0x88A8}:
+        if len(packet) < 18:
+            return None
+        ethertype = int.from_bytes(packet[16:18], "big")
+        offset = 18
+
+    if ethertype == 0x0800:
+        return parse_ipv4_tcp_payload(packet, offset)
+    if ethertype == 0x86DD:
+        return parse_ipv6_tcp_payload(packet, offset)
+    return None
+
+
+def parse_ipv4_tcp_payload(packet: bytes, offset: int) -> PcapPayloadRecord | None:
+    if len(packet) < offset + 20:
+        return None
+    version = packet[offset] >> 4
+    header_len = (packet[offset] & 0x0F) * 4
+    if version != 4 or header_len < 20:
+        return None
+    total_len = int.from_bytes(packet[offset + 2 : offset + 4], "big")
+    if len(packet) < offset + total_len or total_len < header_len:
+        return None
+    protocol = packet[offset + 9]
+    if protocol != 6:
+        return None
+    source_host = str(ipaddress.ip_address(packet[offset + 12 : offset + 16]))
+    destination_host = str(ipaddress.ip_address(packet[offset + 16 : offset + 20]))
+    tcp_offset = offset + header_len
+    segment_end = offset + total_len
+    return parse_tcp_segment(packet, tcp_offset, segment_end, "ipv4", source_host, destination_host)
+
+
+def parse_ipv6_tcp_payload(packet: bytes, offset: int) -> PcapPayloadRecord | None:
+    if len(packet) < offset + 40:
+        return None
+    version = packet[offset] >> 4
+    if version != 6:
+        return None
+    payload_len = int.from_bytes(packet[offset + 4 : offset + 6], "big")
+    next_header = packet[offset + 6]
+    source_host = str(ipaddress.ip_address(packet[offset + 8 : offset + 24]))
+    destination_host = str(ipaddress.ip_address(packet[offset + 24 : offset + 40]))
+    cursor = offset + 40
+    segment_end = cursor + payload_len
+    if len(packet) < segment_end:
+        return None
+
+    while next_header in {0, 43, 44, 50, 51, 60} and cursor < segment_end:
+        if next_header == 44:
+            if cursor + 8 > segment_end:
+                return None
+            next_header = packet[cursor]
+            cursor += 8
+            continue
+        if next_header == 51:
+            if cursor + 2 > segment_end:
+                return None
+            header_len = (packet[cursor + 1] + 2) * 4
+        else:
+            if cursor + 2 > segment_end:
+                return None
+            header_len = (packet[cursor + 1] + 1) * 8
+        if cursor + header_len > segment_end:
+            return None
+        next_header = packet[cursor]
+        cursor += header_len
+
+    if next_header != 6:
+        return None
+    return parse_tcp_segment(packet, cursor, segment_end, "ipv6", source_host, destination_host)
+
+
+def parse_tcp_segment(
+    packet: bytes,
+    tcp_offset: int,
+    segment_end: int,
+    ip_version: str,
+    source_host: str,
+    destination_host: str,
+) -> PcapPayloadRecord | None:
+    if segment_end < tcp_offset + 20 or len(packet) < segment_end:
+        return None
+    source_port = str(int.from_bytes(packet[tcp_offset : tcp_offset + 2], "big"))
+    destination_port = str(int.from_bytes(packet[tcp_offset + 2 : tcp_offset + 4], "big"))
+    header_len = (packet[tcp_offset + 12] >> 4) * 4
+    if header_len < 20 or tcp_offset + header_len > segment_end:
+        return None
+    payload = packet[tcp_offset + header_len : segment_end]
+    return PcapPayloadRecord(
+        ip_version=ip_version,
+        source_host=source_host,
+        source_port=source_port,
+        destination_host=destination_host,
+        destination_port=destination_port,
+        payload=payload,
+    )
 
 
 def parse_packet_record(line: str) -> PacketRecord | None:
@@ -709,6 +882,15 @@ def update_tcp_flow(
             "payload_gap_buckets": Counter(),
             "initial_payload_sequence": [],
             "last_payload_time": None,
+            "framing_first_byte_classes": Counter(),
+            "framing_length_prefix_candidates": Counter(),
+            "framing_tls_record_like": Counter(),
+            "framing_tls_record_len_match": Counter(),
+            "framing_ascii_ratios": Counter(),
+            "framing_high_ratios": Counter(),
+            "framing_zero_ratios": Counter(),
+            "framing_control_ratios": Counter(),
+            "initial_framing_samples": [],
             "first_time": record.timestamp,
             "last_time": record.timestamp,
             "flags": Counter(),
@@ -726,6 +908,49 @@ def update_tcp_flow(
     flow["flags"].update(tcp_flag_classes(record.rest, payload_length))
     tcp_flow_capture_classes[capture_class] += 1 if int(flow["packets"]) == 1 else 0
     tcp_payload_bytes_by_capture[capture_class] += payload_length
+
+
+def update_tcp_flow_framing(
+    tcp_flows: dict[tuple[str, tuple[tuple[str, str], tuple[str, str]]], dict[str, object]],
+    capture_class: str,
+    record: PcapPayloadRecord,
+) -> None:
+    endpoints = tuple(
+        sorted(
+            (
+                (record.source_host, record.source_port),
+                (record.destination_host, record.destination_port),
+            )
+        )
+    )
+    flow = tcp_flows.get((capture_class, endpoints))
+    if flow is None:
+        return
+
+    shape = frame_shape_fields(record.payload)
+    increment_counter_field(flow, "framing_first_byte_classes", shape["first_byte_class"])
+    increment_counter_field(flow, "framing_tls_record_like", shape["tls_record_like"])
+    increment_counter_field(flow, "framing_tls_record_len_match", shape["tls_record_len_match"])
+    increment_counter_field(flow, "framing_ascii_ratios", shape["ascii_ratio"])
+    increment_counter_field(flow, "framing_high_ratios", shape["high_ratio"])
+    increment_counter_field(flow, "framing_zero_ratios", shape["zero_ratio"])
+    increment_counter_field(flow, "framing_control_ratios", shape["control_ratio"])
+
+    prefix_counter = flow["framing_length_prefix_candidates"]
+    assert isinstance(prefix_counter, Counter)
+    for candidate in shape["length_prefix_candidates"].split("|"):
+        prefix_counter[candidate] += 1
+
+    samples = flow["initial_framing_samples"]
+    assert isinstance(samples, list)
+    if len(samples) < 12:
+        samples.append(shape)
+
+
+def increment_counter_field(flow: dict[str, object], key: str, value: str) -> None:
+    counter = flow[key]
+    assert isinstance(counter, Counter)
+    counter[value] += 1
 
 
 def update_flow_payload_sequence(
@@ -780,6 +1005,111 @@ def payload_gap_bucket(seconds: float) -> str:
     if seconds < 1.000:
         return "100ms-1s"
     return ">=1s"
+
+
+def frame_shape_fields(payload: bytes) -> dict[str, str]:
+    classes = byte_class_counts(payload)
+    tls_record_like, tls_record_len_match = tls_record_shape(payload)
+    return {
+        "first_byte_class": first_byte_class(payload),
+        "ascii_ratio": ratio_bucket(classes["ascii"], len(payload)),
+        "high_ratio": ratio_bucket(classes["high"], len(payload)),
+        "zero_ratio": ratio_bucket(classes["zero"], len(payload)),
+        "control_ratio": ratio_bucket(classes["control"], len(payload)),
+        "length_prefix_candidates": "|".join(length_prefix_candidates(payload)) or "none",
+        "tls_record_like": format_bool(tls_record_like),
+        "tls_record_len_match": format_bool(tls_record_len_match),
+    }
+
+
+def byte_class_counts(payload: bytes) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    for byte in payload:
+        if byte == 0:
+            counts["zero"] += 1
+        elif byte in {9, 10, 13} or 0x20 <= byte <= 0x7E:
+            counts["ascii"] += 1
+        elif 0x01 <= byte <= 0x1F or byte == 0x7F:
+            counts["control"] += 1
+        else:
+            counts["high"] += 1
+    return counts
+
+
+def first_byte_class(payload: bytes) -> str:
+    if not payload:
+        return "none"
+    byte = payload[0]
+    if byte == 0:
+        return "zero"
+    if byte in {9, 10, 13}:
+        return "ascii-whitespace"
+    if 0x20 <= byte <= 0x7E:
+        return "ascii"
+    if 0x01 <= byte <= 0x1F or byte == 0x7F:
+        return "control"
+    return "high"
+
+
+def ratio_bucket(count: int, total: int) -> str:
+    if total == 0 or count == 0:
+        return "0pct"
+    if count == total:
+        return "100pct"
+    percent = count * 100 // total
+    if percent <= 9:
+        return "1-9pct"
+    if percent <= 49:
+        return "10-49pct"
+    if percent <= 89:
+        return "50-89pct"
+    return "90-99pct"
+
+
+def length_prefix_candidates(payload: bytes) -> list[str]:
+    candidates: list[str] = []
+    if len(payload) >= 2:
+        push_length_matches(candidates, "be16", int.from_bytes(payload[0:2], "big"), 2, len(payload))
+        push_length_matches(
+            candidates,
+            "le16",
+            int.from_bytes(payload[0:2], "little"),
+            2,
+            len(payload),
+        )
+    if len(payload) >= 4:
+        push_length_matches(candidates, "be32", int.from_bytes(payload[0:4], "big"), 4, len(payload))
+        push_length_matches(
+            candidates,
+            "le32",
+            int.from_bytes(payload[0:4], "little"),
+            4,
+            len(payload),
+        )
+    return candidates
+
+
+def push_length_matches(
+    candidates: list[str],
+    endian: str,
+    value: int,
+    prefix_bytes: int,
+    total_bytes: int,
+) -> None:
+    if value == total_bytes:
+        candidates.append(f"{endian}_total")
+    if value + prefix_bytes == total_bytes:
+        candidates.append(f"{endian}_payload")
+
+
+def tls_record_shape(payload: bytes) -> tuple[bool, bool]:
+    if len(payload) < 5:
+        return False, False
+    content_type = 0x14 <= payload[0] <= 0x18
+    version = payload[1] == 0x03 and payload[2] <= 0x04
+    payload_len = int.from_bytes(payload[3:5], "big")
+    record_like = content_type and version
+    return record_like, record_like and payload_len + 5 == len(payload)
 
 
 def host_class(host: str) -> str:
@@ -876,6 +1206,15 @@ def top_tcp_flow_shapes(
                 "payload_lengths_by_direction": flow["payload_lengths_by_direction"],
                 "payload_gap_buckets": flow["payload_gap_buckets"],
                 "initial_payload_sequence": flow["initial_payload_sequence"],
+                "framing_first_byte_classes": flow["framing_first_byte_classes"],
+                "framing_length_prefix_candidates": flow["framing_length_prefix_candidates"],
+                "framing_tls_record_like": flow["framing_tls_record_like"],
+                "framing_tls_record_len_match": flow["framing_tls_record_len_match"],
+                "framing_ascii_ratios": flow["framing_ascii_ratios"],
+                "framing_high_ratios": flow["framing_high_ratios"],
+                "framing_zero_ratios": flow["framing_zero_ratios"],
+                "framing_control_ratios": flow["framing_control_ratios"],
+                "initial_framing_samples": flow["initial_framing_samples"],
                 "flags": flow["flags"],
                 "first_offset": seconds_between(first_packet_time, first_time),
                 "last_offset": seconds_between(first_packet_time, last_time),
@@ -927,6 +1266,35 @@ def render_tcp_flow_shapes(flows: list[dict[str, object]]) -> list[str]:
             "  - inter-payload gap buckets: "
             + format_counter(flow["payload_gap_buckets"])
         )
+        lines.append(
+            "  - framing first-byte classes: "
+            + format_counter(flow["framing_first_byte_classes"])
+        )
+        lines.append(
+            "  - framing byte-class ratios: "
+            + format_framing_ratios(
+                flow["framing_ascii_ratios"],
+                flow["framing_high_ratios"],
+                flow["framing_zero_ratios"],
+                flow["framing_control_ratios"],
+            )
+        )
+        lines.append(
+            "  - framing length-prefix candidates: "
+            + format_counter(flow["framing_length_prefix_candidates"])
+        )
+        lines.append(
+            "  - framing TLS record-like reads: "
+            + format_counter(flow["framing_tls_record_like"])
+        )
+        lines.append(
+            "  - framing TLS record length matches: "
+            + format_counter(flow["framing_tls_record_len_match"])
+        )
+        lines.append(
+            "  - initial framing samples: "
+            + format_framing_samples(flow["initial_framing_samples"])
+        )
     lines.append("- Raw endpoints, dynamic ports, and packet payloads: not included")
     return lines
 
@@ -963,6 +1331,42 @@ def format_payload_sequence(value: object) -> str:
         direction = item.get("direction", "unknown")
         length = item.get("length", "unknown")
         rendered.append(f"`{direction}:{length}`")
+    return ", ".join(rendered) if rendered else "none"
+
+
+def format_framing_ratios(
+    ascii_ratios: object,
+    high_ratios: object,
+    zero_ratios: object,
+    control_ratios: object,
+) -> str:
+    if not all(isinstance(value, Counter) for value in (ascii_ratios, high_ratios, zero_ratios, control_ratios)):
+        return "unknown"
+    return (
+        f"ascii={format_counter(ascii_ratios)}; "
+        f"high={format_counter(high_ratios)}; "
+        f"zero={format_counter(zero_ratios)}; "
+        f"control={format_counter(control_ratios)}"
+    )
+
+
+def format_framing_samples(value: object) -> str:
+    if not isinstance(value, list) or not value:
+        return "none"
+    rendered: list[str] = []
+    for index, item in enumerate(value, start=1):
+        if not isinstance(item, dict):
+            continue
+        rendered.append(
+            "`#{}:first={},len_prefix={},tls={},ascii={},high={}`".format(
+                index,
+                item.get("first_byte_class", "missing"),
+                item.get("length_prefix_candidates", "missing"),
+                item.get("tls_record_like", "missing"),
+                item.get("ascii_ratio", "missing"),
+                item.get("high_ratio", "missing"),
+            )
+        )
     return ", ".join(rendered) if rendered else "none"
 
 

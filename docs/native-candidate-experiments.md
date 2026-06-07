@@ -287,8 +287,8 @@ Pair the redacted Mac and Windows summaries:
   --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
 ```
 
-Compare the Windows TCP read shape with the Apple-to-Apple AWDL payload
-length/gap baseline:
+Compare the Windows TCP read/framing shape with the Apple-to-Apple AWDL payload
+length/gap and framing-bucket baseline:
 
 ```sh
 ./scripts/compare-native-admission-awdl-baseline.py \

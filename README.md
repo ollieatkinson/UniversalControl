@@ -108,6 +108,7 @@ Those facts make Rapport/CompanionLink the first interop surface to understand. 
 - [docs/native-candidate-experiments.md](docs/native-candidate-experiments.md): immediate native discovery and candidate-admission experiments.
 - [docs/windows-interop-plan.md](docs/windows-interop-plan.md): native-first Windows peer strategy and fallback bridge criteria.
 - [docs/windows-agent-contract.md](docs/windows-agent-contract.md): where the Windows machine should write observations.
+- [docs/language-choice.md](docs/language-choice.md): why the shared core stays Rust and where Swift may fit as a macOS helper.
 - [scripts/mac/uc-probe.sh](scripts/mac/uc-probe.sh): read-only macOS probe for Universal Control/Rapport surfaces.
 - [scripts/mac/capture-uc-session.sh](scripts/mac/capture-uc-session.sh): paired Apple-to-Apple Universal Control session capture wrapper.
 - [scripts/mac/capture-native-admission.sh](scripts/mac/capture-native-admission.sh): coordinated Mac watcher plus redacted summary wrapper for Windows native-admission probes.

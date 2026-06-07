@@ -161,4 +161,14 @@ python scripts/windows/summarize-native-admission-output.py `
   --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md
 ```
 
+After the Mac-side redacted summary exists, create a paired report:
+
+```powershell
+python scripts/compare-native-admission-pair.py `
+  docs/observations/YYYY-MM-DD-redacted-companion-link-shape-candidate.md `
+  docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md `
+  --label shape `
+  --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
+```
+
 The redacted Rust mDNS output should preserve event type, service type, port, TXT key names, TXT value length/class, and address count. Do not commit unredacted `dns-sd` or `--backend system` output unless it has been manually reviewed and sanitized.

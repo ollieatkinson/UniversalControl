@@ -456,3 +456,15 @@ that as the effective local display for both stale example configs, selected
 `peer_mode=mdns_discovery` for the receiver config with no `peer_addr`, and
 reported zero warnings. This answers the Windows bridge-preflight note, but it
 does not advance native Universal Control admission.
+
+### Native Admission Pair Report
+
+Added `scripts/compare-native-admission-pair.py` to combine a redacted macOS
+watcher summary with a redacted Windows native-admission output summary. The
+paired report highlights DNS-SD visibility, resolve success, native macOS log
+signals, Windows TCP observer connection evidence, and a coarse admission tier
+such as `not_visible`, `browse_only`, `resolved_no_tcp_attempt`, or
+`resolved_with_tcp_attempt`.
+
+This is intended to be the final committed artifact for each Windows admission
+attempt, alongside the individual Mac and Windows redacted summaries.

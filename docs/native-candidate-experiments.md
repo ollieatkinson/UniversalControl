@@ -169,6 +169,16 @@ python scripts/windows/summarize-native-admission-output.py `
   --output docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md
 ```
 
+Pair the redacted Mac and Windows summaries:
+
+```sh
+./scripts/compare-native-admission-pair.py \
+  docs/observations/YYYY-MM-DD-redacted-companion-link-shape-candidate.md \
+  docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md \
+  --label shape \
+  --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
+```
+
 This command intentionally does not copy identifiers, certificates, account
 material, hostnames, or real `rp*` values from an Apple device. With
 `--observe-tcp`, it opens a bounded listener on the advertised port only to log

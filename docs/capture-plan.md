@@ -301,6 +301,16 @@ Expected evidence:
 - Windows summary includes whether the TCP observer accepted any connections,
   first-read byte counts, and first-read hex lengths without raw peer addresses
   or payload bytes.
+- The paired report combines the Mac and Windows summaries:
+
+  ```sh
+  ./scripts/compare-native-admission-pair.py \
+    docs/observations/YYYY-MM-DD-redacted-companion-link-shape-candidate.md \
+    docs/windows-inbox/YYYY-MM-DD-redacted-native-admission-shape.md \
+    --label shape \
+    --output docs/observations/YYYY-MM-DD-redacted-native-admission-shape-pair.md
+  ```
+
 - Treat any connection attempt as a signal to build a real listener next, not as
   Universal Control admission.
 

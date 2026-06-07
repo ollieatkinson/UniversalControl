@@ -981,3 +981,26 @@ section to the committed summary with pass/fail status and unsupported
 normalized key/button names. This turns future Keychron Fn/function-row captures
 into direct mapping-gap evidence without committing typed text values or replay
 transcripts.
+
+### Controlled Bonjour TCP Reachability
+
+Pulled the native Windows CompanionLink TCP check. Native Windows Rust mDNS can
+see the Mac's `_companion-link._tcp` services from the real Windows network
+context, including the project-owned Mac Bonjour probe and the Mac
+Apple/Rapport-shaped service. WSL mDNS remains insufficient for that path.
+
+The controlled TCP check failed with connection refused because the Mac
+cross-visibility probe was registered with `dns-sd -R` but did not bind a TCP
+listener on the advertised port. `scripts/mac/capture-bonjour-visibility.sh`
+now has `--observe-tcp` and `--observe-framing`, backed by
+`scripts/mac/observe-tcp-port.py`, so the Mac publishes the same Bonjour service
+while recording only peer address classes, read lengths, timing, and optional
+frame-shape buckets.
+
+Added `cargo run -- discovery connect` for the Windows side. It resolves an
+exact DNS-SD instance, refuses Apple-owned service types unless
+`--allow-apple-service` is supplied, redacts hostnames and addresses in stdout,
+and sends only a small project-owned probe payload. The immediate coordinated
+run is Mac `capture-bonjour-visibility.sh --observe-tcp --observe-framing`
+paired with Windows `discovery connect --service _companion-link._tcp.local.
+--instance "AnyKBFlow Mac Bonjour Probe" --allow-apple-service`.

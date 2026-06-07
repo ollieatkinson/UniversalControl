@@ -10,6 +10,9 @@ port=49152
 output_dir=""
 summary_output=""
 expected_remote_instance=""
+observe_tcp=0
+observe_framing=0
+bind_address="0.0.0.0"
 txt_values=("probe=mac-bonjour" "role=mac-native-visibility")
 
 usage() {
@@ -23,13 +26,18 @@ Options:
   --port PORT                     Local advertised TCP port. Default: 49152.
   --txt KEY=VALUE                 TXT value to advertise. May be repeated.
   --expected-remote-instance NAME Remote Windows instance to match by yes/no only.
+  --observe-tcp                   Bind a redacted TCP observer on the advertised port.
+  --observe-framing               With --observe-tcp, summarize non-payload frame shapes.
+  --bind-address ADDR             Observer bind address. Default: 0.0.0.0.
   --output-dir DIR                Raw artifact directory under artifacts/.
   --summary-output PATH           Redacted summary output path under docs/observations/.
   -h, --help                      Show this help.
 
 This advertises a project-owned Bonjour service from macOS and simultaneously
-browses the same service type. Raw artifacts can contain hostnames, interface
-IDs, and instance names. Commit only the redacted summary.
+browses the same service type. With --observe-tcp it also keeps the published
+port open so Windows can prove it reached the controlled Mac endpoint. Raw
+artifacts can contain hostnames, interface IDs, local addresses, and instance
+names. Commit only the redacted summary.
 EOF
 }
 
@@ -57,6 +65,18 @@ while [[ $# -gt 0 ]]; do
       ;;
     --expected-remote-instance)
       expected_remote_instance="$2"
+      shift 2
+      ;;
+    --observe-tcp)
+      observe_tcp=1
+      shift
+      ;;
+    --observe-framing)
+      observe_framing=1
+      shift
+      ;;
+    --bind-address)
+      bind_address="$2"
       shift 2
       ;;
     --output-dir)
@@ -89,6 +109,11 @@ done
 
 if [[ "${service}" != _*._* ]]; then
   printf 'service must look like _name._proto\n' >&2
+  exit 2
+fi
+
+if [[ "${observe_framing}" -eq 1 && "${observe_tcp}" -ne 1 ]]; then
+  printf '%s\n' '--observe-framing requires --observe-tcp' >&2
   exit 2
 fi
 
@@ -145,6 +170,18 @@ run_capture() {
 }
 
 register_command=(dns-sd -R "${instance}" "${service}" local "${port}" "${txt_values[@]}")
+if [[ "${observe_tcp}" -eq 1 ]]; then
+  observer_command=(
+    "${repo_root}/scripts/mac/observe-tcp-port.py"
+    --bind "${bind_address}"
+    --port "${port}"
+    --duration "${duration}"
+  )
+  if [[ "${observe_framing}" -eq 1 ]]; then
+    observer_command+=(--framing)
+  fi
+  run_capture "tcp-observer" "${observer_command[@]}"
+fi
 run_capture "dns-sd-register" "${register_command[@]}"
 run_capture "dns-sd-browse" dns-sd -B "${service}" local
 
@@ -158,12 +195,19 @@ Local instance: ${instance}
 Port: ${port}
 TXT count: ${#txt_values[@]}
 Expected remote instance: ${expected_remote_instance}
+Observe TCP: ${observe_tcp}
+Observe framing: ${observe_framing}
+Observer bind address: ${bind_address}
 
 Review and redact before sharing. Output can contain hostnames, addresses,
 Bonjour TXT values, local interface identifiers, and local instance names.
 EOF
 
-printf 'Advertising and browsing %s for %ss; output: %s\n' "${service}" "${duration}" "${out_dir}"
+if [[ "${observe_tcp}" -eq 1 ]]; then
+  printf 'Advertising, browsing, and observing TCP %s:%s for %ss; output: %s\n' "${service}" "${port}" "${duration}" "${out_dir}"
+else
+  printf 'Advertising and browsing %s for %ss; output: %s\n' "${service}" "${duration}" "${out_dir}"
+fi
 sleep "${duration}"
 cleanup
 trap - EXIT

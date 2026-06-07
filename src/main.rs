@@ -171,6 +171,25 @@ enum DiscoveryCommand {
         #[arg(long)]
         observe_framing: bool,
     },
+    /// Resolve an exact controlled DNS-SD instance and connect to its TCP port.
+    Connect {
+        #[arg(long, default_value = "_companion-link._tcp.local.")]
+        service: String,
+        #[arg(long, default_value = "AnyKBFlow Mac Bonjour Probe")]
+        instance: String,
+        #[arg(long, default_value_t = 30)]
+        seconds: u64,
+        #[arg(long, default_value = "anykbflow-probe\n")]
+        payload: String,
+        #[arg(long, default_value_t = 1500)]
+        connect_timeout_ms: u64,
+        /// Allow connecting to Apple-owned service types such as _companion-link._tcp.
+        #[arg(long)]
+        allow_apple_service: bool,
+        /// Include Apple peer-to-peer interfaces such as awdl on macOS.
+        #[arg(long)]
+        include_apple_p2p: bool,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -386,6 +405,23 @@ async fn main() -> Result<()> {
                 include_apple_p2p,
                 observe_tcp,
                 observe_framing,
+            }),
+            DiscoveryCommand::Connect {
+                service,
+                instance,
+                seconds,
+                payload,
+                connect_timeout_ms,
+                allow_apple_service,
+                include_apple_p2p,
+            } => discovery::connect_probe(discovery::ConnectProbeOptions {
+                seconds,
+                service_type: service,
+                instance,
+                payload,
+                connect_timeout_ms,
+                allow_apple_service,
+                include_apple_p2p,
             }),
         },
         Command::Probe { command } => match command {

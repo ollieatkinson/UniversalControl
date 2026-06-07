@@ -80,8 +80,8 @@ The next native-focused Windows report should answer:
 5. What happens when running `python scripts/windows/capture-companion-link-discovery.py`?
 6. If Bonjour is installed, what happens with `cargo run -- discover-companion-link --backend system --seconds 30`?
 7. What happens when Windows runs `cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe`?
-8. Does macOS see the Windows service with `dns-sd -B _anyuniversalcontrol-probe._tcp local`?
-9. Does macOS resolve the Windows service with `dns-sd -L "AnyUniversalControl Probe" _anyuniversalcontrol-probe._tcp local`?
+8. Does macOS see the Windows service with `dns-sd -B _anykbflow-probe._tcp local`?
+9. Does macOS resolve the Windows service with `dns-sd -L "AnyKBFlow Probe" _anykbflow-probe._tcp local`?
 10. Is the Windows prototype currently source-controlled somewhere outside this repo?
 11. What language/runtime is the current Windows implementation using?
 12. After macOS confirms the benign probe is visible, what happens when Windows advertises the minimal `_companion-link._tcp` native candidate below while the Mac runs `scripts/mac/watch-companion-link-candidate.sh`?
@@ -194,15 +194,16 @@ python scripts/windows/compare-companion-link-discovery-summaries.py `
   --output docs/windows-inbox/YYYY-MM-DD-redacted-companion-link-discovery-compare.md
 cargo run -- discover-companion-link --backend system --seconds 30
 dns-sd -B _companion-link._tcp local
-dns-sd -R "AnyUniversalControl Windows Bonjour Probe" _companion-link._tcp local 49153 probe=windows-bonjour role=windows-native-visibility
+dns-sd -R "AnyKBFlow Windows Bonjour Probe" _companion-link._tcp local 49153 probe=windows-bonjour role=windows-native-visibility
+cargo run -- discovery connect --service _companion-link._tcp.local. --instance "AnyKBFlow Mac Bonjour Probe" --allow-apple-service
 python scripts/windows/capture-display-probe.py
 python scripts/windows/capture-native-admission.py --mode benign
 python scripts/windows/capture-native-admission.py --mode companion-link
 python scripts/windows/capture-native-admission.py --mode shape
 python scripts/windows/capture-native-admission.py --mode shape --framing-probe
 cargo run -- advertise-mdns --seconds 60 --txt phase=visibility --txt role=windows-probe
-cargo run -- discovery advertise --service _anyuniversalcontrol-probe._tcp.local. --instance "AnyUniversalControl Probe" --addr <redacted-lan-ip> --port 49152 --txt phase=visibility --txt role=windows-probe --seconds 60
-cargo run -- advertise-mdns --service-type _companion-link._tcp --instance "AnyUniversalControl Native Probe" --hostname anyuniversalcontrol-native-probe --port 49152 --txt probe=visibility --txt role=windows-native-candidate --allow-apple-service --observe-tcp --seconds 60
+cargo run -- discovery advertise --service _anykbflow-probe._tcp.local. --instance "AnyKBFlow Probe" --addr <redacted-lan-ip> --port 49152 --txt phase=visibility --txt role=windows-probe --seconds 60
+cargo run -- advertise-mdns --service-type _companion-link._tcp --instance "AnyKBFlow Native Probe" --hostname anykbflow-native-probe --port 49152 --txt probe=visibility --txt role=windows-native-candidate --allow-apple-service --observe-tcp --seconds 60
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --seconds 60
 cargo run -- advertise-companion-link-shape --acknowledge-shape-experiment --observe-tcp --observe-framing --seconds 60
 ```
@@ -217,6 +218,31 @@ commands only while `scripts/mac/capture-bonjour-visibility.sh` is active on the
 Mac. Commit a redacted note saying whether Windows saw the Mac project-owned
 probe and whether macOS saw the Windows project-owned probe. Do not commit raw
 `dns-sd` output.
+
+For the controlled Mac-to-Windows TCP reachability check, ask the Mac side to
+run:
+
+```sh
+./scripts/mac/capture-bonjour-visibility.sh \
+  --duration 300 \
+  --observe-tcp \
+  --observe-framing \
+  --expected-remote-instance "AnyKBFlow Windows Bonjour Probe"
+```
+
+Then run the repo-native Windows probe from a native Windows terminal:
+
+```powershell
+cargo run -- discovery connect `
+  --service _companion-link._tcp.local. `
+  --instance "AnyKBFlow Mac Bonjour Probe" `
+  --allow-apple-service
+```
+
+Commit a redacted Windows note with the command result and the Mac-side
+redacted summary. Do not probe the Mac's Apple/Rapport-shaped CompanionLink
+instance with arbitrary bytes; this command is only for the exact
+project-owned `AnyKBFlow Mac Bonjour Probe` instance.
 
 Use `capture-native-admission.py --mode shape` only while
 `capture-native-admission.sh --mode shape` is running on the Mac. Commit the

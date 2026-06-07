@@ -1,7 +1,7 @@
 use std::{
     collections::{BTreeSet, HashMap},
-    io::{self, Read},
-    net::{IpAddr, SocketAddr, TcpListener, UdpSocket},
+    io::{self, Read, Write},
+    net::{IpAddr, Shutdown, SocketAddr, TcpListener, TcpStream, UdpSocket},
     process::{Command, Stdio},
     sync::{
         Arc,
@@ -50,6 +50,16 @@ pub struct AdvertiseOptions {
     pub include_apple_p2p: bool,
     pub observe_tcp: bool,
     pub observe_framing: bool,
+}
+
+pub struct ConnectProbeOptions {
+    pub seconds: u64,
+    pub service_type: String,
+    pub instance: String,
+    pub payload: String,
+    pub connect_timeout_ms: u64,
+    pub allow_apple_service: bool,
+    pub include_apple_p2p: bool,
 }
 
 pub fn companion_link_shape_txt() -> Vec<String> {
@@ -121,6 +131,75 @@ pub fn browse(service: &str, seconds: u64, redact: bool, include_apple_p2p: bool
         .with_context(|| format!("failed to stop browsing {service}"))?;
     mdns.shutdown().context("failed to shut down mDNS daemon")?;
     Ok(())
+}
+
+pub fn connect_probe(options: ConnectProbeOptions) -> Result<()> {
+    let seconds = options.seconds.max(1);
+    let service_type = normalize_service_type(&options.service_type)?;
+    let instance = options.instance.trim();
+    if instance.is_empty() {
+        bail!("instance must not be empty");
+    }
+    if is_apple_service_type(&service_type) && !options.allow_apple_service {
+        bail!(
+            "refusing to connect to Apple service type {service_type}; rerun with --allow-apple-service only for an exact controlled probe instance"
+        );
+    }
+
+    let browse_duration = Duration::from_secs(seconds);
+    let mdns = ServiceDaemon::new().context("failed to create mDNS daemon")?;
+    if options.include_apple_p2p {
+        mdns.include_apple_p2p(true)
+            .context("failed to include Apple peer-to-peer interfaces")?;
+    }
+
+    let receiver = mdns
+        .browse(&service_type)
+        .with_context(|| format!("failed to browse {service_type}"))?;
+    let started = Instant::now();
+    let deadline = started + browse_duration;
+
+    println!(
+        "Resolving controlled probe service_type={service_type} instance={} for {seconds}s",
+        format_identifier(instance, true)
+    );
+    println!("Output is redacted: hostnames, addresses, and instance names are summarized.");
+
+    while let Some(remaining) = deadline.checked_duration_since(Instant::now()) {
+        if let Ok(event) = receiver.recv_timeout(remaining.min(Duration::from_millis(250))) {
+            match event {
+                ServiceEvent::ServiceResolved(info)
+                    if resolved_instance_matches(&info, &service_type, instance) =>
+                {
+                    print_connect_candidate(&info);
+                    let target = socket_addr_from_resolved(&info).with_context(|| {
+                        format!(
+                            "controlled probe resolved without a usable address: {}",
+                            format_identifier(info.get_fullname(), true)
+                        )
+                    })?;
+                    let result = connect_to_probe(
+                        target,
+                        options.payload.as_bytes(),
+                        Duration::from_millis(options.connect_timeout_ms.max(1)),
+                    );
+                    mdns.stop_browse(&service_type)
+                        .with_context(|| format!("failed to stop browsing {service_type}"))?;
+                    mdns.shutdown().context("failed to shut down mDNS daemon")?;
+                    return result;
+                }
+                other => print_event(started, other, true),
+            }
+        }
+    }
+
+    mdns.stop_browse(&service_type)
+        .with_context(|| format!("failed to stop browsing {service_type}"))?;
+    mdns.shutdown().context("failed to shut down mDNS daemon")?;
+    bail!(
+        "controlled probe instance not resolved: service_type={service_type} instance={}",
+        format_identifier(instance, true)
+    );
 }
 
 pub fn advertise_mdns(options: AdvertiseOptions) -> Result<()> {
@@ -561,6 +640,35 @@ fn format_bool(value: bool) -> &'static str {
     if value { "yes" } else { "no" }
 }
 
+fn classify_ip_addr(addr: IpAddr) -> &'static str {
+    match addr {
+        IpAddr::V4(addr) if addr.is_loopback() => "loopback",
+        IpAddr::V6(addr) if addr.is_loopback() => "loopback",
+        IpAddr::V4(addr) if addr.is_unspecified() => "unspecified",
+        IpAddr::V6(addr) if addr.is_unspecified() => "unspecified",
+        IpAddr::V4(addr) if addr.is_multicast() => "multicast",
+        IpAddr::V6(addr) if addr.is_multicast() => "multicast",
+        IpAddr::V4(addr) if addr.is_link_local() => "link-local",
+        IpAddr::V6(addr) if addr.is_unicast_link_local() => "link-local",
+        IpAddr::V4(addr) if addr.is_private() => "private",
+        IpAddr::V6(addr) if addr.is_unique_local() => "private",
+        _ => "global-or-other",
+    }
+}
+
+fn classify_io_error_kind(kind: io::ErrorKind) -> &'static str {
+    match kind {
+        io::ErrorKind::ConnectionRefused => "connection_refused",
+        io::ErrorKind::ConnectionReset => "connection_reset",
+        io::ErrorKind::ConnectionAborted => "connection_aborted",
+        io::ErrorKind::TimedOut => "timed_out",
+        io::ErrorKind::AddrInUse => "addr_in_use",
+        io::ErrorKind::AddrNotAvailable => "addr_not_available",
+        io::ErrorKind::PermissionDenied => "permission_denied",
+        _ => "other",
+    }
+}
+
 pub fn spawn_bridge_advertisement(node_name: &str, listen_addr: SocketAddr) -> Result<()> {
     if BRIDGE_ADVERTISED.swap(true, Ordering::SeqCst) {
         return Ok(());
@@ -747,6 +855,71 @@ fn print_resolved(started: Instant, info: &ResolvedService, redact: bool) {
         addresses,
         txt
     );
+}
+
+fn print_connect_candidate(info: &ResolvedService) {
+    let txt_keys = info
+        .get_properties()
+        .iter()
+        .map(|property| property.key().to_string())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect::<Vec<_>>()
+        .join(",");
+    println!(
+        "Resolved controlled probe fullname={} type={} host={} port={} address_count={} txt_keys=[{}]",
+        format_identifier(info.get_fullname(), true),
+        info.ty_domain,
+        format_identifier(info.get_hostname(), true),
+        info.get_port(),
+        info.get_addresses().len(),
+        txt_keys
+    );
+}
+
+fn connect_to_probe(target: SocketAddr, payload: &[u8], timeout: Duration) -> Result<()> {
+    println!(
+        "TCP probe target address_class={} port={}",
+        classify_ip_addr(target.ip()),
+        target.port()
+    );
+
+    match TcpStream::connect_timeout(&target, timeout) {
+        Ok(mut stream) => {
+            println!("TCP probe connect result: success");
+            if !payload.is_empty() {
+                stream
+                    .write_all(payload)
+                    .context("failed to write TCP probe payload")?;
+                println!("TCP probe payload bytes: {}", payload.len());
+            } else {
+                println!("TCP probe payload bytes: 0");
+            }
+            let _ = stream.shutdown(Shutdown::Write);
+            Ok(())
+        }
+        Err(error) => {
+            let kind = classify_io_error_kind(error.kind());
+            println!("TCP probe connect result: error kind={kind}");
+            bail!("TCP probe connect failed: kind={kind}");
+        }
+    }
+}
+
+fn resolved_instance_matches(
+    info: &ResolvedService,
+    service_type: &str,
+    expected_instance: &str,
+) -> bool {
+    service_instance_from_fullname(info.get_fullname(), service_type)
+        .is_some_and(|instance| instance == expected_instance)
+}
+
+fn service_instance_from_fullname<'a>(fullname: &'a str, service_type: &str) -> Option<&'a str> {
+    let fullname = fullname.trim_end_matches('.');
+    let service_type = service_type.trim_end_matches('.');
+    let suffix = format!(".{service_type}");
+    fullname.strip_suffix(&suffix)
 }
 
 fn normalize_service_type(value: &str) -> Result<String> {
@@ -1033,7 +1206,7 @@ fn has_dns_sd() -> bool {
 #[cfg(test)]
 mod tests {
     use std::{
-        net::{IpAddr, Ipv4Addr},
+        net::{IpAddr, Ipv4Addr, Ipv6Addr},
         str::FromStr,
     };
 
@@ -1080,6 +1253,44 @@ mod tests {
         assert_eq!(
             normalize_hostname("windows-peer.local").unwrap(),
             "windows-peer.local."
+        );
+    }
+
+    #[test]
+    fn extracts_exact_instance_from_fullname() {
+        assert_eq!(
+            service_instance_from_fullname(
+                "AnyKBFlow Mac Bonjour Probe._companion-link._tcp.local.",
+                "_companion-link._tcp.local."
+            ),
+            Some("AnyKBFlow Mac Bonjour Probe")
+        );
+        assert_eq!(
+            service_instance_from_fullname(
+                "AnyKBFlow Mac Bonjour Probe._companion-link._tcp.local.",
+                "_anykbflow-probe._tcp.local."
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn classifies_tcp_probe_target_addresses() {
+        assert_eq!(
+            classify_ip_addr(IpAddr::V4(Ipv4Addr::LOCALHOST)),
+            "loopback"
+        );
+        assert_eq!(
+            classify_ip_addr(IpAddr::V4(Ipv4Addr::new(192, 168, 1, 20))),
+            "private"
+        );
+        assert_eq!(
+            classify_ip_addr(IpAddr::V4(Ipv4Addr::new(169, 254, 1, 20))),
+            "link-local"
+        );
+        assert_eq!(
+            classify_ip_addr(IpAddr::V6(Ipv6Addr::LOCALHOST)),
+            "loopback"
         );
     }
 

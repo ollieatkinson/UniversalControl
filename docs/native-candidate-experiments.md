@@ -3,7 +3,7 @@
 These experiments keep the Mac side on Apple's native `UniversalControl.app`.
 They are intended to prove or disprove whether a Windows peer can reach native
 Rapport/CompanionLink candidate handling before the project falls back to the
-separate AnyUniversalControl bridge.
+separate AnyKBFlow bridge.
 
 ## Current Evidence Gap
 
@@ -20,9 +20,14 @@ discovery is still not proven:
   still required and must not be written to git as an account identifier.
 - Windows WSL/Rust mDNS did not resolve the Mac's `_companion-link._tcp`
   advertisement in
-  `docs/windows-inbox/2026-06-07-redacted-companion-link-discovery.md`.
-  Native Windows Bonjour still needs to run from the real Windows network
-  context.
+  `docs/windows-inbox/2026-06-07-redacted-companion-link-discovery.md`, but a
+  native Windows Rust mDNS run did resolve both the Mac Apple/Rapport-shaped
+  service and the Mac project-owned Bonjour probe in
+  `docs/windows-inbox/2026-06-07-20260607T102817Z-redacted-native-windows-companion-link-discovery.md`.
+- The first native Windows TCP check reached the Mac probe's resolved endpoint
+  shape, but TCP connect failed with connection refused because the Mac Bonjour
+  probe was only registered with `dns-sd -R` and had no listener; see
+  `docs/windows-inbox/2026-06-07-native-windows-companion-link-tcp-check.md`.
 - macOS has not yet proven it can see a Windows-advertised service on the real
   LAN path. A manual macOS Bonjour watch advertised a project-owned
   `_companion-link._tcp` probe and saw no Windows `_companion-link` instance;
@@ -116,7 +121,9 @@ On macOS:
 ```sh
 ./scripts/mac/capture-bonjour-visibility.sh \
   --duration 300 \
-  --expected-remote-instance "AnyUniversalControl Windows Bonjour Probe"
+  --observe-tcp \
+  --observe-framing \
+  --expected-remote-instance "AnyKBFlow Windows Bonjour Probe"
 ```
 
 On Windows, browse first:
@@ -128,7 +135,16 @@ dns-sd -B _companion-link._tcp local
 Then advertise a project-owned probe:
 
 ```powershell
-dns-sd -R "AnyUniversalControl Windows Bonjour Probe" _companion-link._tcp local 49153 probe=windows-bonjour role=windows-native-visibility
+dns-sd -R "AnyKBFlow Windows Bonjour Probe" _companion-link._tcp local 49153 probe=windows-bonjour role=windows-native-visibility
+```
+
+Then connect to the exact Mac-controlled instance from native Windows:
+
+```powershell
+cargo run -- discovery connect `
+  --service _companion-link._tcp.local. `
+  --instance "AnyKBFlow Mac Bonjour Probe" `
+  --allow-apple-service
 ```
 
 Expected evidence:
@@ -137,8 +153,10 @@ Expected evidence:
   running.
 - macOS browse sees the Windows project-owned probe while the Windows
   `dns-sd -R` command is running.
+- The Windows connect command reports `TCP probe connect result: success`.
 - `scripts/mac/summarize-bonjour-visibility-artifact.py` writes a commit-safe
-  summary preserving only counts and yes/no expected-instance matching.
+  summary preserving only counts, yes/no expected-instance matching, and the
+  Mac TCP observer's peer classes plus length/timing/framing buckets.
 - If either direction fails, record native Windows firewall state, network
   profile, Bonjour service state, and whether Bonjour is bound to the real LAN
   interface rather than WSL/NAT.
@@ -168,7 +186,7 @@ Manual equivalent:
 ```sh
 ./scripts/mac/watch-mdns-service.sh --duration 90
 ./scripts/mac/summarize-mdns-watch-artifact.py artifacts/mac-mdns-watch-YYYYMMDDTHHMMSSZ \
-  --expected-instance "AnyUniversalControl Probe" \
+  --expected-instance "AnyKBFlow Probe" \
   --output docs/observations/YYYY-MM-DD-redacted-benign-mdns-watch.md
 ```
 
@@ -191,9 +209,9 @@ Manual equivalent:
 ```sh
 ./scripts/mac/watch-companion-link-candidate.sh \
   --duration 90 \
-  --instance "AnyUniversalControl Native Probe"
+  --instance "AnyKBFlow Native Probe"
 ./scripts/mac/summarize-mdns-watch-artifact.py artifacts/mac-mdns-watch-YYYYMMDDTHHMMSSZ \
-  --expected-instance "AnyUniversalControl Native Probe" \
+  --expected-instance "AnyKBFlow Native Probe" \
   --output docs/observations/YYYY-MM-DD-redacted-companion-link-candidate.md
 ```
 
@@ -208,8 +226,8 @@ Manual equivalent:
 ```powershell
 cargo run -- advertise-mdns `
   --service-type _companion-link._tcp `
-  --instance "AnyUniversalControl Native Probe" `
-  --hostname anyuniversalcontrol-native-probe `
+  --instance "AnyKBFlow Native Probe" `
+  --hostname anykbflow-native-probe `
   --port 49152 `
   --txt probe=visibility `
   --txt role=windows-native-candidate `
@@ -220,7 +238,7 @@ cargo run -- advertise-mdns `
 
 Expected evidence:
 
-- macOS `dns-sd -B` sees `AnyUniversalControl Native Probe`.
+- macOS `dns-sd -B` sees `AnyKBFlow Native Probe`.
 - macOS `dns-sd -L` resolves the Windows host, port, and TXT keys.
 - `rapportd` and `UniversalControl` logs either ignore the service or record a
   concrete discovery/rejection reason.
@@ -268,9 +286,9 @@ Manual equivalent:
 ```sh
 ./scripts/mac/watch-companion-link-candidate.sh \
   --duration 90 \
-  --instance "AnyUniversalControl Native Shape Probe"
+  --instance "AnyKBFlow Native Shape Probe"
 ./scripts/mac/summarize-mdns-watch-artifact.py artifacts/mac-mdns-watch-YYYYMMDDTHHMMSSZ \
-  --expected-instance "AnyUniversalControl Native Shape Probe" \
+  --expected-instance "AnyKBFlow Native Shape Probe" \
   --output docs/observations/YYYY-MM-DD-redacted-companion-link-shape-candidate.md
 ```
 

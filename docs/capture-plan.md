@@ -39,6 +39,7 @@ Compare two redacted baseline states:
 Expected output:
 
 - OS version and network interfaces
+- continuity health: Wi-Fi power, Wi-Fi/AWDL active state, and firewall block-all state
 - relevant process list
 - Universal Control bundle metadata
 - entitlements
@@ -58,9 +59,11 @@ Expected output:
 The summary preserves bundle metadata, entitlement key names, launchd trigger
 service types, process counts, DNS-SD browse/resolve counts, `rp*` TXT key names
 and value classes, protocol-relevant ports, socket counts, binary-string hint
-categories, and native log event/message IDs. It omits raw hostnames, addresses,
-hardware addresses, Bluetooth IDs, TXT values, defaults values, and unified-log
-lines.
+categories, Universal Control ByHost preference-cache shape, display-cache
+shape, continuity health keyword counts, and native log event/message IDs. It
+omits raw hostnames, addresses, hardware addresses, Bluetooth IDs, TXT values,
+defaults values, display UUIDs, Universal Control configuration blobs, and
+unified-log lines.
 
 The string-surface summary provides concrete terms for later unified-log
 searches. Current high-value terms include stream states (`RPStreamServer`,

@@ -705,3 +705,28 @@ candidate signal resembles the focused families seen during a real Apple peer
 session. Side-channel-only overlap stays below stream, target/input, and
 sync/layout overlap when deciding whether to inspect raw local artifacts or
 build a richer Windows listener.
+
+### Local Universal Control Link-Loss Health
+
+After the operator reported that the Universal Control mouse-link option
+disappeared or stopped working, extended `scripts/mac/uc-probe.sh` and its
+summarizer with redacted continuity-health checks. The probe now records Wi-Fi,
+the detected Wi-Fi interface, AWDL, firewall block-all state, Universal Control
+ByHost preference-cache shape, display-cache shape, and broader
+Rapport/Sharing/UserActivity health-log counts without committing local
+addresses, hardware addresses, display UUIDs, configuration blobs, or raw log
+lines.
+
+Recorded `docs/observations/2026-06-07-redacted-macos-uc-link-loss-health.md`
+from the affected Mac. The local transport and Rapport/CompanionLink surfaces
+looked healthy: Wi-Fi, the Wi-Fi interface, and AWDL were active, firewall
+block-all was not enabled, `_companion-link._tcp` browse/self-resolve worked,
+and `rapportd` kept its listener. The suspicious signals were local
+session/display state: no UniversalControl network sockets, an existing
+Universal Control ByHost configuration cache, collapsed/nonzero-origin
+display-cache records, and a broader continuity log window with Rapport/Sharing
+activity but no UniversalControl lines.
+
+Recovery should therefore start with restarting/toggling Universal Control and,
+if needed, moving only the ByHost `com.apple.universalcontrol.*.plist` aside
+before touching wider display preferences.

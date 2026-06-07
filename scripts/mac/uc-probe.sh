@@ -59,9 +59,35 @@ sample_companion_link_self_resolve() {
   } >"${output}" 2>&1
 }
 
+sample_continuity_health() {
+  local output="${out_dir}/continuity-health.txt"
+  local wifi_device
+  wifi_device="$(
+    networksetup -listallhardwareports 2>/dev/null \
+      | awk '/Hardware Port: Wi-Fi/{getline; if ($1 == "Device:") {print $2; exit}}' \
+      || true
+  )"
+  [[ -n "${wifi_device}" ]] || wifi_device="en0"
+
+  {
+    printf '$ continuity-health\n\n'
+    printf 'wifi_device=%s\n' "${wifi_device}"
+    networksetup -getairportpower "${wifi_device}"
+    printf '\n--- awdl0 ---\n'
+    ifconfig awdl0
+    printf '\n--- wifi-device:%s ---\n' "${wifi_device}"
+    ifconfig "${wifi_device}"
+    printf '\n--- firewall ---\n'
+    /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
+    /usr/libexec/ApplicationFirewall/socketfilterfw --getblockall
+    /usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode
+  } >"${output}" 2>&1 || true
+}
+
 run os sw_vers
 run uname uname -a
 run network-hardware networksetup -listallhardwareports
+sample_continuity_health
 run_shell processes "pgrep -lf 'UniversalControl|rapportd|sharingd|useractivityd|mDNSResponder|bluetoothd|nearbyd|CLinkD'"
 
 if [[ -d "${uc_app}" ]]; then
@@ -79,7 +105,10 @@ run_shell launchctl-rapportd "launchctl print gui/$(id -u)/com.apple.rapportd"
 run_shell lsof-universalcontrol "pid=\$(pgrep -x UniversalControl | head -n 1); test -n \"\${pid}\" && lsof -nP -p \"\${pid}\" -a -iTCP -iUDP"
 run_shell lsof-rapportd "pid=\$(pgrep -x rapportd | head -n 1); test -n \"\${pid}\" && lsof -nP -p \"\${pid}\" -a -iTCP -iUDP"
 run_shell defaults-rapport-sharing "defaults read com.apple.rapport; defaults read com.apple.Sharing"
+run_shell universalcontrol-byhost-preferences "for plist in \"\$HOME\"/Library/Preferences/ByHost/com.apple.universalcontrol.*.plist; do test -e \"\${plist}\" || continue; printf 'plist=%s\\n' \"\${plist##*/}\"; stat -f 'bytes=%z modified=%Sm' -t '%Y-%m-%dT%H:%M:%S%z' \"\${plist}\"; plutil -p \"\${plist}\"; done"
+run_shell display-cache-shape "plutil -p \"\$HOME\"/Library/Preferences/ByHost/com.apple.windowserver.displays.*.plist; printf '\\n--- spaces ---\\n'; defaults read com.apple.spaces SpacesDisplayConfiguration"
 run_shell recent-uc-logs "log show --last 30m --style compact --predicate 'process == \"UniversalControl\" || process == \"rapportd\"' | rg -i 'universal|companion|clink|awdl|p2p|keyboard|mouse|pointer|nearby|rapport|error|fault' | tail -n 200"
+run_shell continuity-health-logs "/usr/bin/log show --last 2h --style compact --predicate 'process == \"UniversalControl\" OR process == \"rapportd\" OR process == \"sharingd\" OR process == \"useractivityd\"' | rg -i 'universal|sidecar|handoff|continuity|companion|rapport|reject|deny|fail|error|invalid|disabled|preference|display|nearby|awdl|p2p' | tail -n 200"
 
 sample_dns_sd companion-link-browse _companion-link._tcp
 sample_companion_link_self_resolve

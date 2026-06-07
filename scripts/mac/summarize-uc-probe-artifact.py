@@ -87,6 +87,7 @@ def render_summary(artifact_dir: Path) -> str:
     launchd_rapportd = parse_launchctl(read_file(artifact_dir / "launchctl-rapportd.txt"))
     processes = summarize_processes(read_file(artifact_dir / "processes.txt"))
     network_hardware = summarize_network_hardware(read_file(artifact_dir / "network-hardware.txt"))
+    continuity_health = summarize_continuity_health(read_file(artifact_dir / "continuity-health.txt"))
     companion_browse = parse_browse(read_file(artifact_dir / "companion-link-browse.txt"))
     universalcontrol_browse = parse_browse(read_file(artifact_dir / "universalcontrol-browse.txt"))
     companion_resolve = parse_resolve(read_file(artifact_dir / "companion-link-resolve-self.txt"))
@@ -94,7 +95,10 @@ def render_summary(artifact_dir: Path) -> str:
     lsof_universalcontrol = summarize_lsof(read_file(artifact_dir / "lsof-universalcontrol.txt"))
     strings = summarize_strings(read_file(artifact_dir / "universalcontrol-strings.txt"))
     defaults = summarize_defaults(read_file(artifact_dir / "defaults-rapport-sharing.txt"))
+    uc_byhost_preferences = summarize_uc_byhost_preferences(read_file(artifact_dir / "universalcontrol-byhost-preferences.txt"))
+    display_cache = summarize_display_cache(read_file(artifact_dir / "display-cache-shape.txt"))
     logs = summarize_logs(read_file(artifact_dir / "recent-uc-logs.txt"))
+    health_logs = summarize_health_logs(read_file(artifact_dir / "continuity-health-logs.txt"))
 
     lines = [
         "# Redacted macOS Universal Control Probe Summary",
@@ -139,6 +143,18 @@ def render_summary(artifact_dir: Path) -> str:
         f"- Wi-Fi port present: {format_bool(network_hardware['wifi_present'])}",
         "- Hardware addresses: not included",
         "",
+        "## Continuity Health",
+        "",
+        f"- Wi-Fi device: {format_code_or_unknown(continuity_health.get('wifi_device', 'unknown'))}",
+        f"- Wi-Fi power: {continuity_health.get('wifi_power', 'unknown')}",
+        f"- Wi-Fi interface active: {format_bool(continuity_health['wifi_active'])}",
+        f"- awdl0 present: {format_bool(continuity_health['awdl_present'])}",
+        f"- awdl0 active: {format_bool(continuity_health['awdl_active'])}",
+        f"- Firewall global state: {continuity_health.get('firewall_global', 'unknown')}",
+        f"- Firewall block-all state: {continuity_health.get('firewall_block_all', 'unknown')}",
+        f"- Firewall stealth mode: {continuity_health.get('firewall_stealth', 'unknown')}",
+        "- Local addresses and hardware addresses: not included",
+        "",
         "## DNS-SD",
         "",
         "### _companion-link._tcp Browse",
@@ -174,6 +190,32 @@ def render_summary(artifact_dir: Path) -> str:
         ]
     )
 
+    lines.extend(["", "## Universal Control ByHost Preferences", ""])
+    lines.extend(
+        [
+            f"- Preference files: {uc_byhost_preferences['files']}",
+            f"- Preference byte sizes: {format_counter(uc_byhost_preferences['byte_sizes'])}",
+            f"- Top-level key names: {format_set(uc_byhost_preferences['keys'])}",
+            f"- Has configuration blob: {format_bool(uc_byhost_preferences['has_configuration'])}",
+            f"- Has configuration ID: {format_bool(uc_byhost_preferences['has_configuration_id'])}",
+            f"- Has shown control notification: {format_bool(uc_byhost_preferences['has_shown_control_notification'])}",
+            "- Raw configuration blob and identifiers: not included",
+        ]
+    )
+
+    lines.extend(["", "## Display Cache Shape", ""])
+    lines.extend(
+        [
+            f"- WindowServer display config entries: {display_cache['windowserver_config_entries']}",
+            f"- WindowServer current display entries: {display_cache['windowserver_current_info_entries']}",
+            f"- WindowServer linked display flags: {format_counter(display_cache['link_flags'])}",
+            f"- WindowServer nonzero-origin entries: {display_cache['nonzero_origin_entries']}",
+            f"- Spaces monitor records: {display_cache['spaces_monitor_records']}",
+            f"- Spaces collapsed display records: {display_cache['spaces_collapsed_records']}",
+            "- Display UUIDs, names, and raw layout values: not included",
+        ]
+    )
+
     lines.extend(["", "## Recent Unified Logs", ""])
     lines.extend(
         [
@@ -192,6 +234,25 @@ def render_summary(artifact_dir: Path) -> str:
         ]
     )
 
+    lines.extend(["", "## Continuity Health Logs", ""])
+    lines.extend(
+        [
+            f"- Total captured lines: {health_logs['total']}",
+            f"- UniversalControl lines: {health_logs['UniversalControl']}",
+            f"- rapportd lines: {health_logs['rapportd']}",
+            f"- sharingd lines: {health_logs['sharingd']}",
+            f"- useractivityd lines: {health_logs['useractivityd']}",
+            f"- Handoff keyword lines: {health_logs['handoff_keywords']}",
+            f"- CompanionLink keyword lines: {health_logs['companion_keywords']}",
+            f"- BLE/nearby keyword lines: {health_logs['nearby_ble_keywords']}",
+            f"- Wi-Fi P2P/AWDL keyword lines: {health_logs['p2p_keywords']}",
+            f"- Display/Sidecar keyword lines: {health_logs['display_keywords']}",
+            f"- Preference/disabled keyword lines: {health_logs['preference_keywords']}",
+            f"- Error/rejection keyword lines: {health_logs['error_keywords']}",
+            "- Raw log lines: not included",
+        ]
+    )
+
     lines.extend(
         [
             "",
@@ -202,7 +263,11 @@ def render_summary(artifact_dir: Path) -> str:
             f"- Universal Control DNS-SD browse observed: {format_bool(bool(universalcontrol_browse))}",
             f"- rapportd network presence: {network_presence(lsof_rapportd)}",
             f"- UniversalControl network presence: {network_presence(lsof_universalcontrol)}",
+            f"- Continuity transport health: {continuity_transport_health(continuity_health)}",
+            f"- Universal Control preference cache: {preference_cache_signal(uc_byhost_preferences)}",
+            f"- Display cache link-loss signal: {display_cache_signal(display_cache)}",
             f"- Native proximity/log signal: {native_log_signal(logs)}",
+            f"- Link-loss health-log signal: {health_log_signal(health_logs)}",
             "- Notes:",
             "  - Fill this section manually after comparing against the local raw artifact.",
             "  - Do not paste raw hostnames, addresses, TXT values, Bluetooth IDs, hardware addresses, or unified-log lines.",
@@ -346,6 +411,63 @@ def summarize_network_hardware(text: str) -> dict[str, object]:
         elif stripped.startswith("Device: "):
             devices.add(stripped.removeprefix("Device: ").strip())
     return {"port_count": port_count, "devices": devices, "wifi_present": wifi_present}
+
+
+def summarize_continuity_health(text: str) -> dict[str, object]:
+    result: dict[str, object] = {
+        "wifi_device": "unknown",
+        "wifi_power": "unknown",
+        "wifi_active": False,
+        "awdl_present": False,
+        "awdl_active": False,
+        "firewall_global": "unknown",
+        "firewall_block_all": "unknown",
+        "firewall_stealth": "unknown",
+    }
+    section = ""
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped == "--- awdl0 ---":
+            section = "awdl0"
+            continue
+        if stripped == "--- en0 ---":
+            section = "wifi"
+            result["wifi_device"] = "en0"
+            continue
+        if stripped.startswith("--- wifi-device:") and stripped.endswith(" ---"):
+            section = "wifi"
+            result["wifi_device"] = stripped.removeprefix("--- wifi-device:").removesuffix(" ---")
+            continue
+        if stripped == "--- firewall ---":
+            section = "firewall"
+            continue
+        if stripped.startswith("wifi_device="):
+            result["wifi_device"] = stripped.split("=", 1)[-1].strip()
+        if stripped.startswith("Wi-Fi Power"):
+            result["wifi_power"] = stripped.split(":", 1)[-1].strip().lower()
+        if stripped.startswith("awdl0:"):
+            result["awdl_present"] = True
+        if stripped == "status: active" and section == "awdl0":
+            result["awdl_active"] = True
+        if stripped == "status: active" and section == "wifi":
+            result["wifi_active"] = True
+        if section == "firewall":
+            if "Firewall is" in stripped:
+                result["firewall_global"] = firewall_state(stripped)
+            elif "block all state" in stripped:
+                result["firewall_block_all"] = firewall_state(stripped)
+            elif "stealth mode" in stripped:
+                result["firewall_stealth"] = firewall_state(stripped)
+    return result
+
+
+def firewall_state(text: str) -> str:
+    lowered = text.lower()
+    if "disabled" in lowered or "off" in lowered:
+        return "disabled"
+    if "enabled" in lowered or "on" in lowered:
+        return "enabled"
+    return "unknown"
 
 
 def parse_browse(text: str) -> list[BrowseEvent]:
@@ -524,6 +646,71 @@ def summarize_defaults(text: str) -> dict[str, object]:
     return {"keys": keys}
 
 
+def summarize_uc_byhost_preferences(text: str) -> dict[str, object]:
+    files = 0
+    byte_sizes: Counter[str] = Counter()
+    keys: set[str] = set()
+    has_configuration = False
+    has_configuration_id = False
+    has_shown_control_notification = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("plist="):
+            files += 1
+        elif stripped.startswith("bytes="):
+            match = re.search(r"bytes=(\d+)", stripped)
+            if match:
+                byte_sizes[match.group(1)] += 1
+        key_match = re.match(r'(\s*)"?([A-Za-z0-9_.-]+)"?\s+=>', line)
+        if key_match and len(key_match.group(1)) <= 2:
+            key = key_match.group(2)
+            keys.add(key)
+            if key == "Configuration":
+                has_configuration = True
+            elif key == "ConfigurationID":
+                has_configuration_id = True
+            elif key == "HasShownControlNotification":
+                has_shown_control_notification = True
+    return {
+        "files": files,
+        "byte_sizes": byte_sizes,
+        "keys": keys,
+        "has_configuration": has_configuration,
+        "has_configuration_id": has_configuration_id,
+        "has_shown_control_notification": has_shown_control_notification,
+    }
+
+
+def summarize_display_cache(text: str) -> dict[str, object]:
+    counts: Counter[str] = Counter()
+    link_flags: Counter[str] = Counter()
+    for line in text.splitlines():
+        stripped = line.strip()
+        if '"ConfigVersion"' in stripped or stripped.startswith("ConfigVersion = "):
+            counts["windowserver_config_entries"] += 1
+        if '"CurrentInfo"' in stripped or stripped.startswith("CurrentInfo = "):
+            counts["windowserver_current_info_entries"] += 1
+        if '"IsLink" => true' in stripped or "IsLink = 1" in stripped:
+            link_flags["true"] += 1
+        if '"IsLink" => false' in stripped or "IsLink = 0" in stripped:
+            link_flags["false"] += 1
+        origin_match = re.match(r'"?Origin[XY]"?\s+(?:=>|=)\s+(-?\d+)', stripped)
+        if origin_match and int(origin_match.group(1)) != 0:
+            counts["nonzero_origin_entries"] += 1
+        if '"Display Identifier"' in stripped or stripped.startswith('"Display Identifier" = '):
+            counts["spaces_monitor_records"] += 1
+        if "Collapsed Space" in stripped:
+            counts["spaces_collapsed_records"] += 1
+    return {
+        "windowserver_config_entries": counts["windowserver_config_entries"],
+        "windowserver_current_info_entries": counts["windowserver_current_info_entries"],
+        "link_flags": link_flags,
+        "nonzero_origin_entries": counts["nonzero_origin_entries"],
+        "spaces_monitor_records": counts["spaces_monitor_records"],
+        "spaces_collapsed_records": counts["spaces_collapsed_records"],
+    }
+
+
 def summarize_logs(text: str) -> dict[str, object]:
     counts: Counter[str] = Counter()
     event_ids: set[str] = set()
@@ -556,6 +743,30 @@ def summarize_logs(text: str) -> dict[str, object]:
     return {**counts, "event_ids": event_ids, "message_ids": message_ids}
 
 
+def summarize_health_logs(text: str) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    patterns = {
+        "handoff_keywords": re.compile(r"handoff|continuity|activity", re.I),
+        "companion_keywords": re.compile(r"companion|clink|rapport", re.I),
+        "nearby_ble_keywords": re.compile(r"nearby|BLE|bluetooth|rssi|paired", re.I),
+        "p2p_keywords": re.compile(r"p2p|WiFiP2P|AWDL", re.I),
+        "display_keywords": re.compile(r"display|sidecar|universal", re.I),
+        "preference_keywords": re.compile(r"preference|prefs|disabled|enabled", re.I),
+        "error_keywords": re.compile(r"reject|den(?:y|ied)|fail(?:ed|ure)?|(?<!no)error|fault|invalid|timeout", re.I),
+    }
+    for line in text.splitlines():
+        if not line or line.startswith("$ "):
+            continue
+        counts["total"] += 1
+        for process in ("UniversalControl", "rapportd", "sharingd", "useractivityd"):
+            if process in line:
+                counts[process] += 1
+        for key, pattern in patterns.items():
+            if pattern.search(line):
+                counts[key] += 1
+    return counts
+
+
 def network_presence(counts: Counter[str]) -> str:
     if not counts["total"]:
         return "none observed"
@@ -564,12 +775,57 @@ def network_presence(counts: Counter[str]) -> str:
     return "process present without network sockets in artifact"
 
 
+def continuity_transport_health(health: dict[str, object]) -> str:
+    wifi_on = health.get("wifi_power") == "on"
+    wifi_active = bool(health.get("wifi_active"))
+    awdl_active = bool(health.get("awdl_active"))
+    block_all = health.get("firewall_block_all") == "enabled"
+    if wifi_on and wifi_active and awdl_active and not block_all:
+        return "Wi-Fi interface and AWDL look available; firewall block-all is not enabled"
+    missing: list[str] = []
+    if not wifi_on:
+        missing.append("Wi-Fi power")
+    if not wifi_active:
+        missing.append("Wi-Fi interface active status")
+    if not awdl_active:
+        missing.append("AWDL active status")
+    if block_all:
+        missing.append("firewall block-all disabled state")
+    return "possible prerequisite issue: " + ", ".join(missing)
+
+
+def preference_cache_signal(preferences: dict[str, object]) -> str:
+    if not preferences["files"]:
+        return "no Universal Control ByHost preference file found"
+    if preferences["has_configuration"]:
+        return "Universal Control ByHost configuration cache present"
+    return "Universal Control preference file present without configuration blob"
+
+
+def display_cache_signal(cache: dict[str, object]) -> str:
+    collapsed = int(cache["spaces_collapsed_records"])
+    nonzero_origins = int(cache["nonzero_origin_entries"])
+    if collapsed or nonzero_origins:
+        return "display cache contains collapsed or nonzero-origin records; inspect if Displays UI is stale"
+    if int(cache["windowserver_current_info_entries"]):
+        return "display cache present without obvious collapsed/nonzero-origin signal"
+    return "display cache shape not observed"
+
+
 def native_log_signal(logs: dict[str, object]) -> str:
     if log_count(logs, "UniversalControl") or log_count(logs, "rapportd"):
         if logs.get("event_ids") or logs.get("message_ids"):
             return "native process logs include redacted Rapport event/message IDs"
         return "native process logs present without parsed event/message IDs"
     return "no native process log lines counted"
+
+
+def health_log_signal(logs: Counter[str]) -> str:
+    if logs["UniversalControl"]:
+        return "UniversalControl health-log lines present"
+    if logs["rapportd"] or logs["sharingd"]:
+        return "Rapport/Sharing continuity lines present without UniversalControl lines"
+    return "no continuity health-log lines counted"
 
 
 def log_count(logs: dict[str, object], key: str) -> int:
@@ -587,6 +843,13 @@ def format_counter(counter: Counter[str]) -> str:
     if not counter:
         return "none"
     return ", ".join(f"`{key}`={counter[key]}" for key in sorted(counter))
+
+
+def format_code_or_unknown(value: object) -> str:
+    text = str(value)
+    if not text or text == "unknown":
+        return "unknown"
+    return f"`{text}`"
 
 
 def format_bool(value: bool) -> str:

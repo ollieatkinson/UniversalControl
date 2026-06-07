@@ -89,12 +89,21 @@ Observed:
 - Universal Control has private HID entitlements and strings for HID report accumulation, local keyboard report removal, pointer focus movement, and target keyboard readiness.
 - Native log templates name `FocusMove`, `TargetBegin`, `TargetConnect`, `TargetReady`, `TargetEvent`, `TargetReply`, and `Target Reply: Reject`.
 - `rapportd` listens on a dynamic TCP port and UDP 3722 locally.
+- Apple-to-Apple session pcaps show the native data path on AWDL IPv6
+  link-local dynamic-port TCP. The strongest redacted length fingerprints are a
+  high-rate small-message flow dominated by 122/93 byte payloads in one
+  direction with small responses, and a lower-rate flow with repeated 621 and
+  1428 byte payloads in both directions.
 
 Inferred:
 
 - Input probably travels as serialized HID reports or higher-level input events after a control-plane focus transfer.
 - macOS injects or dispatches events through private HID and Skylight privileges that third-party apps do not normally have.
 - `TargetReply` status/rejection logs are likely the best redacted indicator that a candidate reached input-target negotiation but failed eligibility, collision handling, keyboard readiness, drag readiness, or HID accumulation.
+- A Windows native-admission attempt that receives a TCP connection should be
+  compared against AWDL payload-length frequencies, initial length sequence, and
+  inter-payload gap buckets before treating it as the Universal Control data
+  plane.
 
 Open questions:
 

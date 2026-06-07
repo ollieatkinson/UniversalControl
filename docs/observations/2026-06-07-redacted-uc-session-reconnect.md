@@ -120,16 +120,37 @@
 ### AWDL TCP Flow Shapes
 
 - #1: ip=ipv6 endpoints=`link-local-v6`<->`link-local-v6` ports=`dynamic`<->`dynamic` packets=5506 payload_bytes=329356 nonzero_payload_packets=2972 max_payload_bytes=174 flags=`ack-only`=2534, `push`=2972 first_offset=1.55s last_offset=72.8s span=71.2s
+  - payload directions: `a_to_b` packets=2927 bytes=324932 top_lengths=`122`=1774, `93`=1034, `107`=74, `55`=16, `82`=12, `140`=8; `b_to_a` packets=45 bytes=4424 top_lengths=`55`=16, `82`=12, `140`=8, `174`=8, `48`=1
+  - initial nonzero payload sequence: `a_to_b:140`, `a_to_b:93`, `a_to_b:122`, `a_to_b:174`, `a_to_b:122`, `b_to_a:55`, `a_to_b:122`, `a_to_b:122`, `b_to_a:82`, `b_to_a:55`, `a_to_b:122`, `a_to_b:122`, `a_to_b:122`, `a_to_b:122`, `a_to_b:122`, `a_to_b:122`, `a_to_b:122`, `a_to_b:93`, `a_to_b:122`, `a_to_b:93`, `a_to_b:122`, `a_to_b:93`, `a_to_b:122`, `a_to_b:93`
+  - inter-payload gap buckets: `1-10ms`=1705, `10-100ms`=145, `100ms-1s`=33, `<1ms`=1077, `>=1s`=11
 - #2: ip=ipv6 endpoints=`link-local-v6`<->`link-local-v6` ports=`dynamic`<->`dynamic` packets=128 payload_bytes=63336 nonzero_payload_packets=70 max_payload_bytes=1428 flags=`ack-only`=58, `ecn-cwr`=1, `push`=53 first_offset=1.54s last_offset=71.4s span=69.9s
+  - payload directions: `a_to_b` packets=36 bytes=32979 top_lengths=`621`=17, `1428`=10, `978`=2, `1076`=1, `714`=1, `658`=1; `b_to_a` packets=34 bytes=30357 top_lengths=`621`=16, `1428`=11, `1255`=1, `867`=1, `1305`=1, `3`=1
+  - initial nonzero payload sequence: `a_to_b:621`, `b_to_a:621`, `b_to_a:621`, `a_to_b:621`, `a_to_b:621`, `b_to_a:621`, `b_to_a:621`, `a_to_b:621`, `a_to_b:621`, `b_to_a:621`, `b_to_a:621`, `a_to_b:621`, `a_to_b:1428`, `a_to_b:1428`, `a_to_b:1076`, `a_to_b:1428`, `a_to_b:1428`, `b_to_a:1428`, `b_to_a:1428`, `b_to_a:1255`, `b_to_a:1428`, `a_to_b:714`, `b_to_a:867`, `a_to_b:658`
+  - inter-payload gap buckets: `1-10ms`=21, `10-100ms`=10, `100ms-1s`=9, `<1ms`=18, `>=1s`=11
 - Raw endpoints, dynamic ports, and packet payloads: not included
 
 ### Primary Network TCP Flow Shapes
 
 - #1: ip=ipv4 endpoints=`private-v4`<->`public-v4` ports=`dynamic`<->`https` packets=2369 payload_bytes=647964 nonzero_payload_packets=1434 max_payload_bytes=1440 flags=`ack-only`=935, `ecn-cwr`=1, `push`=1057 first_offset=0.000s last_offset=116.5s span=116.5s
+  - payload directions: `a_to_b` packets=1309 bytes=487442 top_lengths=`1440`=273, `50`=166, `51`=162, `49`=132, `48`=90, `52`=85; `b_to_a` packets=125 bytes=160522 top_lengths=`1388`=108, `32`=6, `1092`=1, `1051`=1, `497`=1, `1304`=1
+  - initial nonzero payload sequence: `a_to_b:47`, `a_to_b:50`, `a_to_b:52`, `a_to_b:49`, `a_to_b:48`, `a_to_b:50`, `a_to_b:48`, `a_to_b:44`, `a_to_b:47`, `a_to_b:170`, `a_to_b:51`, `a_to_b:52`, `a_to_b:50`, `a_to_b:50`, `a_to_b:51`, `a_to_b:50`, `a_to_b:52`, `a_to_b:51`, `a_to_b:51`, `a_to_b:53`, `a_to_b:51`, `a_to_b:48`, `a_to_b:51`, `a_to_b:51`
+  - inter-payload gap buckets: `1-10ms`=230, `10-100ms`=452, `100ms-1s`=72, `<1ms`=653, `>=1s`=26
 - #2: ip=ipv4 endpoints=`private-v4`<->`public-v4` ports=`dynamic`<->`https` packets=215 payload_bytes=201475 nonzero_payload_packets=148 max_payload_bytes=1398 flags=`ack-only`=67, `push`=7 first_offset=1.43s last_offset=106.7s span=105.2s
+  - payload directions: `a_to_b` packets=4 bytes=3401 top_lengths=`1398`=2, `299`=1, `306`=1; `b_to_a` packets=144 bytes=198074 top_lengths=`1388`=142, `430`=1, `548`=1
+  - initial nonzero payload sequence: `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`, `b_to_a:1388`
+  - inter-payload gap buckets: `10-100ms`=2, `100ms-1s`=1, `<1ms`=143, `>=1s`=1
 - #3: ip=ipv4 endpoints=`private-v4`<->`public-v4` ports=`dynamic`<->`https` packets=493 payload_bytes=91808 nonzero_payload_packets=330 max_payload_bytes=499 flags=`ack-only`=163, `push`=330 first_offset=0.702s last_offset=117.0s span=116.3s
+  - payload directions: `a_to_b` packets=246 bytes=69605 top_lengths=`499`=123, `57`=67, `80`=21, `81`=15, `58`=7, `65`=3; `b_to_a` packets=84 bytes=22203 top_lengths=`185`=31, `347`=13, `184`=12, `350`=10, `346`=9, `348`=8
+  - initial nonzero payload sequence: `b_to_a:348`, `a_to_b:80`, `a_to_b:499`, `a_to_b:58`, `a_to_b:499`, `b_to_a:185`, `a_to_b:58`, `a_to_b:499`, `b_to_a:347`, `a_to_b:82`, `a_to_b:499`, `a_to_b:65`, `a_to_b:499`, `b_to_a:185`, `a_to_b:57`, `a_to_b:499`, `b_to_a:348`, `a_to_b:81`, `a_to_b:499`, `a_to_b:57`, `a_to_b:499`, `b_to_a:185`, `a_to_b:57`, `a_to_b:499`
+  - inter-payload gap buckets: `1-10ms`=120, `10-100ms`=79, `100ms-1s`=8, `<1ms`=85, `>=1s`=37
 - #4: ip=ipv4 endpoints=`private-v4`<->`public-v4` ports=`dynamic`<->`https` packets=41 payload_bytes=18249 nonzero_payload_packets=22 max_payload_bytes=1440 flags=`ack-only`=13, `ecn-cwr`=2, `fin`=2, `push`=14, `rst`=2, `syn`=2 first_offset=7.98s last_offset=39.0s span=31.0s
+  - payload directions: `a_to_b` packets=11 bytes=10036 top_lengths=`1440`=4, `303`=2, `1216`=1, `626`=1, `903`=1, `901`=1; `b_to_a` packets=11 bytes=8213 top_lengths=`1408`=4, `126`=1, `80`=1, `452`=1, `682`=1, `457`=1
+  - initial nonzero payload sequence: `b_to_a:1408`, `b_to_a:126`, `a_to_b:1440`, `a_to_b:1440`, `a_to_b:1216`, `a_to_b:1440`, `a_to_b:1440`, `a_to_b:626`, `b_to_a:80`, `b_to_a:452`, `b_to_a:1408`, `b_to_a:682`, `a_to_b:303`, `a_to_b:303`, `a_to_b:903`, `b_to_a:457`, `b_to_a:1408`, `b_to_a:760`, `b_to_a:1408`, `a_to_b:901`, `a_to_b:24`, `b_to_a:24`
+  - inter-payload gap buckets: `1-10ms`=4, `10-100ms`=2, `100ms-1s`=3, `<1ms`=11, `>=1s`=1
 - #5: ip=ipv4 endpoints=`private-v4`<->`public-v4` ports=`dynamic`<->`https` packets=44 payload_bytes=15764 nonzero_payload_packets=25 max_payload_bytes=1161 flags=`ack-only`=19, `push`=25 first_offset=42.2s last_offset=45.4s span=3.25s
+  - payload directions: `a_to_b` packets=12 bytes=3016 top_lengths=`77`=4, `79`=2, `422`=2, `429`=2, `424`=2; `b_to_a` packets=13 bytes=12748 top_lengths=`1161`=3, `811`=3, `810`=2, `1159`=1, `1041`=1, `1160`=1
+  - initial nonzero payload sequence: `a_to_b:77`, `a_to_b:79`, `a_to_b:77`, `b_to_a:1159`, `b_to_a:1041`, `b_to_a:1161`, `b_to_a:1161`, `a_to_b:422`, `a_to_b:429`, `a_to_b:424`, `b_to_a:811`, `b_to_a:811`, `b_to_a:810`, `a_to_b:77`, `a_to_b:79`, `a_to_b:77`, `b_to_a:1160`, `a_to_b:422`, `b_to_a:1161`, `a_to_b:424`, `b_to_a:1040`, `a_to_b:429`, `b_to_a:812`, `b_to_a:810`
+  - inter-payload gap buckets: `1-10ms`=13, `10-100ms`=2, `100ms-1s`=1, `<1ms`=7, `>=1s`=1
 - Raw endpoints, dynamic ports, and packet payloads: not included
 
 ## Launchd
@@ -147,9 +168,9 @@
 - Target/input negotiation signal: target/input negotiation signal in redacted counts; inspect raw local artifacts
 - Proximity or Wi-Fi P2P side-channel signal: possible proximity or Wi-Fi peer-to-peer signal in redacted counts
 - Notes:
-  - Captured after native Universal Control was restored enough to connect, disconnect, and reconnect in the same 120 second run.
-  - The operator attempted the same short benign text-entry action on both machines before and after reconnect; the literal text is intentionally not included.
-  - Redacted phase counters show disconnect activity followed by reconnect/focus activity: disconnect event lines and connected-link empty transitions appear, then reconnect-after-disconnect is observed shortly afterward, with later target ready, target accept/reply, pointer focus, and keyboard focus lines.
-  - The packet shape again points at AWDL IPv6 link-local dynamic-port TCP as the native session data path: two AWDL TCP flows carried payload, while primary-network traffic was mostly generic private-to-public HTTPS noise.
-  - This is the best current baseline for Windows native-admission comparison because it contains both the steady-state input path and the reconnect state-machine path in one artifact.
-  - Do not paste raw hostnames, addresses, TXT values, interface identifiers, packet payloads, or unified-log lines.
+  - Packet flow summaries are length/timing evidence only: direction labels are arbitrary within each flow, and raw endpoints, dynamic ports, TCP payloads, TXT values, interface identifiers, and unified-log lines are not included.
+  - Redacted phase counters show disconnect activity followed by reconnect/focus activity, so this run is useful for comparing Windows reconnect-state behavior.
+  - The strongest packet clue is the dominant AWDL IPv6 link-local dynamic-port TCP flow. A Windows native probe that reaches admission should be compared against this flow's payload-length frequencies, initial length sequence, and gap buckets before chasing generic primary-network HTTPS traffic.
+  - Native UniversalControl/Rapport target or sync/layout counters are active, so packet bursts should be interpreted together with focus, target-ready, and layout state rather than as raw pointer traffic alone.
+  - The action timeline includes pointer movement, scrolling, and harmless key activity; interpret input/action counters and packet bursts as mixed input activity, not pointer-only traffic. Literal typed text is intentionally not recorded.
+  - Do not paste raw hostnames, addresses, TXT values, interface identifiers, packet payloads, typed text, or unified-log lines.

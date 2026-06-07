@@ -782,6 +782,27 @@ capture. Native Windows admission attempts should be compared against this
 AWDL high-port flow shape before spending effort on generic primary-network
 HTTPS traffic.
 
+Extended the same summarizer again to preserve direction-neutral
+payload-length fingerprints for the top TCP flows: per-direction payload
+packet/byte counts, top payload lengths, the first 24 nonzero payload lengths,
+and inter-payload gap buckets. Direction labels are arbitrary within a flow, and
+the summary still omits raw endpoints, dynamic ports, and payload bytes.
+
+Regenerated both 2026-06-07 Apple-to-Apple session summaries. The reconnect
+baseline now shows two AWDL IPv6 link-local dynamic-port TCP flows with distinct
+length signatures:
+
+- a high-rate small-message flow dominated by repeated 122/93 byte payloads in
+  one direction, with smaller 55/82/140/174 byte responses
+- a lower-rate larger-message flow with repeated 621 and 1428 byte payloads in
+  both directions
+
+Those length fingerprints are now the best non-payload comparison target for a
+future Windows native-admission listener. A Windows TCP attempt that only looks
+like generic HTTPS or mDNS noise should not be treated as Universal Control data
+path progress; an attempt that starts to resemble the AWDL length/gap pattern is
+worth a targeted framing probe.
+
 ### Bridge Hello Authentication
 
 Added optional shared-secret authentication for the AnyKBFlow bridge `Hello`

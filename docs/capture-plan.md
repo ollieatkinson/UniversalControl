@@ -152,8 +152,12 @@ packet-shape metadata: capture class, decoded packet count, IP version counts,
 transport counts, protocol-relevant port hits, mDNS service mentions, and
 redacted TCP flow shapes by capture class. Flow shapes preserve endpoint
 classes, port classes, packet counts, payload byte counts, flag classes, and
-relative timing. They do not include raw packet lines, endpoints, dynamic ports,
-or payload bytes.
+relative timing. For the top flows, they also preserve direction-neutral
+payload-length fingerprints: per-direction payload packet/byte counts, top
+payload lengths, an initial nonzero payload-length sequence, and inter-payload
+gap buckets. Direction labels are arbitrary within each flow and are only useful
+for shape comparison. Summaries do not include raw packet lines, endpoints,
+dynamic ports, or payload bytes.
 
 Active-session baselines may include intentional pointer, scroll, and short
 benign text-entry actions. Summaries should describe this as input activity
@@ -411,6 +415,9 @@ Expected evidence:
   per-connection read counts, total byte counts, first-read byte counts,
   first-read hex lengths, additional-read hex lengths, read-limit status, and
   peer-close-after-data status without raw peer addresses or payload bytes.
+- Compare any Windows TCP observer length/timing behavior with the Apple
+  session AWDL payload-length fingerprints before assuming the first accepted
+  connection is the Universal Control data path.
 - The paired report combines the Mac and Windows summaries:
 
   ```sh

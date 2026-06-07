@@ -195,12 +195,17 @@ def render_summary(artifact_dir: Path) -> str:
             f"- UniversalControl/rapportd session signal: {session_signal(log_counts)}",
             f"- Target/input negotiation signal: {target_signal(log_counts)}",
             f"- Proximity or Wi-Fi P2P side-channel signal: {side_channel_signal(log_counts)}",
-            "- Notes:",
-            "  - Fill this section manually after inspecting local raw artifacts.",
-            "  - Do not paste raw hostnames, addresses, TXT values, interface identifiers, packet payloads, or unified-log lines.",
-            "",
         ]
     )
+    lines.extend(
+        render_interpretation_notes(
+            metadata,
+            log_counts,
+            phase_signals,
+            pcap_summary,
+        )
+    )
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -506,6 +511,7 @@ def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
     decoded_packets = 0
     decode_failures = 0
     first_packet_time: datetime | None = None
+    last_packet_time: datetime | None = None
     tcpdump = shutil.which("tcpdump")
     pcaps = sorted(artifact_dir.glob("*.pcap"))
     for pcap in pcaps:
@@ -527,6 +533,7 @@ def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
             if record is None:
                 continue
             first_packet_time = min_timestamp(first_packet_time, record.timestamp)
+            last_packet_time = max_timestamp(last_packet_time, record.timestamp)
             count_packet_shape(record, ip_versions, transports, known_ports)
             count_mdns_service_mentions(record.rest, mdns_service_mentions)
             if record.transport == "tcp":
@@ -560,6 +567,7 @@ def summarize_pcaps(artifact_dir: Path) -> dict[str, object]:
         "primary_network_tcp_flows": top_tcp_flow_shapes(
             tcp_flows, first_packet_time, capture_class="primary-network"
         ),
+        "packet_span": seconds_between(first_packet_time, last_packet_time),
         "decode_failures": decode_failures,
     }
 
@@ -638,6 +646,12 @@ def min_timestamp(current: datetime | None, candidate: datetime) -> datetime:
     return current
 
 
+def max_timestamp(current: datetime | None, candidate: datetime) -> datetime:
+    if current is None or candidate > current:
+        return candidate
+    return current
+
+
 def count_packet_shape(
     record: PacketRecord,
     ip_versions: Counter[str],
@@ -685,6 +699,16 @@ def update_tcp_flow(
             "payload_bytes": 0,
             "nonzero_payload_packets": 0,
             "max_payload_bytes": 0,
+            "endpoints": endpoints,
+            "payload_packets_by_direction": Counter(),
+            "payload_bytes_by_direction": Counter(),
+            "payload_lengths_by_direction": {
+                "a_to_b": Counter(),
+                "b_to_a": Counter(),
+            },
+            "payload_gap_buckets": Counter(),
+            "initial_payload_sequence": [],
+            "last_payload_time": None,
             "first_time": record.timestamp,
             "last_time": record.timestamp,
             "flags": Counter(),
@@ -695,12 +719,67 @@ def update_tcp_flow(
     flow["payload_bytes"] = int(flow["payload_bytes"]) + payload_length
     if payload_length:
         flow["nonzero_payload_packets"] = int(flow["nonzero_payload_packets"]) + 1
+        update_flow_payload_sequence(flow, endpoints, record, payload_length)
     flow["max_payload_bytes"] = max(int(flow["max_payload_bytes"]), payload_length)
     flow["first_time"] = min(flow["first_time"], record.timestamp)
     flow["last_time"] = max(flow["last_time"], record.timestamp)
     flow["flags"].update(tcp_flag_classes(record.rest, payload_length))
     tcp_flow_capture_classes[capture_class] += 1 if int(flow["packets"]) == 1 else 0
     tcp_payload_bytes_by_capture[capture_class] += payload_length
+
+
+def update_flow_payload_sequence(
+    flow: dict[str, object],
+    endpoints: tuple[tuple[str, str], tuple[str, str]],
+    record: PacketRecord,
+    payload_length: int,
+) -> None:
+    direction = "a_to_b" if (record.source_host, record.source_port) == endpoints[0] else "b_to_a"
+
+    payload_packets_by_direction = flow["payload_packets_by_direction"]
+    assert isinstance(payload_packets_by_direction, Counter)
+    payload_packets_by_direction[direction] += 1
+
+    payload_bytes_by_direction = flow["payload_bytes_by_direction"]
+    assert isinstance(payload_bytes_by_direction, Counter)
+    payload_bytes_by_direction[direction] += payload_length
+
+    payload_lengths_by_direction = flow["payload_lengths_by_direction"]
+    assert isinstance(payload_lengths_by_direction, dict)
+    payload_lengths = payload_lengths_by_direction[direction]
+    assert isinstance(payload_lengths, Counter)
+    payload_lengths[str(payload_length)] += 1
+
+    last_payload_time = flow["last_payload_time"]
+    if isinstance(last_payload_time, datetime):
+        gap = seconds_between(last_payload_time, record.timestamp)
+        if gap is not None:
+            payload_gap_buckets = flow["payload_gap_buckets"]
+            assert isinstance(payload_gap_buckets, Counter)
+            payload_gap_buckets[payload_gap_bucket(gap)] += 1
+    flow["last_payload_time"] = record.timestamp
+
+    initial_payload_sequence = flow["initial_payload_sequence"]
+    assert isinstance(initial_payload_sequence, list)
+    if len(initial_payload_sequence) < 24:
+        initial_payload_sequence.append(
+            {
+                "direction": direction,
+                "length": payload_length,
+            }
+        )
+
+
+def payload_gap_bucket(seconds: float) -> str:
+    if seconds < 0.001:
+        return "<1ms"
+    if seconds < 0.010:
+        return "1-10ms"
+    if seconds < 0.100:
+        return "10-100ms"
+    if seconds < 1.000:
+        return "100ms-1s"
+    return ">=1s"
 
 
 def host_class(host: str) -> str:
@@ -792,6 +871,11 @@ def top_tcp_flow_shapes(
                 "payload_bytes": flow["payload_bytes"],
                 "nonzero_payload_packets": flow["nonzero_payload_packets"],
                 "max_payload_bytes": flow["max_payload_bytes"],
+                "payload_packets_by_direction": flow["payload_packets_by_direction"],
+                "payload_bytes_by_direction": flow["payload_bytes_by_direction"],
+                "payload_lengths_by_direction": flow["payload_lengths_by_direction"],
+                "payload_gap_buckets": flow["payload_gap_buckets"],
+                "initial_payload_sequence": flow["initial_payload_sequence"],
                 "flags": flow["flags"],
                 "first_offset": seconds_between(first_packet_time, first_time),
                 "last_offset": seconds_between(first_packet_time, last_time),
@@ -827,8 +911,59 @@ def render_tcp_flow_shapes(flows: list[dict[str, object]]) -> list[str]:
             + f"last_offset={format_seconds(flow['last_offset'])} "
             + f"span={format_seconds(flow['span'])}"
         )
+        lines.append(
+            "  - payload directions: "
+            + format_payload_directions(
+                flow["payload_packets_by_direction"],
+                flow["payload_bytes_by_direction"],
+                flow["payload_lengths_by_direction"],
+            )
+        )
+        lines.append(
+            "  - initial nonzero payload sequence: "
+            + format_payload_sequence(flow["initial_payload_sequence"])
+        )
+        lines.append(
+            "  - inter-payload gap buckets: "
+            + format_counter(flow["payload_gap_buckets"])
+        )
     lines.append("- Raw endpoints, dynamic ports, and packet payloads: not included")
     return lines
+
+
+def format_payload_directions(
+    packet_counter: object,
+    byte_counter: object,
+    length_counters: object,
+) -> str:
+    if not isinstance(packet_counter, Counter) or not isinstance(byte_counter, Counter):
+        return "unknown"
+    if not isinstance(length_counters, dict):
+        return "unknown"
+    parts: list[str] = []
+    for direction in ("a_to_b", "b_to_a"):
+        length_counter = length_counters.get(direction)
+        if not isinstance(length_counter, Counter):
+            length_counter = Counter()
+        parts.append(
+            f"`{direction}` packets={packet_counter[direction]} "
+            f"bytes={byte_counter[direction]} "
+            f"top_lengths={format_top_counter(length_counter, limit=6)}"
+        )
+    return "; ".join(parts)
+
+
+def format_payload_sequence(value: object) -> str:
+    if not isinstance(value, list) or not value:
+        return "none"
+    rendered: list[str] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        direction = item.get("direction", "unknown")
+        length = item.get("length", "unknown")
+        rendered.append(f"`{direction}:{length}`")
+    return ", ".join(rendered) if rendered else "none"
 
 
 def parse_launchctl(text: str) -> dict[str, str]:
@@ -881,6 +1016,60 @@ def side_channel_signal(log_counts: Counter[str]) -> str:
     return "no nearbyd or wifip2pd lines counted"
 
 
+def render_interpretation_notes(
+    metadata: dict[str, str],
+    log_counts: Counter[str],
+    phase_signals: dict[str, object],
+    pcap_summary: dict[str, object],
+) -> list[str]:
+    notes = [
+        "- Notes:",
+        "  - Packet flow summaries are length/timing evidence only: direction labels are arbitrary within each flow, and raw endpoints, dynamic ports, TCP payloads, TXT values, interface identifiers, and unified-log lines are not included.",
+    ]
+
+    requested_duration = parse_duration_seconds(metadata.get("duration", ""))
+    packet_span = pcap_summary.get("packet_span")
+    if isinstance(packet_span, float) and requested_duration and packet_span > requested_duration * 1.2:
+        notes.append(
+            "  - Decoded pcap timing exceeds the requested capture duration; treat packet and unified-log counts as active-session signal shape rather than an exact bounded window."
+        )
+
+    first_disconnect = phase_signals.get("first_disconnect_offset")
+    first_reconnect = phase_signals.get("first_reconnect_after_disconnect_offset")
+    if first_disconnect is not None and first_reconnect is not None:
+        notes.append(
+            "  - Redacted phase counters show disconnect activity followed by reconnect/focus activity, so this run is useful for comparing Windows reconnect-state behavior."
+        )
+
+    awdl_flows = pcap_summary.get("awdl_tcp_flows")
+    if isinstance(awdl_flows, list) and awdl_flows:
+        first_flow = awdl_flows[0]
+        if isinstance(first_flow, dict) and int(first_flow.get("payload_bytes", 0) or 0) > 0:
+            notes.append(
+                "  - The strongest packet clue is the dominant AWDL IPv6 link-local dynamic-port TCP flow. A Windows native probe that reaches admission should be compared against this flow's payload-length frequencies, initial length sequence, and gap buckets before chasing generic primary-network HTTPS traffic."
+            )
+
+    if log_counts["native_target_keywords"] or log_counts["native_sync_layout_keywords"]:
+        notes.append(
+            "  - Native UniversalControl/Rapport target or sync/layout counters are active, so packet bursts should be interpreted together with focus, target-ready, and layout state rather than as raw pointer traffic alone."
+        )
+
+    notes.append(
+        "  - The action timeline includes pointer movement, scrolling, and harmless key activity; interpret input/action counters and packet bursts as mixed input activity, not pointer-only traffic. Literal typed text is intentionally not recorded."
+    )
+    notes.append(
+        "  - Do not paste raw hostnames, addresses, TXT values, interface identifiers, packet payloads, typed text, or unified-log lines."
+    )
+    return notes
+
+
+def parse_duration_seconds(value: str) -> int | None:
+    match = re.match(r"^(\d+)s$", value.strip())
+    if not match:
+        return None
+    return int(match.group(1))
+
+
 def format_set(values) -> str:
     unique = sorted({str(value) for value in values if str(value)})
     if not unique:
@@ -892,6 +1081,12 @@ def format_counter(counter: Counter[str]) -> str:
     if not counter:
         return "none"
     return ", ".join(f"`{key}`={counter[key]}" for key in sorted(counter))
+
+
+def format_top_counter(counter: Counter[str], *, limit: int) -> str:
+    if not counter:
+        return "none"
+    return ", ".join(f"`{key}`={value}" for key, value in counter.most_common(limit))
 
 
 def format_pair(values: object) -> str:
